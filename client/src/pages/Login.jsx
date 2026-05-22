@@ -20,43 +20,23 @@ function DbStats() {
   const barColor = pct >= 85 ? '#ff6b6b' : pct >= 60 ? '#ffd93d' : '#6bcb77';
 
   return (
-    <div style={{ marginTop:24, background:'rgba(0,0,0,.18)', borderRadius:12, padding:'14px 16px' }}>
-      {/* Header */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:10 }}>
-        <span style={{ fontSize:11, fontWeight:700, color:'rgba(255,255,255,.9)', letterSpacing:.5 }}>🗄️ Database {stats?.dbName || 'WMS'}</span>
-        <span style={{ fontSize:10, color:'rgba(255,255,255,.5)' }}>{stats?.server || '–'}</span>
+    <div style={{ marginTop:20 }}>
+      <div style={{ fontSize:10, color:'rgba(255,255,255,.5)', marginBottom:4 }}>
+        🗄️ {stats?.dbName || 'WMS'} {stats?.server ? `· ${stats.server}` : ''}
       </div>
-
-      {/* Progress bar */}
-      <div style={{ background:'rgba(0,0,0,.25)', borderRadius:6, height:8, overflow:'hidden', marginBottom:10 }}>
-        {loading ? (
-          <div style={{ width:'40%', height:'100%', background:'rgba(255,255,255,.2)', borderRadius:6, animation:'pulse 1.5s ease-in-out infinite' }}/>
-        ) : (
-          <div style={{ width:`${pct}%`, height:'100%', background: barColor, borderRadius:6, transition:'width .8s ease' }}/>
-        )}
-      </div>
-
-      {/* Stats row */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr 1fr', gap:6 }}>
-        {[
-          { label:'ใช้ไป', value: loading ? '...' : `${stats?.usedMB?.toFixed(1) ?? '–'} MB` },
-          { label:'คงเหลือ', value: loading ? '...' : `${stats?.freeMB?.toFixed(1) ?? '–'} MB` },
-          { label:'การใช้งาน', value: loading ? '...' : `${pct}%`, highlight: true },
-        ].map(({ label, value, highlight }) => (
-          <div key={label} style={{ background:'rgba(0,0,0,.15)', borderRadius:8, padding:'8px 10px', textAlign:'center' }}>
-            <div style={{ fontSize:9, color:'rgba(255,255,255,.55)', marginBottom:3, letterSpacing:.3 }}>{label}</div>
-            <div style={{ fontSize:13, fontWeight:700, color: highlight ? barColor : '#fff' }}>{value}</div>
-          </div>
-        ))}
-      </div>
-
-      {!loading && !stats && (
-        <div style={{ marginTop:8, fontSize:10, color:'rgba(255,255,255,.4)', textAlign:'center' }}>
-          รอการเชื่อมต่อ Database...
+      {loading ? (
+        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>กำลังโหลด...</div>
+      ) : stats ? (
+        <div style={{ fontSize:11, color:'rgba(255,255,255,.7)', lineHeight:1.8 }}>
+          <span>ใช้ไป {stats.usedMB?.toFixed(1)} MB</span>
+          <span style={{ margin:'0 6px', opacity:.4 }}>·</span>
+          <span>คงเหลือ {stats.freeMB?.toFixed(1)} MB</span>
+          <span style={{ margin:'0 6px', opacity:.4 }}>·</span>
+          <span style={{ color:'#fff', fontWeight:700 }}>{stats.usedPct}%</span>
         </div>
+      ) : (
+        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>รอการเชื่อมต่อ Database...</div>
       )}
-
-      <style>{`@keyframes pulse { 0%,100%{opacity:.4} 50%{opacity:.9} }`}</style>
     </div>
   );
 }
@@ -241,11 +221,7 @@ export default function Login() {
           )))}
         </svg>
         <div>
-          <div style={{ marginBottom:28, display:'inline-block' }}>
-            <div style={{ width:100, height:100, borderRadius:24, background:'rgba(255,255,255,.15)', backdropFilter:'blur(8px)', border:'2px solid rgba(255,255,255,.3)', display:'flex', alignItems:'center', justifyContent:'center', boxShadow:'0 8px 32px rgba(0,0,0,.25), 0 0 0 6px rgba(255,255,255,.08)' }}>
-              <img src="/logo.png" alt="CS" style={{ width:70, height:70, objectFit:'contain', filter:'drop-shadow(0 4px 12px rgba(0,0,0,.3)) brightness(1.1)' }}/>
-            </div>
-          </div>
+          <img src="/logo.png" alt="CS" style={{ width:80, height:80, objectFit:'contain', marginBottom:24, filter:'drop-shadow(0 4px 16px rgba(0,0,0,.3)) brightness(1.1)' }}/>
           <h1 style={{ fontSize:20, fontWeight:800, color:'#fff', lineHeight:1.3, marginBottom:8, whiteSpace:'nowrap' }}>
             CS.Smart Warehouse &amp; Transport
           </h1>
