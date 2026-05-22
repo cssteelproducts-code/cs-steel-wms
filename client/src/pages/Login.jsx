@@ -137,9 +137,15 @@ export default function Login() {
 
   return (
     <div style={{ minHeight:'100vh', display:'flex', fontFamily:"'Noto Sans Thai','Noto Sans',sans-serif" }}>
+      <style>{`
+        @media (max-width: 640px) {
+          .login-brand { display: none !important; }
+          .login-right { padding: 24px 16px !important; }
+        }
+      `}</style>
 
       {/* ── LEFT — Brand panel ── */}
-      <div style={{ width:380, background:'#CC0000', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'52px 44px', flexShrink:0 }}>
+      <div className="login-brand" style={{ flex:1, background:'#CC0000', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'52px 44px' }}>
         <div>
           <img src="/logo.png" alt="CS" style={{ width:72, height:72, objectFit:'contain', marginBottom:24, filter:'drop-shadow(0 2px 8px rgba(0,0,0,.2))' }}/>
           <h1 style={{ fontSize:20, fontWeight:800, color:'#fff', lineHeight:1.3, marginBottom:8, whiteSpace:'nowrap' }}>
@@ -156,7 +162,7 @@ export default function Login() {
       </div>
 
       {/* ── RIGHT — Login form ── */}
-      <div style={{ flex:1, background:'#f4f6f9', display:'flex', alignItems:'center', justifyContent:'center', padding:32 }}>
+      <div className="login-right" style={{ flex:1, background:'#f4f6f9', display:'flex', alignItems:'center', justifyContent:'center', padding:32 }}>
         <div style={{ width:'100%', maxWidth:400 }}>
 
           {/* Card */}
@@ -173,7 +179,7 @@ export default function Login() {
               {/* Username */}
               <div>
                 <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#374151', marginBottom:6 }}>
-                  ชื่อผู้ใช้ <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· အသုံးပြုသူအမည်</span>
+                  User <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· အသုံးပြုသူအမည်</span>
                 </label>
                 <input
                   placeholder="กรอก username"
@@ -187,7 +193,7 @@ export default function Login() {
               {/* Password */}
               <div>
                 <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#374151', marginBottom:6 }}>
-                  รหัสผ่าน <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· စကားဝှက်</span>
+                  Password <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· စကားဝှက်</span>
                 </label>
                 <div style={{ position:'relative' }}>
                   <input
@@ -225,7 +231,7 @@ export default function Login() {
 
               {/* Submit */}
               <button type="submit" disabled={loading} className="btn-primary" style={{ padding:'13px', fontSize:15, fontWeight:700, borderRadius:10, opacity:loading?0.7:1, marginTop:4, boxShadow:'0 4px 14px rgba(204,0,0,.35)' }}>
-                {loading ? '⏳ กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
+                {loading ? '⏳ Logging in...' : 'Login'}
               </button>
             </form>
           </div>
