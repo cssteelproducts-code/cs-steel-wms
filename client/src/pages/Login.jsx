@@ -145,7 +145,70 @@ export default function Login() {
       `}</style>
 
       {/* ── LEFT — Brand panel ── */}
-      <div className="login-brand" style={{ flex:1, background:'#CC0000', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'52px 44px' }}>
+      <div className="login-brand" style={{ flex:1, background:'#CC0000', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'52px 44px', position:'relative', overflow:'hidden' }}>
+
+        {/* 4D Steel Structure SVG */}
+        <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:.13, pointerEvents:'none' }} viewBox="0 0 600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          {/* Perspective grid floor */}
+          <g stroke="#fff" strokeWidth="1.2" fill="none">
+            {[0,1,2,3,4,5,6,7,8].map(i => (
+              <line key={`h${i}`} x1="0" y1={500 + i*50} x2="600" y2={500 + i*50}/>
+            ))}
+            {[-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6].map(i => (
+              <line key={`v${i}`} x1={300 + i*50} y1="500" x2={300 + i*200} y2="900"/>
+            ))}
+          </g>
+          {/* Vertical I-beams */}
+          <g stroke="#fff" strokeWidth="2" fill="none">
+            {[80, 220, 380, 520].map(x => (
+              <g key={x}>
+                <line x1={x} y1="0" x2={x} y2="500"/>
+                <line x1={x-14} y1="0" x2={x+14} y2="0"/>
+                <line x1={x-14} y1="100" x2={x+14} y2="100"/>
+                <line x1={x-14} y1="200" x2={x+14} y2="200"/>
+                <line x1={x-14} y1="300" x2={x+14} y2="300"/>
+                <line x1={x-14} y1="400" x2={x+14} y2="400"/>
+                <line x1={x-14} y1="500" x2={x+14} y2="500"/>
+              </g>
+            ))}
+          </g>
+          {/* Horizontal beams */}
+          <g stroke="#fff" strokeWidth="2.5" fill="none">
+            {[80, 180, 280, 380, 480].map(y => (
+              <g key={y}>
+                <line x1="50" y1={y} x2="550" y2={y}/>
+                <line x1="50" y1={y-8} x2="550" y2={y-8}/>
+                <line x1="50" y1={y+8} x2="550" y2={y+8}/>
+              </g>
+            ))}
+          </g>
+          {/* Diagonal braces */}
+          <g stroke="#fff" strokeWidth="1.5" fill="none" strokeDasharray="4 3">
+            <line x1="80" y1="80" x2="220" y2="180"/>
+            <line x1="220" y1="80" x2="80" y2="180"/>
+            <line x1="220" y1="180" x2="380" y2="280"/>
+            <line x1="380" y1="180" x2="220" y2="280"/>
+            <line x1="380" y1="80" x2="520" y2="180"/>
+            <line x1="520" y1="80" x2="380" y2="180"/>
+            <line x1="80" y1="280" x2="220" y2="380"/>
+            <line x1="220" y1="280" x2="80" y2="380"/>
+            <line x1="380" y1="280" x2="520" y2="380"/>
+            <line x1="520" y1="280" x2="380" y2="380"/>
+          </g>
+          {/* Depth layer — back frame */}
+          <g stroke="#fff" strokeWidth="1" fill="none" opacity="0.5">
+            <rect x="140" y="40" width="320" height="420" rx="2"/>
+            <line x1="140" y1="40" x2="80" y2="80"/>
+            <line x1="460" y1="40" x2="520" y2="80"/>
+            <line x1="140" y1="460" x2="80" y2="500"/>
+            <line x1="460" y1="460" x2="520" y2="500"/>
+            <rect x="80" y="80" width="440" height="420" rx="2"/>
+          </g>
+          {/* Rivet dots */}
+          {[80,220,380,520].map(x => [80,180,280,380,480].map(y => (
+            <circle key={`${x}${y}`} cx={x} cy={y} r="4" fill="#fff" opacity="0.6"/>
+          )))}
+        </svg>
         <div>
           <img src="/logo.png" alt="CS" style={{ width:72, height:72, objectFit:'contain', marginBottom:24, filter:'drop-shadow(0 2px 8px rgba(0,0,0,.2))' }}/>
           <h1 style={{ fontSize:20, fontWeight:800, color:'#fff', lineHeight:1.3, marginBottom:8, whiteSpace:'nowrap' }}>
