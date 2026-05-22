@@ -1,5 +1,6 @@
 [build]
-buildCommand = "cd server && npm install && cd ../client && npm install && npm run build"
+builder = "dockerfile"
+dockerfilePath = "Dockerfile"
 
 [deploy]
 startCommand = "node server/app.js"
