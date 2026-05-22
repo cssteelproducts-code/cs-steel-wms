@@ -1,0 +1,56 @@
+/* CS Steel — Red & White theme */
+:root {
+  --bg:        #ffffff;
+  --surface:   #ffffff;
+  --accent:    #CC0000;
+  --accent2:   #aa0000;
+  --accent-lt: #fff0f0;
+  --text:      #1a1a1a;
+  --muted:     #6b7280;
+  --border:    #f0d0d0;
+  --sidebar:   #CC0000;
+  --sidebar2:  #aa0000;
+  --sidebar-t: #ffffff;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background:  var(--bg);
+  color:       var(--text);
+  font-family: 'Noto Sans Thai', 'Noto Sans', sans-serif;
+  font-size:   15px;
+  line-height: 1.5;
+}
+
+button {
+  cursor:        pointer;
+  border:        none;
+  border-radius: 6px;
+  padding:       8px 16px;
+  font-family:   inherit;
+  font-size:     14px;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+}
+.btn-primary:hover { background: var(--accent2); }
+
+input, select, textarea {
+  background:    #fff;
+  border:        1px solid #e0b0b0;
+  border-radius: 8px;
+  color:         var(--text);
+  padding:       10px 14px;
+  font-family:   inherit;
+  font-size:     14px;
+  width:         100%;
+  transition:    border-color .15s, box-shadow .15s;
+}
+input:focus, select:focus {
+  outline:      none;
+  border-color: var(--accent);
+  box-shadow:   0 0 0 3px rgba(204,0,0,.1);
+}
