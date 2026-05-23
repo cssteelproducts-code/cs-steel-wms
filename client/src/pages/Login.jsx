@@ -236,12 +236,70 @@ export default function Login() {
       </div>
 
       {/* ── RIGHT — Login form ── */}
-      <div className="login-right" style={{ flex:1, background:'#f4f6f9', display:'flex', alignItems:'center', justifyContent:'center', padding:32 }}>
+      <div className="login-right" style={{ flex:1, background:'#f4f6f9', display:'flex', alignItems:'center', justifyContent:'center', padding:32, position:'relative', overflow:'hidden' }}>
+
+        {/* Steel structure background */}
+        <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:.045, pointerEvents:'none' }} viewBox="0 0 600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
+          <g stroke="#CC0000" strokeWidth="1.5" fill="none">
+            {[0,1,2,3,4,5,6,7,8].map(i => (
+              <line key={`h${i}`} x1="0" y1={500 + i*50} x2="600" y2={500 + i*50}/>
+            ))}
+            {[-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6].map(i => (
+              <line key={`v${i}`} x1={300 + i*50} y1="500" x2={300 + i*200} y2="900"/>
+            ))}
+          </g>
+          <g stroke="#CC0000" strokeWidth="2.5" fill="none">
+            {[80, 220, 380, 520].map(x => (
+              <g key={x}>
+                <line x1={x} y1="0" x2={x} y2="500"/>
+                <line x1={x-14} y1="0" x2={x+14} y2="0"/>
+                <line x1={x-14} y1="100" x2={x+14} y2="100"/>
+                <line x1={x-14} y1="200" x2={x+14} y2="200"/>
+                <line x1={x-14} y1="300" x2={x+14} y2="300"/>
+                <line x1={x-14} y1="400" x2={x+14} y2="400"/>
+                <line x1={x-14} y1="500" x2={x+14} y2="500"/>
+              </g>
+            ))}
+          </g>
+          <g stroke="#CC0000" strokeWidth="3" fill="none">
+            {[80,180,280,380,480].map(y => (
+              <g key={y}>
+                <line x1="50" y1={y} x2="550" y2={y}/>
+                <line x1="50" y1={y-8} x2="550" y2={y-8}/>
+                <line x1="50" y1={y+8} x2="550" y2={y+8}/>
+              </g>
+            ))}
+          </g>
+          <g stroke="#CC0000" strokeWidth="1.5" fill="none" strokeDasharray="4 3">
+            <line x1="80" y1="80" x2="220" y2="180"/>
+            <line x1="220" y1="80" x2="80" y2="180"/>
+            <line x1="220" y1="180" x2="380" y2="280"/>
+            <line x1="380" y1="180" x2="220" y2="280"/>
+            <line x1="380" y1="80" x2="520" y2="180"/>
+            <line x1="520" y1="80" x2="380" y2="180"/>
+            <line x1="80" y1="280" x2="220" y2="380"/>
+            <line x1="220" y1="280" x2="80" y2="380"/>
+            <line x1="380" y1="280" x2="520" y2="380"/>
+            <line x1="520" y1="280" x2="380" y2="380"/>
+          </g>
+          <g stroke="#CC0000" strokeWidth="1" fill="none" opacity="0.5">
+            <rect x="140" y="40" width="320" height="420" rx="2"/>
+            <line x1="140" y1="40" x2="80" y2="80"/>
+            <line x1="460" y1="40" x2="520" y2="80"/>
+            <line x1="140" y1="460" x2="80" y2="500"/>
+            <line x1="460" y1="460" x2="520" y2="500"/>
+            <rect x="80" y="80" width="440" height="420" rx="2"/>
+          </g>
+          {[80,220,380,520].map(x => [80,180,280,380,480].map(y => (
+            <circle key={`${x}${y}`} cx={x} cy={y} r="4" fill="#CC0000" opacity="0.7"/>
+          )))}
+        </svg>
         <div style={{ width:'100%', maxWidth:400 }}>
 
           {/* Card */}
           <div style={{ background:'#fff', borderRadius:20, padding:'40px 36px', boxShadow:'0 4px 24px rgba(0,0,0,.08)' }}>
             <div style={{ textAlign:'center', marginBottom:32 }}>
+              <img src="/logo.png" alt="CS" style={{ width:64, height:64, objectFit:'contain', marginBottom:16, filter:'drop-shadow(0 2px 8px rgba(204,0,0,.25))' }}/>
               <h2 style={{ fontSize:20, fontWeight:700, color:'#1f2937', marginBottom:4 }}>เข้าสู่ระบบ</h2>
               <p style={{ fontSize:13, color:'#9ca3af' }}>
                 ยินดีต้อนรับ · <span style={{ fontSize:12 }}>ကြိုဆိုပါသည်</span>
