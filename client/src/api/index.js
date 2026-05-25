@@ -35,15 +35,18 @@ export const authApi = {
 
 // ==================== Trucks ====================
 export const trucksApi = {
-  getAll:          ()        => api.get('/trucks').then(r => r.data),
-  getById:         (id)      => api.get(`/trucks/${id}`).then(r => r.data),
-  search:          (q)       => api.get('/trucks/search', { params: { q } }).then(r => r.data),
-  checkin:         (payload) => api.post('/trucks/checkin', payload).then(r => r.data),
-  datastation:     (data)    => api.post('/trucks/datastation', data).then(r => r.data),
-  checkout:        (data)    => api.post('/trucks/checkout', data).then(r => r.data),
-  stationExit:     (data)    => api.post('/trucks/station-exit', data).then(r => r.data),
-  getStations:     (truckId) => api.get(`/trucks/stations/${truckId}`).then(r => r.data),
-  getCompleted:    (from, to)=> api.get('/trucks', { params: { from, to } }).then(r => r.data),
+  getAll:          ()          => api.get('/trucks').then(r => r.data),
+  getById:         (id)        => api.get(`/trucks/${id}`).then(r => r.data),
+  search:          (q)         => api.get('/trucks/search', { params: { q } }).then(r => r.data),
+  checkin:         (payload)   => api.post('/trucks/checkin', payload).then(r => r.data),
+  datastation:     (data)      => api.post('/trucks/datastation', data).then(r => r.data),
+  checkout:        (data)      => api.post('/trucks/checkout', data).then(r => r.data),
+  stationExit:     (data)      => api.post('/trucks/station-exit', data).then(r => r.data),
+  getStations:     (truckId)   => api.get(`/trucks/stations/${truckId}`).then(r => r.data),
+  addStation:      (data)      => api.post('/trucks/station-add', data).then(r => r.data),
+  recordEntry:     (stationId) => api.post('/trucks/station-entry', { stationId }).then(r => r.data),
+  recordExitById:  (stationId) => api.post('/trucks/station-exit-by-id', { stationId }).then(r => r.data),
+  getCompleted:    (from, to)  => api.get('/trucks', { params: { from, to } }).then(r => r.data),
 };
 
 // ==================== Dashboard ====================
@@ -58,6 +61,8 @@ export const trackingApi = {
   getVehicles:   ()     => api.get('/tracking/vehicles').then(r => r.data),
   updateVehicle: (data) => api.post('/tracking/update', data).then(r => r.data),
   getGps:        ()     => api.get('/tracking/gps').then(r => r.data),
+  getGpsEta:     ()     => api.get('/tracking/gps-eta').then(r => r.data),
+  saveWhMap:     (map)  => api.post('/tracking/wh-map', map).then(r => r.data),
 };
 
 // ==================== Utils/Config ====================

@@ -266,22 +266,29 @@ router.post('/station-exit-by-id', async (req, res) => {
   }
 });
 
-// POST /api/trucks/station-add  (เพิ่มจุดขนถ่ายให้รถ)
+// POST /api/trucks/station-add  (เพิ่มจุดขนถ่ายให้รถ ไม่ auto-set entry time)
 router.post('/station-add', async (req, res) => {
   try {
     const { truckId, stationName } = req.body;
     if (!truckId || !stationName) return res.json({ success: false, message: 'ระบุ truckId และ stationName' });
-    const now  = new Date();
-    const time = formatTime(now);
-    const sid  = 'STN-' + Date.now() + '-' + uuidv4().slice(0, 6).toUpperCase();
-    const lp   = await query('SELECT [LicensePlate] FROM dbo.Trucks WHERE [ID]=@id', { id: truckId });
+    const now = new Date();
+    const sid = 'STN-' + Date.now() + '-' + uuidv4().slice(0, 6).toUpperCase();
+    const truckRows = await query('SELECT [LicensePlate],[Status],[DataStationTime] FROM dbo.Trucks WHERE [ID]=@id', { id: truckId });
+    const lp = truckRows.length ? (truckRows[0].LicensePlate || '') : '';
     await execute(
       `INSERT INTO dbo.LoadingStations
          ([ID],[TruckID],[StationName],[EntryTime],[ExitTime],[DurationMinutes],[EntryTimestamp],[ExitTimestamp],[LicensePlate])
-       VALUES (@id,@tid,@sn,@et,N'',NULL,@ets,NULL,@lp)`,
-      { id: sid, tid: truckId, sn: stationName, et: time, ets: now.toISOString(), lp: lp.length ? (lp[0].LicensePlate || '') : '' }
+       VALUES (@id,@tid,@sn,N'',N'',NULL,NULL,NULL,@lp)`,
+      { id: sid, tid: truckId, sn: stationName, lp }
     );
-    return res.json({ success: true, stationId: sid, entryTime: time });
+    // อัพเดท truck status ถ้ายังไม่ได้บันทึก DataStation
+    if (truckRows.length && !(truckRows[0].DataStationTime || '').toString().trim()) {
+      await execute(
+        "UPDATE dbo.Trucks SET [DataStationTime]=@t,[Status]=N'กำลังไปขึ้นสินค้า' WHERE [ID]=@id",
+        { t: formatTime(now), id: truckId }
+      );
+    }
+    return res.json({ success: true, stationId: sid });
   } catch (e) {
     return res.json({ success: false, message: e.message });
   }

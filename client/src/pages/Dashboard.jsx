@@ -104,10 +104,12 @@ export default function Dashboard() {
   });
   const { data: trucksData } = useQuery({ queryKey:['trucks'], queryFn: trucksApi.getAll });
 
-  const trucks    = trucksData?.trucks || [];
-  const atStation = trucks.filter(t => t.status === 'กำลังดำเนินการ');
-  const history   = searched && dateFrom
-    ? trucks.filter(t => {
+  const activeTrucks    = trucksData?.active    || [];
+  const completedTrucks = trucksData?.completed || [];
+  const allTrucks       = [...activeTrucks, ...completedTrucks];
+  const atStation       = activeTrucks;
+  const history         = searched && dateFrom
+    ? allTrucks.filter(t => {
         const d = t.date || t.checkinDate || '';
         return d >= dateFrom && d <= (dateTo || dateFrom);
       })

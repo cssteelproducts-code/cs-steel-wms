@@ -56,8 +56,8 @@ export default function Loading() {
 
   const today  = todayStr();
 
-  // trucks currently at station
-  const atStation = (trucksData?.trucks || []).filter(t => t.status === 'กำลังดำเนินการ');
+  // trucks currently active (checked in, not yet checked out)
+  const atStation = (trucksData?.active || []);
   const filtered  = searched
     ? atStation.filter(t => t.licensePlate?.toLowerCase().includes(searched.toLowerCase()))
     : atStation;

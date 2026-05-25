@@ -3,24 +3,25 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { authApi } from '../api';
 import {
   Truck, LogIn, FileText, Database, Network, LogOut,
-  BarChart2, Clock, Building2, Users, Menu,
+  BarChart2, Clock, Building2, Users, Menu, Navigation,
 } from 'lucide-react';
 
 const NAV = [
-  { path: '/checkin',     label: 'รับรถเข้า',       icon: LogIn     },
-  { path: '/loading',     label: 'Pick',            icon: FileText  },
-  { path: '/datastation', label: 'สถานีขึ้นสินค้า', icon: Network   },
-  { path: '/checkout',    label: 'บันทึกออก',       icon: LogOut    },
-  { path: '/warehouse',   label: 'คลังสำเร็จรูป',   icon: Building2 },
-  { path: '/delivery',    label: 'จัดส่ง',          icon: Truck     },
-  { path: '/dashboard',   label: 'Dashboard',       icon: BarChart2 },
-  { path: '/stdmonitor',  label: 'ติดตาม STD',      icon: Clock     },
-  { path: '/data',        label: 'Data',            icon: Database  },
-  { path: '/users',       label: 'จัดการผู้ใช้',    icon: Users     },
+  { path: '/checkin',     label: 'รับรถ',      icon: LogIn      },
+  { path: '/loading',     label: 'Pick',       icon: FileText   },
+  { path: '/datastation', label: 'สถานี',      icon: Network    },
+  { path: '/checkout',    label: 'บันทึกออก',  icon: LogOut     },
+  { path: '/eta',         label: 'ETA',        icon: Navigation },
+  { path: '/warehouse',   label: 'คลัง',       icon: Building2  },
+  { path: '/delivery',    label: 'จัดส่ง',     icon: Truck      },
+  { path: '/dashboard',   label: 'Dashboard',  icon: BarChart2  },
+  { path: '/stdmonitor',  label: 'STD',        icon: Clock      },
+  { path: '/data',        label: 'Data',       icon: Database   },
+  { path: '/users',       label: 'ผู้ใช้',     icon: Users      },
 ];
 
 export default function Layout() {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(typeof window !== 'undefined' ? window.innerWidth > 640 : true);
   const loc = useLocation();
   const nav = useNavigate();
 
@@ -41,46 +42,45 @@ export default function Layout() {
 
       {/* ── Sidebar ── */}
       <aside style={{
-        width: open ? 200 : 0, minWidth: open ? 200 : 0,
+        width: open ? 160 : 0, minWidth: open ? 160 : 0,
         background: 'var(--sidebar)',
         overflow: 'hidden', transition: 'width .2s, min-width .2s',
         display: 'flex', flexDirection: 'column', flexShrink: 0,
         boxShadow: '2px 0 8px rgba(0,0,0,.15)',
       }}>
         {/* Header */}
-        <div style={{ padding:'16px 14px 14px', borderBottom:'1px solid rgba(255,255,255,.2)' }}>
-          <div style={{ display:'flex', alignItems:'center', gap:10, marginBottom:12 }}>
-            <img src="/logo.png" alt="CS" style={{ width:38, height:38, objectFit:'contain', flexShrink:0, filter:'drop-shadow(0 1px 6px rgba(0,0,0,.25))' }}/>
+        <div style={{ padding:'12px 12px 10px', borderBottom:'1px solid rgba(255,255,255,.2)' }}>
+          <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+            <img src="/logo.png" alt="CS" style={{ width:30, height:30, objectFit:'contain', flexShrink:0, filter:'drop-shadow(0 1px 4px rgba(0,0,0,.25))' }}/>
             <div>
-              <div style={{ fontSize:12, fontWeight:700, color:'#fff', lineHeight:1.2 }}>CS.Smart</div>
-              <div style={{ fontSize:10, color:'rgba(255,255,255,.75)', lineHeight:1.3 }}>Warehouse &amp; Transport</div>
+              <div style={{ fontSize:11, fontWeight:700, color:'#fff', lineHeight:1.2 }}>CS.Smart</div>
+              <div style={{ fontSize:9, color:'rgba(255,255,255,.7)', lineHeight:1.3 }}>Warehouse&amp;Transport</div>
             </div>
           </div>
-
         </div>
 
         {/* Nav */}
-        <nav style={{ flex:1, overflowY:'auto', padding:'6px 0' }}>
+        <nav style={{ flex:1, overflowY:'auto', padding:'4px 0' }}>
           {NAV.map(({ path, label, icon: Icon }) => {
             const active = isActive(path);
             return (
               <Link key={path} to={path} style={{
-                display:'flex', alignItems:'center', gap:10, padding:'10px 16px',
-                textDecoration:'none', fontSize:13,
+                display:'flex', alignItems:'center', gap:8, padding:'9px 12px',
+                textDecoration:'none', fontSize:12,
                 background: active ? 'rgba(0,0,0,.25)' : 'transparent',
                 color: '#fff',
                 borderLeft: `3px solid ${active ? '#fff' : 'transparent'}`,
                 opacity: active ? 1 : 0.85,
-                transition: 'background .15s, opacity .15s',
+                transition: 'background .15s',
               }}>
-                <Icon size={15} strokeWidth={active ? 2.2 : 1.8}/>
+                <Icon size={14} strokeWidth={active ? 2.2 : 1.8}/>
                 <span style={{ fontWeight: active ? 700 : 400 }}>{label}</span>
               </Link>
             );
           })}
         </nav>
 
-        <div style={{ padding:'10px 14px', fontSize:10, color:'rgba(255,255,255,.45)', borderTop:'1px solid rgba(255,255,255,.15)' }}>
+        <div style={{ padding:'8px 12px', fontSize:9, color:'rgba(255,255,255,.4)', borderTop:'1px solid rgba(255,255,255,.15)' }}>
           v1.0.0 · CS Steel 2026
         </div>
       </aside>

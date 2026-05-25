@@ -37,19 +37,20 @@ export default function Checkout() {
   const [completedOpen, setCompletedOpen] = useState(true);
 
   const { data } = useQuery({ queryKey:['trucks'], queryFn: trucksApi.getAll });
-  const allTrucks = data?.trucks || [];
+  const activeTrucks    = data?.active    || [];
+  const completedTrucks = data?.completed || [];
 
   const found = searched
-    ? allTrucks.find(t =>
+    ? activeTrucks.find(t =>
         t.licensePlate?.toLowerCase() === searched.toLowerCase() ||
         t.licensePlate?.toLowerCase().includes(searched.toLowerCase())
       )
     : null;
 
-  const completedToday = allTrucks.filter(t => t.status === 'ดำเนินการเสร็จสิ้น');
+  const completedToday = completedTrucks;
 
   const checkout = useMutation({
-    mutationFn: () => trucksApi.checkout({ truckId: found.truckId, checkoutTime, netWeight: parseFloat(netWeight) || 0 }),
+    mutationFn: () => trucksApi.checkout({ truckId: found.id, checkoutTime, netWeight: parseFloat(netWeight) || 0 }),
     onSuccess: (res) => {
       if (res.success) {
         setMsg({ text:`บันทึกสำเร็จ — ${found.licensePlate} ออก ${checkoutTime}`, ok:true });

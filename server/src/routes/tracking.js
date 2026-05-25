@@ -85,6 +85,82 @@ router.get('/gps', async (req, res) => {
   }
 });
 
+// ── DTC helper functions ──
+function normalizeDtcResponse(raw) {
+  if (!raw) return [];
+  if (Array.isArray(raw)) return raw.map(normalizeDtcVehicle);
+  if (Array.isArray(raw.vehicle_list)) return raw.vehicle_list.map(normalizeDtcVehicle);
+  if (Array.isArray(raw.result?.vehicle_list)) return raw.result.vehicle_list.map(normalizeDtcVehicle);
+  if (Array.isArray(raw.data)) return raw.data.map(normalizeDtcVehicle);
+  return [];
+}
+
+function normalizeDtcVehicle(v) {
+  const plate = String(v.license_plate_no || v.PlateNo || v.plate_no || v.device_name || v.DeviceName || v.name || '').trim();
+  const speed  = parseFloat(v.speed || v.Speed || 0);
+  const engineOn = v.acc_status === 1 || v.acc_status === '1' || v.engine_status === 'ON';
+  return {
+    vehicleId:   String(v.gps_id || v.vehicle_id || v.VehicleID || v.id || plate),
+    licensePlate: plate,
+    vehicleType:  String(v.vehicle_type || v.VehicleType || v.group_name || v.GroupName || ''),
+    lat:   parseFloat(v.lat || v.Lat || 0),
+    lon:   parseFloat(v.lon || v.lng || v.Lng || v.Lon || 0),
+    speed,
+    engineOn,
+    currentZone: [v.province_name || v.ProvinceName || '', v.district_name || v.DistrictName || ''].filter(Boolean).join(' '),
+    status: String(v.vehicle_status || v.Status || (speed > 3 ? 'Run' : 'Stop')),
+    updatedAt: String(v.last_receive_datetime || v.LastUpdate || v.datetime || v.UpdatedAt || ''),
+    remark: String(v.driver_name || v.DriverName || ''),
+  };
+}
+
+function haversineKm(lat1, lon1, lat2, lon2) {
+  const R = 6371, toRad = x => x * Math.PI / 180;
+  const dLat = toRad(lat2 - lat1), dLon = toRad(lon2 - lon1);
+  const a = Math.sin(dLat/2)**2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon/2)**2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// GET /api/tracking/gps-eta  (DTC GPS + ETA calculation)
+router.get('/gps-eta', async (req, res) => {
+  try {
+    const ra = await getRoleAccess();
+    if (!ra.eta?.includes(req.user.role))
+      return res.json({ success: false, message: 'ไม่มีสิทธิ์', code: 'FORBIDDEN' });
+
+    const apiToken = process.env.DTC_API_TOKEN;
+    const [warehouseRows, mapRows, dtcRaw] = await Promise.all([
+      query('SELECT * FROM dbo.WarehouseList ORDER BY [SortOrder]').catch(() => []),
+      query("SELECT [Value] FROM dbo.AppConfig WHERE [Key]=N'VEHICLE_WH_MAP'").catch(() => []),
+      apiToken ? _fetchDtcVehicles(apiToken) : Promise.resolve(null),
+    ]);
+
+    let vehWhMap = {};
+    if (mapRows.length && mapRows[0].Value) {
+      try { vehWhMap = JSON.parse(mapRows[0].Value); } catch {}
+    }
+
+    const dtcVehicles = normalizeDtcResponse(dtcRaw);
+    const warehouses  = warehouseRows;
+
+    const vehicles = dtcVehicles.map(v => {
+      const whId = vehWhMap[v.licensePlate] || vehWhMap[v.vehicleId] || null;
+      const wh   = whId ? warehouses.find(w => String(w.WarehouseID) === String(whId)) : null;
+      let etaMinutes = null, distanceKm = null;
+      if (wh && v.lat && v.lon && wh.Lat && wh.Lng) {
+        distanceKm = Math.round(haversineKm(v.lat, v.lon, parseFloat(wh.Lat), parseFloat(wh.Lng)) * 10) / 10;
+        const spd  = v.speed > 10 ? v.speed : 60;
+        etaMinutes = Math.round((distanceKm / spd) * 60);
+      }
+      return { ...v, warehouseId: whId, warehouseName: wh?.Name || '', etaMinutes, distanceKm };
+    });
+
+    return res.json({ success: true, vehicles, warehouses, hasDtc: !!apiToken });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
+
 function _fetchDtcVehicles(apiToken) {
   return new Promise((resolve, reject) => {
     const body = JSON.stringify({ api_token_key: apiToken, gps_list: [] });
