@@ -10,8 +10,8 @@ router.get('/tasks', async (req, res) => {
     let sql = 'SELECT * FROM dbo.TransferTasks WHERE 1=1';
     const inputs = {};
     if (req.query.status) { sql += ' AND [Status]=@st'; inputs.st = req.query.status; }
-    if (req.query.date)   { sql += ' AND CAST([RequestedAt] AS DATE)=@dt'; inputs.dt = req.query.date; }
-    sql += ' ORDER BY [RequestedAt] DESC';
+    if (req.query.date)   { sql += ' AND CAST([CreatedAt] AS DATE)=@dt'; inputs.dt = req.query.date; }
+    sql += ' ORDER BY [CreatedAt] DESC';
     const rows = await query(sql, inputs);
     return res.json({ success: true, tasks: rows.map(rowToTask) });
   } catch (e) { return res.json({ success: false, message: e.message }); }
@@ -32,7 +32,7 @@ router.post('/tasks/add', async (req, res) => {
     const now = new Date().toISOString();
     await execute(
       `INSERT INTO dbo.TransferTasks ([TaskID],[FromLocationID],[ToLocationID],[SkuCode],[SkuName],
-       [Quantity],[Unit],[Status],[Priority],[AssignedVehicle],[RequestedBy],[RequestedAt],[Remark])
+       [Quantity],[Unit],[Status],[Priority],[AssignedVehicle],[RequestedBy],[CreatedAt],[Remark])
        VALUES (@id,@from,@to,@sku,@nm,@qty,@un,N'รอดำเนินการ',@pri,@veh,@rb,@ra,@rm)`,
       { id: taskId, from: p.fromLocationId || '', to: p.toLocationId || '',
         sku: p.skuCode || '', nm: p.skuName || '',
@@ -167,11 +167,126 @@ function rowToTask(r) {
     priority:       parseInt(r.Priority)         || 2,
     assignedVehicle:r.AssignedVehicle|| '',
     requestedBy:    r.RequestedBy    || '',
-    requestedAt:    r.RequestedAt    || '',
+    createdAt:      r.CreatedAt    || '',
     startedAt:      r.StartedAt      || '',
     completedAt:    r.CompletedAt    || '',
     remark:         r.Remark         || '',
   };
 }
+
+// GET /api/transfer/monitor?date=
+router.get('/monitor', async (req, res) => {
+  try {
+    const date  = (req.query.date || '').toString();
+    let sql     = 'SELECT * FROM dbo.TransferTasks WHERE 1=1';
+    const inputs = {};
+    if (date) { sql += ' AND ([CreatedAt] LIKE @pat OR [StartedAt] LIKE @pat OR [CompletedAt] LIKE @pat)'; inputs.pat = date + '%'; }
+    sql += ' ORDER BY [CreatedAt] DESC';
+    const rows  = await query(sql, inputs);
+    const tasks = rows.map(rowToTask);
+    return res.json({
+      success: true,
+      activeTasks:    tasks.filter(t => ['รอมอบหมาย','กำลังดำเนินการ'].includes(t.status)),
+      completedTasks: tasks.filter(t => t.status === 'สำเร็จ'),
+      cancelledTasks: tasks.filter(t => t.status === 'ยกเลิก'),
+    });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/transfer/drivers
+router.get('/drivers', async (req, res) => {
+  try {
+    const rows = await query("SELECT [Value] FROM dbo.AppConfig WHERE [Key]=N'TRANSFER_DRIVERS'").catch(() => []);
+    let drivers = [];
+    if (rows.length && rows[0].Value) {
+      try { drivers = JSON.parse(rows[0].Value); } catch {}
+    }
+    return res.json({ success: true, drivers });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// POST /api/transfer/drivers/save
+router.post('/drivers/save', async (req, res) => {
+  try {
+    const { drivers } = req.body;
+    const val  = JSON.stringify(Array.isArray(drivers) ? drivers : []);
+    const rows = await query("SELECT [Key] FROM dbo.AppConfig WHERE [Key]=N'TRANSFER_DRIVERS'").catch(() => []);
+    if (rows.length) {
+      await execute("UPDATE dbo.AppConfig SET [Value]=@v,[UpdatedAt]=@ua WHERE [Key]=N'TRANSFER_DRIVERS'",
+        { v: val, ua: new Date().toISOString() });
+    } else {
+      await execute("INSERT INTO dbo.AppConfig ([Key],[Value],[UpdatedAt]) VALUES (N'TRANSFER_DRIVERS',@v,@ua)",
+        { v: val, ua: new Date().toISOString() });
+    }
+    return res.json({ success: true, message: 'บันทึก drivers แล้ว' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// POST /api/transfer/station-log
+router.post('/station-log', async (req, res) => {
+  try {
+    const { taskId, stationName, entryTime, exitTime, note } = req.body;
+    if (!taskId) return res.json({ success: false, message: 'ระบุ taskId' });
+    const rows = await query('SELECT [StationLogs] FROM dbo.TransferTasks WHERE [TaskID]=@id', { id: taskId });
+    if (!rows.length) return res.json({ success: false, message: 'ไม่พบ task' });
+    let logs = [];
+    try { logs = JSON.parse(rows[0].StationLogs || '[]'); } catch {}
+    logs.push({ stationName, entryTime, exitTime, note, ts: new Date().toISOString() });
+    await execute('UPDATE dbo.TransferTasks SET [StationLogs]=@sl WHERE [TaskID]=@id',
+      { sl: JSON.stringify(logs), id: taskId });
+    return res.json({ success: true, message: 'บันทึก log แล้ว' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// POST /api/transfer/vehicles/status
+router.post('/vehicles/status', async (req, res) => {
+  try {
+    const { vehicleId, status } = req.body;
+    if (!vehicleId || !status) return res.json({ success: false, message: 'ระบุ vehicleId และ status' });
+    await execute('UPDATE dbo.TransferVehicles SET [Status]=@st WHERE [VehicleID]=@id',
+      { st: status, id: vehicleId });
+    return res.json({ success: true, message: 'อัปเดต status แล้ว' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/transfer/settings
+router.get('/settings', async (req, res) => {
+  try {
+    const rows = await query("SELECT [Value] FROM dbo.AppConfig WHERE [Key]=N'TRANSFER_SETTINGS'").catch(() => []);
+    let settings = {};
+    if (rows.length && rows[0].Value) {
+      try { settings = JSON.parse(rows[0].Value); } catch {}
+    }
+    return res.json({ success: true, settings });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// POST /api/transfer/settings
+router.post('/settings', async (req, res) => {
+  try {
+    const val  = JSON.stringify(req.body || {});
+    const rows = await query("SELECT [Key] FROM dbo.AppConfig WHERE [Key]=N'TRANSFER_SETTINGS'").catch(() => []);
+    if (rows.length) {
+      await execute("UPDATE dbo.AppConfig SET [Value]=@v,[UpdatedAt]=@ua WHERE [Key]=N'TRANSFER_SETTINGS'",
+        { v: val, ua: new Date().toISOString() });
+    } else {
+      await execute("INSERT INTO dbo.AppConfig ([Key],[Value],[UpdatedAt]) VALUES (N'TRANSFER_SETTINGS',@v,@ua)",
+        { v: val, ua: new Date().toISOString() });
+    }
+    return res.json({ success: true, message: 'บันทึก settings แล้ว' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/transfer/report?month=MM/YYYY
+router.get('/report', async (req, res) => {
+  try {
+    const month = (req.query.month || '').toString();
+    let sql = 'SELECT * FROM dbo.TransferTasks WHERE 1=1';
+    const inputs = {};
+    if (month) { sql += ' AND ([CreatedAt] LIKE @pat OR [CompletedAt] LIKE @pat)'; inputs.pat = '%' + month + '%'; }
+    const rows = await query(sql, inputs);
+    return res.json({ success: true, tasks: rows.map(rowToTask) });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
 
 module.exports = router;

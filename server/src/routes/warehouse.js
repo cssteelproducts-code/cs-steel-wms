@@ -226,4 +226,96 @@ router.get('/stock-count', async (req, res) => {
   } catch (e) { return res.json({ success: false, message: e.message }); }
 });
 
+// GET /api/warehouse/master  (locations + skus ในครั้งเดียว)
+router.get('/master', async (req, res) => {
+  try {
+    const [locRows, skuRows] = await Promise.all([
+      query('SELECT * FROM dbo.WarehouseLocations ORDER BY [LocationID]').catch(() => []),
+      query('SELECT * FROM dbo.TypeSKUMaster ORDER BY [TypeSKU]').catch(() => []),
+    ]);
+    return res.json({ success: true, locations: locRows, skus: skuRows });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/warehouse/audit/progress  (นับ % progress ของ audit)
+router.get('/audit/progress', async (req, res) => {
+  try {
+    const [locRows, auditRows] = await Promise.all([
+      query("SELECT COUNT(*) AS total FROM dbo.WarehouseLocations WHERE [Status]=N'active'").catch(() => []),
+      query("SELECT COUNT(DISTINCT [LocationID]) AS done FROM dbo.AuditLogs WHERE CONVERT(date,[AuditDate])=CONVERT(date,GETDATE())").catch(() => []),
+    ]);
+    const total = locRows.length ? (parseInt(locRows[0].total) || 0) : 0;
+    const done  = auditRows.length ? (parseInt(auditRows[0].done) || 0) : 0;
+    return res.json({ success: true, total, done, pct: total > 0 ? Math.round(done / total * 100) : 0 });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/warehouse/audit/report?month=MM/YYYY
+router.get('/audit/report', async (req, res) => {
+  try {
+    const month = (req.query.month || '').toString();
+    let sql = 'SELECT * FROM dbo.AuditLogs WHERE 1=1';
+    const inputs = {};
+    if (month) { sql += ' AND [AuditDate] LIKE @pat'; inputs.pat = '%/' + month + '%'; }
+    sql += ' ORDER BY [AuditDate] DESC';
+    const rows = await query(sql, inputs);
+    return res.json({ success: true, logs: rows });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/warehouse/stock  (SystemStock — stub)
+router.get('/stock', async (req, res) => {
+  return res.json({ success: true, items: [], message: 'SystemStock ยังไม่ implement' });
+});
+
+// GET /api/warehouse/stock/import-dates  (stub)
+router.get('/stock/import-dates', async (req, res) => {
+  return res.json({ success: true, dates: [] });
+});
+
+// POST /api/warehouse/stock/import  (stub)
+router.post('/stock/import', async (req, res) => {
+  return res.json({ success: false, message: 'SystemStock import ยังไม่ implement' });
+});
+
+// POST /api/warehouse/stock/clear  (stub)
+router.post('/stock/clear', async (req, res) => {
+  return res.json({ success: false, message: 'SystemStock clear ยังไม่ implement' });
+});
+
+// GET /api/warehouse/count?date=
+router.get('/count', async (req, res) => {
+  return res.json({ success: true, entries: [], message: 'StockCount ยังไม่ implement' });
+});
+
+// POST /api/warehouse/count/add  (stub)
+router.post('/count/add', async (req, res) => {
+  return res.json({ success: false, message: 'StockCount add ยังไม่ implement' });
+});
+
+// POST /api/warehouse/count/delete  (stub)
+router.post('/count/delete', async (req, res) => {
+  return res.json({ success: false, message: 'StockCount delete ยังไม่ implement' });
+});
+
+// POST /api/warehouse/count/process  (stub)
+router.post('/count/process', async (req, res) => {
+  return res.json({ success: false, message: 'StockCount process ยังไม่ implement' });
+});
+
+// GET /api/warehouse/count/result
+router.get('/count/result', async (req, res) => {
+  return res.json({ success: true, rows: [] });
+});
+
+// POST /api/warehouse/count/result/update  (stub)
+router.post('/count/result/update', async (req, res) => {
+  return res.json({ success: false, message: 'StockCount result update ยังไม่ implement' });
+});
+
+// POST /api/warehouse/count/result/delete  (stub)
+router.post('/count/result/delete', async (req, res) => {
+  return res.json({ success: false, message: 'StockCount result delete ยังไม่ implement' });
+});
+
 module.exports = router;

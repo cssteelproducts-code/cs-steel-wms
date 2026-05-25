@@ -91,4 +91,28 @@ router.post('/calculate', async (req, res) => {
   } catch (e) { return res.json({ success: false, message: e.message }); }
 });
 
+// POST /api/transportcost/geocode  (geocodeZone — ค้นหา lat/lng จาก zone name ผ่าน Nominatim)
+router.post('/geocode', async (req, res) => {
+  try {
+    const { zone } = req.body;
+    if (!zone) return res.json({ success: false, message: 'ระบุ zone' });
+    const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(zone + ' Thailand')}&limit=1`;
+    const https  = require('https');
+    const result = await new Promise((resolve) => {
+      https.get(url, { headers: { 'User-Agent': 'CSSteelWMS/1.0' } }, r => {
+        let data = '';
+        r.on('data', c => data += c);
+        r.on('end', () => {
+          try {
+            const j = JSON.parse(data);
+            if (j.length) resolve({ success: true, lat: parseFloat(j[0].lat), lng: parseFloat(j[0].lon), display: j[0].display_name });
+            else resolve({ success: false, message: 'ไม่พบตำแหน่ง: ' + zone });
+          } catch { resolve({ success: false, message: 'Geocode error' }); }
+        });
+      }).on('error', e => resolve({ success: false, message: e.message }));
+    });
+    return res.json(result);
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
 module.exports = router;

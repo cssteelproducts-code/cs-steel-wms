@@ -17,6 +17,7 @@ const warehouseRouter     = require('./src/routes/warehouse');
 const transferRouter      = require('./src/routes/transfer');
 const transportCostRouter = require('./src/routes/transportcost');
 const plansRouter         = require('./src/routes/plans');
+const callRouter          = require('./src/routes/call');
 
 const app  = express();
 const PORT = process.env.PORT || 3001;
@@ -30,6 +31,7 @@ app.use(cors({
 app.use(express.json());
 
 // ── API routes ──
+app.use('/api/call',          callRouter);  // GAS-style universal dispatcher
 app.use('/api/auth',          authRouter);
 app.use('/api/trucks',        trucksRouter);
 app.use('/api/dashboard',     dashboardRouter);
@@ -45,12 +47,23 @@ app.use('/api/transfer',      transferRouter);
 app.use('/api/transportcost', transportCostRouter);
 app.use('/api/plans',         plansRouter);
 
-app.get('/api/health', (_, res) => res.json({ ok: true, ts: new Date().toISOString() }));
+app.get('/api/health', (_, res) => res.json({ ok: true, ts: new Date().toISOString(), db: process.env.MSSQL_DB || '-', server: process.env.MSSQL_SERVER || '-' }));
 
-// ── Static files (production) ──
-// serve React build และ SPA fallback
+// ── Static files ──
+// ถ้ามี public/index.html (GAS-migrated) ให้ serve ก่อน, ไม่งั้น fallback React build
+const PUBLIC_DIR  = path.join(__dirname, 'public');
 const CLIENT_DIST = path.join(__dirname, '../client/dist');
-app.use(express.static(CLIENT_DIST));
-app.get('*', (_, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
+
+const fs = require('fs');
+if (fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
+  app.use(express.static(PUBLIC_DIR));
+  app.get('*', (req, res) => {
+    if (req.path.startsWith('/api/')) return res.status(404).json({ error: 'Not found' });
+    res.sendFile(path.join(PUBLIC_DIR, 'index.html'));
+  });
+} else {
+  app.use(express.static(CLIENT_DIST));
+  app.get('*', (_, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
+}
 
 app.listen(PORT, '0.0.0.0', () => console.log(`CS Steel WMS running on port ${PORT} [${IS_PROD ? 'production' : 'development'}]`));

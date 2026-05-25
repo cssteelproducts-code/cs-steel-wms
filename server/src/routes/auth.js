@@ -6,8 +6,25 @@ const jwt     = require('jsonwebtoken');
 const crypto  = require('crypto');
 const { query, execute } = require('../db/connection');
 const { authMiddleware, requireRole } = require('../middleware/auth');
+const { getRoleAccess, DEFAULT_ROLE_ACCESS } = require('./utils');
 
 const ROLES_ADMIN = ['manager', 'dept_head'];
+
+async function _getAppConfigForLogin() {
+  const [raRows, mmRows] = await Promise.all([
+    query("SELECT [Value] FROM dbo.AppConfig WHERE [Key]=N'ROLE_ACCESS'").catch(() => []),
+    query("SELECT [Value] FROM dbo.AppConfig WHERE [Key]=N'MENU_MAINTENANCE'").catch(() => []),
+  ]);
+  const parseVal = (rows, def) => {
+    if (!rows.length || !rows[0].Value) return def;
+    try { return JSON.parse(rows[0].Value); } catch { return def; }
+  };
+  return {
+    roleAccess:      parseVal(raRows,  DEFAULT_ROLE_ACCESS),
+    menuMaintenance: parseVal(mmRows,  {}),
+    customRoles:     [],
+  };
+}
 
 function hashPassword(password) {
   const salt = process.env.PASSWORD_SALT || '';
@@ -39,12 +56,32 @@ router.post('/login', async (req, res) => {
       process.env.JWT_SECRET,
       { expiresIn: `${sessionHours}h` }
     );
+    const [cfg, dbRows] = await Promise.all([
+      _getAppConfigForLogin().catch(() => ({ roleAccess: DEFAULT_ROLE_ACCESS, menuMaintenance: {}, customRoles: [] })),
+      query(
+        "SELECT CAST(SUM(CAST(size AS BIGINT))*8.0/1024 AS DECIMAL(10,2)) AS total_mb," +
+        "CAST(SUM(CAST(FILEPROPERTY(name,N'SpaceUsed') AS BIGINT))*8.0/1024 AS DECIMAL(10,2)) AS used_mb " +
+        "FROM sys.database_files WHERE type_desc=N'ROWS'"
+      ).catch(() => []),
+    ]);
+    const _totalMb = dbRows.length ? parseFloat(dbRows[0].total_mb) : 0;
+    const _usedMb  = dbRows.length ? parseFloat(dbRows[0].used_mb)  : 0;
     return res.json({
-      success:      true,
+      success:         true,
       token,
-      role:         user.Role,
-      displayName:  user.DisplayName,
+      role:            user.Role,
+      displayName:     user.DisplayName,
       sessionHours,
+      roleAccess:      cfg.roleAccess,
+      menuMaintenance: cfg.menuMaintenance,
+      customRoles:     cfg.customRoles,
+      dbInfo: {
+        db:      process.env.MSSQL_DB     || '',
+        server:  process.env.MSSQL_SERVER || '',
+        totalMb: _totalMb,
+        usedMb:  _usedMb,
+        freeMb:  Math.max(0, _totalMb - _usedMb),
+      },
     });
   } catch (e) {
     return res.json({ success: false, message: 'เกิดข้อผิดพลาด: ' + e.message });
@@ -133,6 +170,40 @@ router.post('/change-password', authMiddleware, async (req, res) => {
   } catch (e) {
     return res.json({ success: false, message: e.message });
   }
+});
+
+// POST /api/auth/admin-reset-password  (admin reset โดยไม่ต้องยืนยัน displayName)
+router.post('/admin-reset-password', authMiddleware, requireRole(ROLES_ADMIN), async (req, res) => {
+  try {
+    const { targetUsername, newPassword } = req.body;
+    if (!targetUsername || !newPassword)
+      return res.json({ success: false, message: 'กรอกข้อมูลให้ครบ' });
+    if (newPassword.length < 4)
+      return res.json({ success: false, message: 'รหัสผ่านต้องมีอย่างน้อย 4 ตัวอักษร' });
+    const hashed = hashPassword(newPassword);
+    await execute(
+      "UPDATE dbo.Users SET [Password]=@pw,[Token]=N'',[TokenExpiry]=N'' WHERE [Username]=@u",
+      { pw: hashed, u: targetUsername }
+    );
+    return res.json({ success: true, message: 'รีเซ็ตรหัสผ่านสำเร็จ' });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
+
+// POST /api/auth/roles/add  (เพิ่ม custom role — ยังไม่ implement เต็ม ให้ return success)
+router.post('/roles/add', authMiddleware, requireRole(ROLES_ADMIN), async (req, res) => {
+  return res.json({ success: true, message: 'Custom roles ไม่รองรับใน Node.js version นี้' });
+});
+
+// POST /api/auth/roles/edit
+router.post('/roles/edit', authMiddleware, requireRole(ROLES_ADMIN), async (req, res) => {
+  return res.json({ success: true, message: 'Custom roles ไม่รองรับใน Node.js version นี้' });
+});
+
+// POST /api/auth/roles/delete
+router.post('/roles/delete', authMiddleware, requireRole(ROLES_ADMIN), async (req, res) => {
+  return res.json({ success: true, message: 'Custom roles ไม่รองรับใน Node.js version นี้' });
 });
 
 // POST /api/auth/reset-password  (self reset ด้วย displayName verify)

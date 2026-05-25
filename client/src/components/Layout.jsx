@@ -13,7 +13,7 @@ const NAV = [
   { path: '/checkout',    label: 'บันทึกออก',       icon: LogOut    },
   { path: '/warehouse',   label: 'คลังสำเร็จรูป',   icon: Building2 },
   { path: '/delivery',    label: 'จัดส่ง',          icon: Truck     },
-  { path: '/dashboard',   label: 'เมนู',            icon: BarChart2 },
+  { path: '/dashboard',   label: 'Dashboard',       icon: BarChart2 },
   { path: '/stdmonitor',  label: 'ติดตาม STD',      icon: Clock     },
   { path: '/data',        label: 'Data',            icon: Database  },
   { path: '/users',       label: 'จัดการผู้ใช้',    icon: Users     },

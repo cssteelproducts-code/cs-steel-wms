@@ -308,4 +308,123 @@ function clarkeWright(orders, vehicles, depot) {
   return routes;
 }
 
+// GET /api/plans/confirmed-today  (แผนที่ confirm แล้วสำหรับวันนี้)
+router.get('/confirmed-today', async (req, res) => {
+  try {
+    const today = getTodayStr();
+    const rows  = await query(
+      "SELECT * FROM dbo.DeliveryPlans WHERE [PlanDate]=@d AND [Status] IN (N'ยืนยัน',N'กำลังส่ง')",
+      { d: today }
+    );
+    const plans = rows.map(r => {
+      const p = rowToPlan(r);
+      const customerNames = [...new Set(
+        (p.orders || []).map(o => (o.arname || o.customerName || '').trim()).filter(Boolean)
+      )];
+      return { ...p, orderCount: p.orders.length, customerNames };
+    });
+    return res.json({ success: true, plans, planDate: today });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/plans/station-queues  (คิวที่สถานี — เหมือน GAS: activePlanned + exitedAt cross-check)
+router.get('/station-queues', async (req, res) => {
+  try {
+    const today = getTodayStr();
+
+    const [truckRows, stationRows] = await Promise.all([
+      query(
+        "SELECT [ID],[LicensePlate],[VehicleType],[Arname],[Arcode],[PlannedStations],[CheckoutTime],[Status] FROM dbo.Trucks WHERE [Date]=@d AND [Status]<>N'ดำเนินการเสร็จสิ้น' AND ISNULL([PlannedStations],N'')<>N''",
+        { d: today }
+      ),
+      query(
+        "SELECT [TruckID],[StationName],[ExitTime] FROM dbo.LoadingStations WHERE [TruckID] IN (SELECT [ID] FROM dbo.Trucks WHERE [Date]=@d)",
+        { d: today }
+      ),
+    ]);
+
+    // build exitedAt set: truckId|stationName → true
+    const exitedAt = {};
+    stationRows.forEach(sr => {
+      const exit = (sr.ExitTime || '').toString().trim();
+      if (exit) exitedAt[(sr.TruckID || '') + '|' + (sr.StationName || '')] = true;
+    });
+
+    // stationQueues: stationName → { count, trucks[] }
+    const stationQueues = {};
+    truckRows.forEach(r => {
+      const tid    = (r.ID || '').toString();
+      const lp     = (r.LicensePlate || '').toString();
+      const vt     = (r.VehicleType  || '').toString();
+      const arn    = (r.Arname       || '').toString();
+      const arc    = (r.Arcode       || '').toString();
+      const planned = (r.PlannedStations || '').toString().split(',').map(s => s.trim()).filter(Boolean);
+      planned.forEach(stName => {
+        if (!exitedAt[tid + '|' + stName]) {
+          if (!stationQueues[stName]) stationQueues[stName] = { stationName: stName, count: 0, trucks: [] };
+          stationQueues[stName].count++;
+          stationQueues[stName].trucks.push({ truckId: tid, licensePlate: lp, vehicleType: vt, arname: arn, arcode: arc });
+        }
+      });
+    });
+
+    return res.json({ success: true, queues: Object.values(stationQueues).sort((a, b) => b.count - a.count) });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/plans/vrp-settings
+router.get('/vrp-settings', async (req, res) => {
+  try {
+    const rows = await query("SELECT [Value] FROM dbo.AppConfig WHERE [Key]=N'VRP_SETTINGS'").catch(() => []);
+    let settings = {};
+    if (rows.length && rows[0].Value) {
+      try { settings = JSON.parse(rows[0].Value); } catch {}
+    }
+    return res.json({ success: true, settings });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// POST /api/plans/vrp-settings
+router.post('/vrp-settings', async (req, res) => {
+  try {
+    const { settings } = req.body;
+    const val  = JSON.stringify(settings || {});
+    const rows = await query("SELECT [Key] FROM dbo.AppConfig WHERE [Key]=N'VRP_SETTINGS'").catch(() => []);
+    if (rows.length) {
+      await execute("UPDATE dbo.AppConfig SET [Value]=@v,[UpdatedAt]=@ua WHERE [Key]=N'VRP_SETTINGS'",
+        { v: val, ua: new Date().toISOString() });
+    } else {
+      await execute("INSERT INTO dbo.AppConfig ([Key],[Value],[UpdatedAt]) VALUES (N'VRP_SETTINGS',@v,@ua)",
+        { v: val, ua: new Date().toISOString() });
+    }
+    return res.json({ success: true, message: 'บันทึก VRP Settings สำเร็จ' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/plans/kpi-report?month=MM/YYYY
+router.get('/kpi-report', async (req, res) => {
+  try {
+    const month = (req.query.month || '').toString();
+    let sql = "SELECT p.*,o.[DeliveryZone],o.[ProductType],o.[WeightKg] FROM dbo.DeliveryPlans p LEFT JOIN dbo.DeliveryOrders o ON o.[PlanID]=p.[PlanID] WHERE p.[Status]=N'ส่งแล้ว'";
+    const inputs = {};
+    if (month) { sql += ' AND p.[PlanDate] LIKE @pat'; inputs.pat = '%/' + month; }
+    const rows = await query(sql, inputs);
+    return res.json({ success: true, rows });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// GET /api/plans/:planId/export
+router.get('/:planId/export', async (req, res) => {
+  try {
+    const rows = await query('SELECT * FROM dbo.DeliveryPlans WHERE [PlanID]=@pid', { pid: req.params.planId });
+    if (!rows.length) return res.json({ success: false, message: 'ไม่พบ Plan' });
+    const plan    = rowToPlan(rows[0]);
+    const orderRows = await query(
+      'SELECT * FROM dbo.DeliveryOrders WHERE [PlanID]=@pid',
+      { pid: req.params.planId }
+    ).catch(() => []);
+    return res.json({ success: true, plan, orders: orderRows });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
 module.exports = router;

@@ -113,4 +113,74 @@ function _fetchDtcVehicles(apiToken) {
   });
 }
 
+// GET /api/tracking/all  (ETA module — vehicles + warehouses + vehWhMap ในคำขอเดียว)
+router.get('/all', async (req, res) => {
+  try {
+    const [vehicles, warehouses, whMapRows] = await Promise.all([
+      query('SELECT * FROM dbo.VehicleETA ORDER BY [UpdatedAt] DESC').catch(() => []),
+      query('SELECT * FROM dbo.WarehouseList ORDER BY [SortOrder]').catch(() => []),
+      query("SELECT [Value] FROM dbo.AppConfig WHERE [Key]=N'VEHICLE_WH_MAP'").catch(() => []),
+    ]);
+    let vehWhMap = {};
+    if (whMapRows.length && whMapRows[0].Value) {
+      try { vehWhMap = JSON.parse(whMapRows[0].Value); } catch {}
+    }
+    return res.json({ success: true, vehicles, warehouses, vehWhMap });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
+
+// POST /api/tracking/vehicle-delete
+router.post('/vehicle-delete', async (req, res) => {
+  try {
+    const { licensePlate } = req.body;
+    if (!licensePlate) return res.json({ success: false, message: 'ระบุ licensePlate' });
+    await execute('DELETE FROM dbo.VehicleETA WHERE [LicensePlate]=@lp',
+      { lp: licensePlate.toUpperCase() });
+    return res.json({ success: true, message: 'ลบรถแล้ว' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// POST /api/tracking/warehouses-save
+router.post('/warehouses-save', async (req, res) => {
+  try {
+    const { warehouses } = req.body;
+    if (!Array.isArray(warehouses)) return res.json({ success: false, message: 'warehouses must be array' });
+    for (const wh of warehouses) {
+      if (!wh.id) continue;
+      const exists = await query('SELECT [WarehouseID] FROM dbo.WarehouseList WHERE [WarehouseID]=@id', { id: wh.id }).catch(() => []);
+      if (exists.length) {
+        await execute(
+          'UPDATE dbo.WarehouseList SET [Name]=@n,[Address]=@a,[Lat]=@lat,[Lng]=@lng,[SortOrder]=@so WHERE [WarehouseID]=@id',
+          { n: wh.name || '', a: wh.address || '', lat: wh.lat || null, lng: wh.lng || null, so: wh.sortOrder || 0, id: wh.id }
+        );
+      } else {
+        await execute(
+          'INSERT INTO dbo.WarehouseList ([WarehouseID],[Name],[Address],[Lat],[Lng],[SortOrder]) VALUES (@id,@n,@a,@lat,@lng,@so)',
+          { id: wh.id, n: wh.name || '', a: wh.address || '', lat: wh.lat || null, lng: wh.lng || null, so: wh.sortOrder || 0 }
+        );
+      }
+    }
+    return res.json({ success: true, message: 'บันทึก warehouses แล้ว' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
+// POST /api/tracking/wh-map
+router.post('/wh-map', async (req, res) => {
+  try {
+    const map = req.body;
+    const val = JSON.stringify(map || {});
+    const rows = await query("SELECT [Key] FROM dbo.AppConfig WHERE [Key]=N'VEHICLE_WH_MAP'").catch(() => []);
+    if (rows.length) {
+      await execute("UPDATE dbo.AppConfig SET [Value]=@v,[UpdatedAt]=@ua WHERE [Key]=N'VEHICLE_WH_MAP'",
+        { v: val, ua: new Date().toISOString() });
+    } else {
+      await execute("INSERT INTO dbo.AppConfig ([Key],[Value],[UpdatedAt]) VALUES (N'VEHICLE_WH_MAP',@v,@ua)",
+        { v: val, ua: new Date().toISOString() });
+    }
+    return res.json({ success: true, message: 'บันทึก WH map แล้ว' });
+  } catch (e) { return res.json({ success: false, message: e.message }); }
+});
+
 module.exports = router;

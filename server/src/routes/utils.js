@@ -17,10 +17,34 @@ const DEFAULT_ROLE_ACCESS = {
   dashboard:   ['manager','dept_head','section_chief','unit_chief','checker_officer','warehouse_admin','sales','weight_officer'],
   stdmonitor:  ['manager','dept_head','section_chief'],
   delivery:    ROLES_ALL,
+  delivery_fleet:  ROLES_ALL,
+  delivery_orders: ROLES_ALL,
+  delivery_plan:   ROLES_ALL,
+  delivery_trip:   ['manager','dept_head','section_chief'],
+  delivery_cost:   ['manager','dept_head','section_chief'],
   trip:        ['manager','dept_head','section_chief'],
   customers:   ['manager','dept_head','section_chief'],
   data:        ROLES_ALL,
+  data_items:     ROLES_ALL,
+  data_customers: ROLES_ALL,
   warehouse:   ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_forecast:  ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_internal:  ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_audit:     ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_locations: ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_skus:      ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_report:    ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_stockcount:        ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_stockcount_count:  ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_stockcount_import: ['manager','dept_head','section_chief'],
+  warehouse_stockcount_report: ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_transfer:          ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_transfer_monitor:  ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_transfer_tasks:    ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_transfer_report:   ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_transfer_vehicles: ['manager','dept_head','section_chief','unit_chief'],
+  warehouse_transfer_settings: ['manager','dept_head','section_chief'],
+  warehouse_transfer_move:     ROLES_ALL,
   users:       ['manager','dept_head'],
 };
 
@@ -197,6 +221,11 @@ router.get('/db-info', requireRole(ROLES_ADMIN), async (req, res) => {
   } catch (e) {
     return res.json({ success: false, message: e.message });
   }
+});
+
+// POST /api/utils/ai-chat  (askAIChat — stub หรือเชื่อม Claude API ทีหลัง)
+router.post('/ai-chat', async (req, res) => {
+  return res.json({ success: false, message: 'AI Chat ยังไม่รองรับใน Node.js version นี้' });
 });
 
 module.exports = router;
