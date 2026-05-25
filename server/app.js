@@ -49,6 +49,14 @@ app.use('/api/plans',         plansRouter);
 
 app.get('/api/health', (_, res) => res.json({ ok: true, ts: new Date().toISOString(), db: process.env.MSSQL_DB || '-', server: process.env.MSSQL_SERVER || '-' }));
 
+app.get('/api/myip', async (_, res) => {
+  try {
+    const r = await fetch('https://api.ipify.org?format=json');
+    const d = await r.json();
+    return res.json({ outboundIp: d.ip });
+  } catch (e) { return res.json({ error: e.message }); }
+});
+
 // ── Static files ──
 // ถ้ามี public/index.html (GAS-migrated) ให้ serve ก่อน, ไม่งั้น fallback React build
 const PUBLIC_DIR  = path.join(__dirname, 'public');
