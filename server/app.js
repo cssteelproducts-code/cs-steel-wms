@@ -2,6 +2,7 @@ require('dotenv').config();
 const express    = require('express');
 const cors       = require('cors');
 const path       = require('path');
+const { startSSHTunnel } = require('./src/db/tunnel');
 
 const authRouter          = require('./src/routes/auth');
 const trucksRouter        = require('./src/routes/trucks');
@@ -74,4 +75,14 @@ if (fs.existsSync(path.join(PUBLIC_DIR, 'index.html'))) {
   app.get('*', (_, res) => res.sendFile(path.join(CLIENT_DIST, 'index.html')));
 }
 
-app.listen(PORT, '0.0.0.0', () => console.log(`CS Steel WMS running on port ${PORT} [${IS_PROD ? 'production' : 'development'}]`));
+async function main() {
+  if (process.env.SSH_TUNNEL_HOST) {
+    try {
+      await startSSHTunnel();
+    } catch (e) {
+      console.error('[tunnel] failed to start SSH tunnel:', e.message);
+    }
+  }
+  app.listen(PORT, '0.0.0.0', () => console.log(`CS Steel WMS running on port ${PORT} [${IS_PROD ? 'production' : 'development'}]`));
+}
+main();

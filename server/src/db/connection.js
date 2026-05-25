@@ -1,20 +1,26 @@
 // แทน MigrationDB.gs: _getConn(), _withConn(), _sqlQuery(), _sqlExecute()
 const sql = require('mssql');
+const { getTunnelPort } = require('./tunnel');
 
-const config = {
-  server:   process.env.MSSQL_SERVER,
-  port:     parseInt(process.env.MSSQL_PORT || '1433'),
-  database: process.env.MSSQL_DB,
-  user:     process.env.MSSQL_USER,
-  password: process.env.MSSQL_PASS,
-  options:  { encrypt: false, trustServerCertificate: true },
-  pool:     { max: 10, min: 0, idleTimeoutMillis: 30000 },
-};
+function _buildConfig() {
+  const tunnelPort = getTunnelPort();
+  return {
+    server:   tunnelPort ? '127.0.0.1' : process.env.MSSQL_SERVER,
+    port:     tunnelPort ?? parseInt(process.env.MSSQL_PORT || '1433'),
+    database: process.env.MSSQL_DB,
+    user:     process.env.MSSQL_USER,
+    password: process.env.MSSQL_PASS,
+    options:  { encrypt: false, trustServerCertificate: true },
+    pool:     { max: 10, min: 0, idleTimeoutMillis: 30000 },
+    connectionTimeout: 15000,
+    requestTimeout:    30000,
+  };
+}
 
 let _pool = null;
 
 async function getPool() {
-  if (!_pool) _pool = await sql.connect(config);
+  if (!_pool) _pool = await sql.connect(_buildConfig());
   return _pool;
 }
 

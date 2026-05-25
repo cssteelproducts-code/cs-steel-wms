@@ -13,6 +13,7 @@
     "express": "^4.19.2",
     "jsonwebtoken": "^9.0.2",
     "mssql": "^11.0.1",
+    "tunnel-ssh": "^2.3.0",
     "node-cache": "^5.1.2",
     "uuid": "^10.0.0"
   },
