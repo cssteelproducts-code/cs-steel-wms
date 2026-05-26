@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Settings, Plus, Edit, Warehouse, Users, Truck, Package, Save, X } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Settings, Plus, Edit, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -18,6 +18,57 @@ export default function Master() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
+  // Location search state
+  const [locQuery, setLocQuery] = useState('');
+  const [locResults, setLocResults] = useState([]);
+  const [locSearching, setLocSearching] = useState(false);
+  const locTimer = useRef(null);
+
+  const searchLocation = async (q) => {
+    if (!q.trim()) { setLocResults([]); return; }
+    setLocSearching(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`,
+        { headers: { 'Accept-Language': 'th,en' } }
+      );
+      const data = await res.json();
+      setLocResults(data);
+    } catch { setLocResults([]); }
+    finally { setLocSearching(false); }
+  };
+
+  const handleLocInput = (v) => {
+    setLocQuery(v);
+    clearTimeout(locTimer.current);
+    locTimer.current = setTimeout(() => searchLocation(v), 600);
+  };
+
+  const pickLocation = (item) => {
+    setForm(p => ({
+      ...p,
+      GpsLat: parseFloat(item.lat).toFixed(6),
+      GpsLng: parseFloat(item.lon).toFixed(6),
+      Location: item.display_name,
+    }));
+    setLocQuery(item.display_name);
+    setLocResults([]);
+  };
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) { toast.error('Browser ไม่รองรับ Geolocation'); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        setForm(p => ({
+          ...p,
+          GpsLat: pos.coords.latitude.toFixed(6),
+          GpsLng: pos.coords.longitude.toFixed(6),
+        }));
+        toast.success('ดึงตำแหน่งปัจจุบันสำเร็จ');
+      },
+      () => toast.error('ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาต Location')
+    );
+  };
 
   useEffect(() => { fetchData(tab); }, [tab]);
   useEffect(() => { fetchWarehouses(); }, []);
@@ -184,9 +235,58 @@ export default function Master() {
         <div className="grid grid-cols-2 gap-3">
           <div><label className="label">รหัสคลัง *</label><input value={form.WarehouseCode || form.warehouseCode || ''} onChange={e => setForm(p => ({ ...p, WarehouseCode: e.target.value }))} className="input-field" placeholder="W001" /></div>
           <div><label className="label">ชื่อคลัง *</label><input value={form.WarehouseName || form.warehouseName || ''} onChange={e => setForm(p => ({ ...p, WarehouseName: e.target.value }))} className="input-field" placeholder="คลังสินค้า 1" /></div>
-          <div className="col-span-2"><label className="label">ที่ตั้ง</label><input value={form.Location || form.location || ''} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} className="input-field" placeholder="ที่อยู่คลัง" /></div>
-          <div><label className="label">GPS Latitude</label><input type="number" step="0.000001" value={form.GpsLat || form.gpsLat || ''} onChange={e => setForm(p => ({ ...p, GpsLat: e.target.value }))} className="input-field" placeholder="13.756331" /></div>
-          <div><label className="label">GPS Longitude</label><input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => setForm(p => ({ ...p, GpsLng: e.target.value }))} className="input-field" placeholder="100.501765" /></div>
+
+          {/* Location search via OpenStreetMap Nominatim */}
+          <div className="col-span-2">
+            <label className="label">ค้นหาที่ตั้งจากแผนที่</label>
+            <div className="relative">
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-steel-400" />
+              <input
+                value={locQuery}
+                onChange={e => handleLocInput(e.target.value)}
+                className="input-field pl-9 pr-10"
+                placeholder="พิมพ์ชื่อสถานที่ เช่น นิคมอุตสาหกรรมบางปู..."
+              />
+              {locSearching && (
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+              )}
+            </div>
+            {locResults.length > 0 && (
+              <div className="mt-1 bg-steel-700 border border-steel-600 rounded-lg overflow-hidden shadow-xl max-h-44 overflow-y-auto">
+                {locResults.map((item, i) => (
+                  <button key={i} type="button" onClick={() => pickLocation(item)}
+                    className="w-full text-left px-3 py-2.5 text-sm text-steel-200 hover:bg-steel-600 hover:text-white border-b border-steel-600/50 last:border-0 flex items-start gap-2">
+                    <MapPin size={13} className="text-red-400 mt-0.5 flex-shrink-0" />
+                    <span className="line-clamp-2">{item.display_name}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+            <button type="button" onClick={useCurrentLocation}
+              className="mt-2 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+              <Navigation size={12} />ใช้ตำแหน่งปัจจุบัน (GPS)
+            </button>
+          </div>
+
+          <div className="col-span-2"><label className="label">ที่ตั้ง / ที่อยู่</label><input value={form.Location || form.location || ''} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} className="input-field" placeholder="จะกรอกอัตโนมัติเมื่อเลือกจากแผนที่" /></div>
+
+          <div>
+            <label className="label">GPS Latitude</label>
+            <input type="number" step="0.000001" value={form.GpsLat || form.gpsLat || ''} onChange={e => setForm(p => ({ ...p, GpsLat: e.target.value }))} className="input-field" placeholder="13.756331" />
+          </div>
+          <div>
+            <label className="label">GPS Longitude</label>
+            <input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => setForm(p => ({ ...p, GpsLng: e.target.value }))} className="input-field" placeholder="100.501765" />
+          </div>
+
+          {form.GpsLat && form.GpsLng && (
+            <div className="col-span-2">
+              <a href={`https://www.google.com/maps?q=${form.GpsLat},${form.GpsLng}`} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+                <MapPin size={12} />ดูตำแหน่งบน Google Maps
+              </a>
+            </div>
+          )}
         </div>
       </>);
       case 'customers': return (<>

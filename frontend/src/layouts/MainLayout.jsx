@@ -14,7 +14,8 @@ const pageTitles = {
   '/eta': 'ETA / ติดตาม GPS รถ',
   '/users': 'จัดการผู้ใช้งาน',
   '/master': 'ข้อมูลหลัก',
-  '/reports': 'รายงาน'
+  '/reports': 'รายงาน',
+  '/profile': 'โปรไฟล์ / เปลี่ยนรหัสผ่าน'
 };
 
 export default function MainLayout() {

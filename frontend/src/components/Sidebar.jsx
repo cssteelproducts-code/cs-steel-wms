@@ -4,6 +4,7 @@ import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, ChevronRight, Activity
 } from 'lucide-react';
+import logoImg from '../assets/Logo.png';
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard', code: 'DASHBOARD' },
@@ -45,14 +46,13 @@ export default function Sidebar({ isOpen, onClose }) {
       `}>
         {/* Logo */}
         <div className="flex items-center justify-between p-4 border-b border-steel-700 h-16">
-          <div className="flex items-center gap-3">
-            <div className="w-9 h-9 bg-blue-600 rounded-lg flex items-center justify-center font-bold text-white text-sm">
-              CS
+          <div className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white flex items-center justify-center">
+              <img src={logoImg} alt="CS" className="w-8 h-8 object-contain" />
             </div>
             <div>
               <div className="text-white font-semibold text-sm leading-tight">CS.Smart WMS</div>
-              <div className="text-steel-500 text-[10px] leading-tight">Warehouse&Transport</div>
-              <div className="text-steel-400 text-xs">{user?.warehouseName || 'คลังสินค้า'}</div>
+              <div className="text-steel-400 text-[10px] leading-tight">คลังสินค้าและจัดส่ง</div>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden text-steel-400 hover:text-white p-1">
