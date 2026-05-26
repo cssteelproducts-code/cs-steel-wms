@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir -p \"C:\\\\Users\\\\l3o.oK\\\\OneDrive\\\\Desktop\\\\CS.Smart\\\\backend\\\\src\\\\config\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\l3o.oK\\\\OneDrive\\\\Desktop\\\\CS.Smart\\\\backend\\\\src\\\\middleware\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\l3o.oK\\\\OneDrive\\\\Desktop\\\\CS.Smart\\\\backend\\\\src\\\\routes\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\l3o.oK\\\\OneDrive\\\\Desktop\\\\CS.Smart\\\\backend\\\\src\\\\db\")",
+      "Bash(mkdir -p \"C:\\\\Users\\\\l3o.oK\\\\OneDrive\\\\Desktop\\\\CS.Smart\\\\backend\\\\public\")",
+      "Bash(npm install *)",
+      "Bash(npm run *)",
+      "Bash(xcopy *)",
+      "Bash(node -e \"require\\('dotenv'\\).config\\(\\); const {connectDB} = require\\('./src/config/db'\\); connectDB\\(\\).then\\(\\(\\) => { console.log\\('DB OK'\\); process.exit\\(0\\); }\\).catch\\(e => { console.log\\('DB Error:', e.message\\); process.exit\\(1\\); }\\)\")",
+      "Bash(node src/db/init.js)",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:3000/api/health)",
+      "Bash(curl -s -X POST http://localhost:3000/api/auth/login -H \"Content-Type: application/json\" -d '{\"username\":\"admin\",\"password\":\"Admin@1234\"}')",
+      "Bash(python3 -m json.tool)",
+      "Bash(railway --version)",
+      "Bash(git --version)",
+      "Bash(gh --version)",
+      "Bash(railway whoami *)",
+      "Bash(railway status *)",
+      "Bash(railway list *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git commit *)"
+    ]
+  }
+}

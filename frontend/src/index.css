@@ -1,0 +1,74 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * { font-family: 'Sarabun', system-ui, sans-serif; }
+  body {
+    @apply bg-steel-900 text-white antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { @apply bg-steel-800; }
+  ::-webkit-scrollbar-thumb { @apply bg-steel-600 rounded-full; }
+  ::-webkit-scrollbar-thumb:hover { @apply bg-steel-500; }
+}
+
+@layer components {
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-medium px-4 py-2.5 rounded-lg transition-colors duration-150 flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-secondary {
+    @apply bg-steel-700 hover:bg-steel-600 active:bg-steel-500 text-white font-medium px-4 py-2.5 rounded-lg transition-colors duration-150 flex items-center gap-2 justify-center;
+  }
+  .btn-success {
+    @apply bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-lg transition-colors duration-150 flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-danger {
+    @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2.5 rounded-lg transition-colors duration-150 flex items-center gap-2 justify-center;
+  }
+  .btn-warning {
+    @apply bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2.5 rounded-lg transition-colors duration-150 flex items-center gap-2 justify-center;
+  }
+  .card {
+    @apply bg-steel-800 border border-steel-700 rounded-xl p-4;
+  }
+  .card-header {
+    @apply text-lg font-semibold text-white mb-4;
+  }
+  .input-field {
+    @apply w-full bg-steel-700 border border-steel-600 text-white placeholder-steel-400 rounded-lg px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-150;
+  }
+  .label {
+    @apply block text-sm font-medium text-steel-300 mb-1;
+  }
+  .badge-status {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+  }
+  .table-header {
+    @apply text-xs text-steel-400 uppercase tracking-wider font-medium;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm text-steel-200 whitespace-nowrap;
+  }
+  .page-title {
+    @apply text-2xl font-bold text-white;
+  }
+  .stat-card {
+    @apply card hover:border-blue-500/50 transition-colors cursor-default;
+  }
+  .mobile-btn {
+    @apply w-full py-4 text-lg font-semibold rounded-xl transition-all active:scale-95;
+  }
+}
+
+/* Print styles */
+@media print {
+  .no-print { display: none !important; }
+  body { @apply bg-white text-black; }
+}
+
+/* Mobile optimizations */
+@media (max-width: 640px) {
+  .hide-mobile { display: none !important; }
+}
