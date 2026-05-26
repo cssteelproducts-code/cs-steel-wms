@@ -38,7 +38,7 @@ export default function Layout() {
     path === '/dashboard' ? loc.pathname === '/dashboard' : loc.pathname.startsWith(path);
 
   return (
-    <div style={{ display:'flex', height:'100vh', overflow:'hidden', fontFamily:"'Noto Sans Thai','Noto Sans',sans-serif" }}>
+    <div style={{ display:'flex', height:'100%', overflow:'hidden', fontFamily:"'Noto Sans Thai','Noto Sans',sans-serif" }}>
 
       {/* ── Sidebar ── */}
       <aside style={{
@@ -112,7 +112,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main style={{ height:'calc(100vh - 52px)', overflowY:'auto', background:'#fff' }}>
+        <main style={{ flex:1, overflowY:'auto', background:'#fff', minHeight:0, WebkitOverflowScrolling:'touch' }}>
           <Outlet/>
         </main>
       </div>
