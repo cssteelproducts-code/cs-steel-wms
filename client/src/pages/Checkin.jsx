@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQueryClient } from '@tanstack/react-query';
 import { trucksApi } from '../api';
 import { ArrowLeft, CheckCircle } from 'lucide-react';
 
@@ -51,6 +52,7 @@ function Label({ children }) {
 
 export default function Checkin() {
   const nav = useNavigate();
+  const qc  = useQueryClient();
   const [form, setForm] = useState({
     date: todayStr(),
     checkinTime: nowTime(),
@@ -82,6 +84,8 @@ export default function Checkin() {
       });
       if (!res.success) { setMsg({ text: res.message, ok:false }); return; }
       setMsg({ text:`บันทึกสำเร็จ — ${form.licensePlate} เวลา ${form.checkinTime}`, ok:true });
+      qc.invalidateQueries({ queryKey: ['trucks'] });
+      qc.invalidateQueries({ queryKey: ['dashboard'] });
       setForm(f => ({ ...f, licensePlate:'', arcode:'', arname:'', vehicleType:'', transport:'' }));
     } catch { setMsg({ text:'ไม่สามารถเชื่อมต่อ Server ได้', ok:false }); }
     finally { setLoading(false); }
