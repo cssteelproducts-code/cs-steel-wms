@@ -109,13 +109,13 @@ export default function Loading() {
           ) : (
             <div style={{ display:'flex', flexDirection:'column', gap:0 }}>
               {filtered.map((t, i) => (
-                <div key={t.truckId} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderBottom: i < filtered.length-1 ? '1px solid #f5e0e0' : 'none', background:'#fff' }}>
+                <div key={t.id || i} style={{ display:'flex', justifyContent:'space-between', alignItems:'center', padding:'12px 18px', borderBottom: i < filtered.length-1 ? '1px solid #f5e0e0' : 'none', background:'#fff' }}>
                   <div>
                     <div style={{ fontSize:14, fontWeight:700, color:'#1a1a1a' }}>{t.licensePlate}</div>
                     <div style={{ fontSize:12, color:'#888' }}>{t.vehicleType} · {t.arname || '-'}</div>
                   </div>
                   <span style={{ fontSize:12, background:'#fff0f0', color:'#CC0000', border:'1px solid #f0d0d0', borderRadius:6, padding:'3px 10px' }}>
-                    กำลังดำเนินการ
+                    {t.status || 'กำลังดำเนินการ'}
                   </span>
                 </div>
               ))}
