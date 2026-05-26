@@ -56,18 +56,18 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
-const startServer = async () => {
-  try {
-    await connectDB();
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`\n🚀 CS Steel WMS Server running on port ${PORT}`);
-      console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
-      console.log(`   URL: http://localhost:${PORT}\n`);
-    });
-  } catch (err) {
-    console.error('❌ Failed to start server:', err.message);
+const startServer = () => {
+  app.listen(PORT, '0.0.0.0', () => {
+    console.log(`\n🚀 CS Steel WMS Server running on port ${PORT}`);
+    console.log(`   Environment: ${process.env.NODE_ENV || 'development'}`);
+    console.log(`   URL: http://localhost:${PORT}\n`);
+  });
+
+  // Connect to DB after server is listening so healthcheck doesn't time out
+  connectDB().catch(err => {
+    console.error('❌ Database connection failed:', err.message);
     process.exit(1);
-  }
+  });
 };
 
 startServer();
