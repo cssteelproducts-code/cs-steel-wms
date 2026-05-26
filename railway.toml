@@ -4,8 +4,6 @@ buildCommand = "npm install --prefix backend && npm install --include=dev --pref
 
 [deploy]
 startCommand = "cd backend && npm start"
-healthcheckPath = "/api/health"
-healthcheckTimeout = 30
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
