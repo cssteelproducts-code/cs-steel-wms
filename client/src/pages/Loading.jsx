@@ -56,8 +56,8 @@ export default function Loading() {
 
   const today  = todayStr();
 
-  // trucks currently active (checked in, not yet checked out)
-  const atStation = (trucksData?.active || []);
+  // trucks that have received pick slip (DataStationTime set, not yet checked out)
+  const atStation = (trucksData?.active || []).filter(t => t.dataStationTime);
   const filtered  = searched
     ? atStation.filter(t => t.licensePlate?.toLowerCase().includes(searched.toLowerCase()))
     : atStation;
