@@ -205,7 +205,7 @@ export default function Checkout() {
               {completedToday.length === 0 ? (
                 <div style={{ padding:'20px', textAlign:'center', color:'#bbb', fontSize:13 }}>ยังไม่มีรถที่เสร็จสิ้น</div>
               ) : completedToday.map((t, i) => (
-                <div key={t.truckId} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 16px', borderBottom: i < completedToday.length-1 ? '1px solid #f5f5f5':'none' }}>
+                <div key={t.id} style={{ display:'flex', alignItems:'center', justifyContent:'space-between', padding:'11px 16px', borderBottom: i < completedToday.length-1 ? '1px solid #f5f5f5':'none' }}>
                   <span style={{ fontSize:14, fontWeight:700, color:'#1a1a1a' }}>{t.licensePlate}</span>
                   <div style={{ display:'flex', alignItems:'center', gap:8 }}>
                     {t.checkoutTime && (

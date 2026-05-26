@@ -3,6 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout       from './components/Layout';
 import Login        from './pages/Login';
+import Home        from './pages/Home';
 import Dashboard    from './pages/Dashboard';
 import Checkin      from './pages/Checkin';
 import Checkout     from './pages/Checkout';
@@ -27,7 +28,7 @@ export default function App() {
           <Route path="/login" element={<Login />} />
           <Route element={<ProtectedRoute />}>
             <Route element={<Layout />}>
-              <Route path="/"            element={<Navigate to="/dashboard" replace />} />
+              <Route path="/"            element={<Home />} />
               <Route path="/dashboard"   element={<Dashboard />} />
               <Route path="/checkin"     element={<Checkin />} />
               <Route path="/checkout"    element={<Checkout />} />
