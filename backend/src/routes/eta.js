@@ -68,25 +68,39 @@ router.get('/vehicles', authenticate, async (req, res) => {
       return res.json({ success: true, data: result, source: 'mock' });
     }
 
-    // Real DTC API call
-    const response = await axios.get(`${dtcApiUrl}/vehicles`, {
-      headers: { 'Authorization': `Bearer ${dtcApiKey}`, 'Content-Type': 'application/json' },
-      timeout: 10000
+    // Real DTC API call — endpoint: GET /getlocation?TokenKey=KEY
+    const response = await axios.get(`${dtcApiUrl}/getlocation`, {
+      params: { TokenKey: dtcApiKey },
+      timeout: 15000,
+      httpsAgent: new (require('https').Agent)({ rejectUnauthorized: false }),
+      validateStatus: () => true // don't throw on non-2xx
     });
+
+    // DTC returns HTML "ไม่พบข้อมูล" when no vehicles are online
+    const isJson = typeof response.data === 'object' || (typeof response.data === 'string' && response.data.trim().startsWith('['));
+    if (!isJson || (Array.isArray(response.data) && response.data.length === 0)) {
+      return res.json({ success: true, data: [], source: 'dtc', message: 'ไม่มีข้อมูลรถจาก DTC GPS ขณะนี้' });
+    }
 
     const pool = getPool();
     const warehouses = await pool.request()
       .query('SELECT WarehouseID, WarehouseName, GpsLat, GpsLng FROM WMS_Warehouses WHERE IsActive=1');
 
-    const vehicles = response.data.vehicles || response.data.data || [];
-    const result = vehicles.map(v => {
-      const warehouseId = v.warehouseId;
-      const warehouse = warehouses.recordset.find(w => w.WarehouseID === warehouseId);
-      let distanceKm = null, etaMinutes = null, etaTime = null;
+    // DTC response fields: IMEI, PlateNo/VehicleName, Lat/Lng, Speed, DateTimeGPS, Address, EngineStatus
+    const rawVehicles = Array.isArray(response.data) ? response.data : (response.data.data || []);
+    const result = rawVehicles.map(v => {
+      const lat = parseFloat(v.Lat || v.lat || v.latitude || 0);
+      const lng = parseFloat(v.Lng || v.lng || v.longitude || 0);
+      const speed = parseFloat(v.Speed || v.speed || 0);
 
-      if (warehouse?.GpsLat && warehouse?.GpsLng && v.lat && v.lng) {
-        distanceKm = calculateDistance(v.lat, v.lng, warehouse.GpsLat, warehouse.GpsLng);
-        const avgSpeedKmh = (v.speed > 10 ? v.speed : 60);
+      // Match vehicle to a warehouse by VehicleID or first warehouse as fallback
+      const warehouseId = v.WarehouseID || v.warehouseId || warehouses.recordset[0]?.WarehouseID;
+      const warehouse = warehouses.recordset.find(w => w.WarehouseID === warehouseId) || warehouses.recordset[0];
+
+      let distanceKm = null, etaMinutes = null, etaTime = null;
+      if (warehouse?.GpsLat && warehouse?.GpsLng && lat && lng) {
+        distanceKm = calculateDistance(lat, lng, warehouse.GpsLat, warehouse.GpsLng);
+        const avgSpeedKmh = speed > 10 ? speed : 60;
         etaMinutes = Math.round((distanceKm / avgSpeedKmh) * 60);
         const eta = new Date();
         eta.setMinutes(eta.getMinutes() + etaMinutes);
@@ -94,16 +108,15 @@ router.get('/vehicles', authenticate, async (req, res) => {
       }
 
       return {
-        vehicleId: v.vehicleId || v.id,
-        licensePlate: v.licensePlate || v.plate,
-        driverName: v.driverName || v.driver,
-        lat: v.lat || v.latitude,
-        lng: v.lng || v.longitude,
-        speed: v.speed,
-        status: v.status,
+        vehicleId: v.IMEI || v.VehicleID || v.vehicleId || v.id,
+        licensePlate: v.PlateNo || v.LicensePlate || v.licensePlate || v.plate || '-',
+        driverName: v.DriverName || v.VehicleName || v.driverName || '-',
+        lat, lng, speed,
+        status: v.EngineStatus === 'ON' || speed > 0 ? 'Moving' : 'Stopped',
+        warehouseId: warehouse?.WarehouseID,
         warehouseName: warehouse?.WarehouseName,
-        lastUpdate: v.lastUpdate || v.timestamp,
-        address: v.address,
+        lastUpdate: v.DateTimeGPS || v.DateTime || v.lastUpdate || v.timestamp || new Date().toISOString(),
+        address: v.Address || v.address || '',
         distanceKm: distanceKm?.toFixed(1),
         etaMinutes,
         etaTime
