@@ -6,32 +6,67 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, Lock, User, X, ChevronLeft } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
-// SVG flag components — reliable on all platforms (no emoji font needed)
-const FlagTH = () => (
-  <svg viewBox="0 0 30 20" width="28" height="19" xmlns="http://www.w3.org/2000/svg">
-    <rect width="30" height="20" fill="#A51931"/>
-    <rect y="3.33" width="30" height="3.34" fill="#F4F5F8"/>
-    <rect y="6.67" width="30" height="6.66" fill="#2D2A4A"/>
-    <rect y="13.33" width="30" height="3.34" fill="#F4F5F8"/>
-  </svg>
+// CSS-gradient flag components — works on every browser, no font/emoji dependency
+// Thai flag: 5 horizontal stripes (red 20% / white 13% / blue 34% / white 13% / red 20%)
+const FlagTH = ({ size = 1 }) => (
+  <span style={{
+    display: 'inline-block',
+    width: 34 * size, height: 22 * size,
+    borderRadius: 3 * size,
+    overflow: 'hidden',
+    background: 'linear-gradient(to bottom,#A51931 20%,#F4F5F8 20%,#F4F5F8 33%,#2E3192 33%,#2E3192 67%,#F4F5F8 67%,#F4F5F8 80%,#A51931 80%)',
+    flexShrink: 0,
+  }}/>
 );
-const FlagGB = () => (
-  <svg viewBox="0 0 30 20" width="28" height="19" xmlns="http://www.w3.org/2000/svg">
-    <rect width="30" height="20" fill="#012169"/>
-    <path d="M0,0 L30,20 M30,0 L0,20" stroke="#fff" strokeWidth="4"/>
-    <path d="M0,0 L30,20 M30,0 L0,20" stroke="#C8102E" strokeWidth="2.4"/>
-    <path d="M15,0 V20 M0,10 H30" stroke="#fff" strokeWidth="6"/>
-    <path d="M15,0 V20 M0,10 H30" stroke="#C8102E" strokeWidth="3.6"/>
-  </svg>
+
+// UK flag: blue base + white/red diagonals + white/red cross, using layered box-shadow trick via SVG data URI
+const FlagGB = ({ size = 1 }) => (
+  <span style={{
+    display: 'inline-block', position: 'relative',
+    width: 34 * size, height: 22 * size,
+    borderRadius: 3 * size, overflow: 'hidden', flexShrink: 0,
+  }}>
+    {/* Blue base */}
+    <span style={{ position: 'absolute', inset: 0, background: '#012169' }}/>
+    {/* White diagonals (St Andrew) */}
+    <span style={{
+      position: 'absolute', inset: 0,
+      background: 'linear-gradient(to bottom right,transparent calc(50% - 3px),#fff calc(50% - 3px),#fff calc(50% + 3px),transparent calc(50% + 3px)),' +
+                  'linear-gradient(to bottom left,transparent calc(50% - 3px),#fff calc(50% - 3px),#fff calc(50% + 3px),transparent calc(50% + 3px))',
+    }}/>
+    {/* Red diagonals (St Patrick) */}
+    <span style={{
+      position: 'absolute', inset: 0,
+      background: 'linear-gradient(to bottom right,transparent calc(50% - 2px),#C8102E calc(50% - 2px),#C8102E calc(50% + 2px),transparent calc(50% + 2px)),' +
+                  'linear-gradient(to bottom left,transparent calc(50% - 2px),#C8102E calc(50% - 2px),#C8102E calc(50% + 2px),transparent calc(50% + 2px))',
+    }}/>
+    {/* White cross (St George) */}
+    <span style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '22%', background: '#fff' }}/>
+    <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-50%)', height: '28%', background: '#fff' }}/>
+    {/* Red cross (St George, narrower) */}
+    <span style={{ position: 'absolute', top: 0, bottom: 0, left: '50%', transform: 'translateX(-50%)', width: '13%', background: '#C8102E' }}/>
+    <span style={{ position: 'absolute', left: 0, right: 0, top: '50%', transform: 'translateY(-50%)', height: '16%', background: '#C8102E' }}/>
+  </span>
 );
-const FlagMM = () => (
-  <svg viewBox="0 0 30 20" width="28" height="19" xmlns="http://www.w3.org/2000/svg">
-    <rect width="30" height="6.67" fill="#FECB00"/>
-    <rect y="6.67" width="30" height="6.66" fill="#34B233"/>
-    <rect y="13.33" width="30" height="6.67" fill="#EA2839"/>
-    <polygon points="15,3 16.5,7.5 21,7.5 17.5,10 18.8,14.5 15,12 11.2,14.5 12.5,10 9,7.5 13.5,7.5" fill="white"/>
-  </svg>
+
+// Myanmar flag: 3 horizontal stripes (yellow / green / red) + white star in centre
+const FlagMM = ({ size = 1 }) => (
+  <span style={{
+    display: 'inline-block', position: 'relative',
+    width: 34 * size, height: 22 * size,
+    borderRadius: 3 * size, overflow: 'hidden', flexShrink: 0,
+    background: 'linear-gradient(to bottom,#FECB00 33.33%,#34B233 33.33%,#34B233 66.67%,#EA2839 66.67%)',
+  }}>
+    <span style={{
+      position: 'absolute', top: '50%', left: '50%',
+      transform: 'translate(-50%,-50%)',
+      color: 'white', fontSize: 13 * size, lineHeight: 1,
+      textShadow: '0 0 2px rgba(0,0,0,0.4)',
+      userSelect: 'none',
+    }}>★</span>
+  </span>
 );
+
 const FLAG_ICONS = { th: FlagTH, en: FlagGB, my: FlagMM };
 
 const LANGS = {
@@ -428,19 +463,25 @@ export default function Login() {
       <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(185,28,28,0.06) 0%, transparent 70%)' }}/>
 
-      {/* Language switcher — SVG flag buttons */}
-      <div className="absolute top-4 right-4 flex gap-1.5 z-10">
+      {/* Language switcher — CSS flag buttons */}
+      <div className="absolute top-4 right-4 flex gap-2 z-10">
         {(['th','en','my']).map(l => {
           const FlagIcon = FLAG_ICONS[l];
           return (
-            <button key={l} onClick={() => setLang(l)}
-              className={`rounded-lg flex items-center justify-center transition-all overflow-hidden ${
-                lang === l
-                  ? 'ring-2 ring-red-500 scale-110 shadow-lg opacity-100'
-                  : 'opacity-50 hover:opacity-90 hover:scale-105'
-              }`}
-              style={{ padding: 0, width: 36, height: 24 }}
-              title={l === 'th' ? 'ภาษาไทย' : l === 'en' ? 'English' : 'မြန်မာဘာသာ'}>
+            <button
+              key={l}
+              onClick={() => setLang(l)}
+              title={l === 'th' ? 'ภาษาไทย' : l === 'en' ? 'English' : 'မြန်မာဘာသာ'}
+              style={{
+                background: 'none', border: 'none', padding: 0, cursor: 'pointer',
+                transition: 'all 0.15s',
+                transform: lang === l ? 'scale(1.15)' : 'scale(1)',
+                opacity: lang === l ? 1 : 0.5,
+                outline: lang === l ? '2px solid #ef4444' : 'none',
+                outlineOffset: 2,
+                borderRadius: 4,
+              }}
+            >
               <FlagIcon/>
             </button>
           );
