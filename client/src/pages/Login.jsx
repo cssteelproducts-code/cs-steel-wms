@@ -6,37 +6,26 @@ import { Eye, EyeOff, KeyRound } from 'lucide-react';
 /* ── DB Stats ── */
 function DbStats() {
   const [stats, setStats] = useState(null);
-  const [loading, setLoading] = useState(true);
-
   useEffect(() => {
-    fetch('/api/utils/db-stats')
-      .then(r => r.json())
-      .then(d => { if (d.success) setStats(d); })
-      .catch(() => {})
-      .finally(() => setLoading(false));
+    fetch('/api/utils/db-stats').then(r => r.json()).then(d => { if (d.success) setStats(d); }).catch(() => {});
   }, []);
-
-  const pct = stats?.usedPct ?? 0;
-  const barColor = pct >= 85 ? '#ff6b6b' : pct >= 60 ? '#ffd93d' : '#6bcb77';
-
+  if (!stats) return null;
+  const pct   = stats.usedPct;
+  const color = pct >= 85 ? '#dc2626' : pct >= 60 ? '#d97706' : '#16a34a';
   return (
-    <div style={{ marginTop:20 }}>
-      <div style={{ fontSize:10, color:'rgba(255,255,255,.5)', marginBottom:4 }}>
-        🗄️ {stats?.dbName || 'WMS'} {stats?.server ? `· ${stats.server}` : ''}
+    <div style={{ marginTop:24 }}>
+      <div style={{ display:'flex', justifyContent:'space-between', marginBottom:5 }}>
+        <span style={{ fontSize:11, color:'rgba(255,255,255,.7)' }}>🗄️ {stats.dbName}</span>
+        <span style={{ fontSize:11, color:'rgba(255,255,255,.5)' }}>{stats.server}</span>
       </div>
-      {loading ? (
-        <div style={{ fontSize:11, color:'rgba(255,255,255,.4)' }}>กำลังโหลด...</div>
-      ) : stats ? (
-        <div style={{ fontSize:11, color:'rgba(255,255,255,.7)', lineHeight:1.8 }}>
-          <span>ใช้ไป {stats.usedMB?.toFixed(1)} MB</span>
-          <span style={{ margin:'0 6px', opacity:.4 }}>·</span>
-          <span>คงเหลือ {stats.freeMB?.toFixed(1)} MB</span>
-          <span style={{ margin:'0 6px', opacity:.4 }}>·</span>
-          <span style={{ color:'#fff', fontWeight:700 }}>{stats.usedPct}%</span>
-        </div>
-      ) : (
-        <div style={{ fontSize:11, color:'rgba(255,255,255,.35)' }}>รอการเชื่อมต่อ Database...</div>
-      )}
+      <div style={{ background:'rgba(0,0,0,.2)', borderRadius:4, height:5, overflow:'hidden', marginBottom:5 }}>
+        <div style={{ width:`${pct}%`, height:'100%', background:'rgba(255,255,255,.8)', borderRadius:4, transition:'width .6s' }}/>
+      </div>
+      <div style={{ display:'flex', justifyContent:'space-between', fontSize:10, color:'rgba(255,255,255,.6)' }}>
+        <span>ใช้ {stats.usedMB.toFixed(1)} MB</span>
+        <span style={{ fontWeight:700, color:'#fff' }}>{pct}%</span>
+        <span>เหลือ {stats.freeMB.toFixed(1)} MB</span>
+      </div>
     </div>
   );
 }
@@ -148,80 +137,11 @@ export default function Login() {
 
   return (
     <div style={{ minHeight:'100vh', display:'flex', fontFamily:"'Noto Sans Thai','Noto Sans',sans-serif" }}>
-      <style>{`
-        @media (max-width: 640px) {
-          .login-brand { display: none !important; }
-          .login-right { padding: 24px 16px !important; }
-        }
-      `}</style>
 
       {/* ── LEFT — Brand panel ── */}
-      <div className="login-brand" style={{ flex:1, background:'#CC0000', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'52px 44px', position:'relative', overflow:'hidden' }}>
-
-        {/* 4D Steel Structure SVG */}
-        <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:.13, pointerEvents:'none' }} viewBox="0 0 600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-          {/* Perspective grid floor */}
-          <g stroke="#fff" strokeWidth="1.2" fill="none">
-            {[0,1,2,3,4,5,6,7,8].map(i => (
-              <line key={`h${i}`} x1="0" y1={500 + i*50} x2="600" y2={500 + i*50}/>
-            ))}
-            {[-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6].map(i => (
-              <line key={`v${i}`} x1={300 + i*50} y1="500" x2={300 + i*200} y2="900"/>
-            ))}
-          </g>
-          {/* Vertical I-beams */}
-          <g stroke="#fff" strokeWidth="2" fill="none">
-            {[80, 220, 380, 520].map(x => (
-              <g key={x}>
-                <line x1={x} y1="0" x2={x} y2="500"/>
-                <line x1={x-14} y1="0" x2={x+14} y2="0"/>
-                <line x1={x-14} y1="100" x2={x+14} y2="100"/>
-                <line x1={x-14} y1="200" x2={x+14} y2="200"/>
-                <line x1={x-14} y1="300" x2={x+14} y2="300"/>
-                <line x1={x-14} y1="400" x2={x+14} y2="400"/>
-                <line x1={x-14} y1="500" x2={x+14} y2="500"/>
-              </g>
-            ))}
-          </g>
-          {/* Horizontal beams */}
-          <g stroke="#fff" strokeWidth="2.5" fill="none">
-            {[80, 180, 280, 380, 480].map(y => (
-              <g key={y}>
-                <line x1="50" y1={y} x2="550" y2={y}/>
-                <line x1="50" y1={y-8} x2="550" y2={y-8}/>
-                <line x1="50" y1={y+8} x2="550" y2={y+8}/>
-              </g>
-            ))}
-          </g>
-          {/* Diagonal braces */}
-          <g stroke="#fff" strokeWidth="1.5" fill="none" strokeDasharray="4 3">
-            <line x1="80" y1="80" x2="220" y2="180"/>
-            <line x1="220" y1="80" x2="80" y2="180"/>
-            <line x1="220" y1="180" x2="380" y2="280"/>
-            <line x1="380" y1="180" x2="220" y2="280"/>
-            <line x1="380" y1="80" x2="520" y2="180"/>
-            <line x1="520" y1="80" x2="380" y2="180"/>
-            <line x1="80" y1="280" x2="220" y2="380"/>
-            <line x1="220" y1="280" x2="80" y2="380"/>
-            <line x1="380" y1="280" x2="520" y2="380"/>
-            <line x1="520" y1="280" x2="380" y2="380"/>
-          </g>
-          {/* Depth layer — back frame */}
-          <g stroke="#fff" strokeWidth="1" fill="none" opacity="0.5">
-            <rect x="140" y="40" width="320" height="420" rx="2"/>
-            <line x1="140" y1="40" x2="80" y2="80"/>
-            <line x1="460" y1="40" x2="520" y2="80"/>
-            <line x1="140" y1="460" x2="80" y2="500"/>
-            <line x1="460" y1="460" x2="520" y2="500"/>
-            <rect x="80" y="80" width="440" height="420" rx="2"/>
-          </g>
-          {/* Rivet dots */}
-          {[80,220,380,520].map(x => [80,180,280,380,480].map(y => (
-            <circle key={`${x}${y}`} cx={x} cy={y} r="4" fill="#fff" opacity="0.6"/>
-          )))}
-        </svg>
+      <div style={{ width:380, background:'#CC0000', display:'flex', flexDirection:'column', justifyContent:'space-between', padding:'52px 44px', flexShrink:0 }}>
         <div>
-          <img src="/logo.png" alt="CS" style={{ width:80, height:80, objectFit:'contain', marginBottom:24, filter:'drop-shadow(0 4px 16px rgba(0,0,0,.3)) brightness(1.1)' }}/>
+          <img src="/logo.png" alt="CS" style={{ width:72, height:72, objectFit:'contain', marginBottom:24, filter:'drop-shadow(0 2px 8px rgba(0,0,0,.2))' }}/>
           <h1 style={{ fontSize:20, fontWeight:800, color:'#fff', lineHeight:1.3, marginBottom:8, whiteSpace:'nowrap' }}>
             CS.Smart Warehouse &amp; Transport
           </h1>
@@ -236,70 +156,12 @@ export default function Login() {
       </div>
 
       {/* ── RIGHT — Login form ── */}
-      <div className="login-right" style={{ flex:1, background:'#f4f6f9', display:'flex', alignItems:'center', justifyContent:'center', padding:32, position:'relative', overflow:'hidden' }}>
-
-        {/* Steel structure background */}
-        <svg style={{ position:'absolute', inset:0, width:'100%', height:'100%', opacity:.045, pointerEvents:'none' }} viewBox="0 0 600 900" preserveAspectRatio="xMidYMid slice" xmlns="http://www.w3.org/2000/svg">
-          <g stroke="#CC0000" strokeWidth="1.5" fill="none">
-            {[0,1,2,3,4,5,6,7,8].map(i => (
-              <line key={`h${i}`} x1="0" y1={500 + i*50} x2="600" y2={500 + i*50}/>
-            ))}
-            {[-6,-5,-4,-3,-2,-1,0,1,2,3,4,5,6].map(i => (
-              <line key={`v${i}`} x1={300 + i*50} y1="500" x2={300 + i*200} y2="900"/>
-            ))}
-          </g>
-          <g stroke="#CC0000" strokeWidth="2.5" fill="none">
-            {[80, 220, 380, 520].map(x => (
-              <g key={x}>
-                <line x1={x} y1="0" x2={x} y2="500"/>
-                <line x1={x-14} y1="0" x2={x+14} y2="0"/>
-                <line x1={x-14} y1="100" x2={x+14} y2="100"/>
-                <line x1={x-14} y1="200" x2={x+14} y2="200"/>
-                <line x1={x-14} y1="300" x2={x+14} y2="300"/>
-                <line x1={x-14} y1="400" x2={x+14} y2="400"/>
-                <line x1={x-14} y1="500" x2={x+14} y2="500"/>
-              </g>
-            ))}
-          </g>
-          <g stroke="#CC0000" strokeWidth="3" fill="none">
-            {[80,180,280,380,480].map(y => (
-              <g key={y}>
-                <line x1="50" y1={y} x2="550" y2={y}/>
-                <line x1="50" y1={y-8} x2="550" y2={y-8}/>
-                <line x1="50" y1={y+8} x2="550" y2={y+8}/>
-              </g>
-            ))}
-          </g>
-          <g stroke="#CC0000" strokeWidth="1.5" fill="none" strokeDasharray="4 3">
-            <line x1="80" y1="80" x2="220" y2="180"/>
-            <line x1="220" y1="80" x2="80" y2="180"/>
-            <line x1="220" y1="180" x2="380" y2="280"/>
-            <line x1="380" y1="180" x2="220" y2="280"/>
-            <line x1="380" y1="80" x2="520" y2="180"/>
-            <line x1="520" y1="80" x2="380" y2="180"/>
-            <line x1="80" y1="280" x2="220" y2="380"/>
-            <line x1="220" y1="280" x2="80" y2="380"/>
-            <line x1="380" y1="280" x2="520" y2="380"/>
-            <line x1="520" y1="280" x2="380" y2="380"/>
-          </g>
-          <g stroke="#CC0000" strokeWidth="1" fill="none" opacity="0.5">
-            <rect x="140" y="40" width="320" height="420" rx="2"/>
-            <line x1="140" y1="40" x2="80" y2="80"/>
-            <line x1="460" y1="40" x2="520" y2="80"/>
-            <line x1="140" y1="460" x2="80" y2="500"/>
-            <line x1="460" y1="460" x2="520" y2="500"/>
-            <rect x="80" y="80" width="440" height="420" rx="2"/>
-          </g>
-          {[80,220,380,520].map(x => [80,180,280,380,480].map(y => (
-            <circle key={`${x}${y}`} cx={x} cy={y} r="4" fill="#CC0000" opacity="0.7"/>
-          )))}
-        </svg>
+      <div style={{ flex:1, background:'#f4f6f9', display:'flex', alignItems:'center', justifyContent:'center', padding:32 }}>
         <div style={{ width:'100%', maxWidth:400 }}>
 
           {/* Card */}
           <div style={{ background:'#fff', borderRadius:20, padding:'40px 36px', boxShadow:'0 4px 24px rgba(0,0,0,.08)' }}>
             <div style={{ textAlign:'center', marginBottom:32 }}>
-              <img src="/logo.png" alt="CS" style={{ width:64, height:64, objectFit:'contain', marginBottom:16, filter:'drop-shadow(0 2px 8px rgba(204,0,0,.25))' }}/>
               <h2 style={{ fontSize:20, fontWeight:700, color:'#1f2937', marginBottom:4 }}>เข้าสู่ระบบ</h2>
               <p style={{ fontSize:13, color:'#9ca3af' }}>
                 ยินดีต้อนรับ · <span style={{ fontSize:12 }}>ကြိုဆိုပါသည်</span>
@@ -311,7 +173,7 @@ export default function Login() {
               {/* Username */}
               <div>
                 <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#374151', marginBottom:6 }}>
-                  User <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· အသုံးပြုသူအမည်</span>
+                  ชื่อผู้ใช้ <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· အသုံးပြုသူအမည်</span>
                 </label>
                 <input
                   placeholder="กรอก username"
@@ -325,7 +187,7 @@ export default function Login() {
               {/* Password */}
               <div>
                 <label style={{ display:'block', fontSize:13, fontWeight:600, color:'#374151', marginBottom:6 }}>
-                  Password <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· စကားဝှက်</span>
+                  รหัสผ่าน <span style={{ fontSize:10, color:'#9ca3af', fontWeight:400 }}>· စကားဝှက်</span>
                 </label>
                 <div style={{ position:'relative' }}>
                   <input
@@ -363,7 +225,7 @@ export default function Login() {
 
               {/* Submit */}
               <button type="submit" disabled={loading} className="btn-primary" style={{ padding:'13px', fontSize:15, fontWeight:700, borderRadius:10, opacity:loading?0.7:1, marginTop:4, boxShadow:'0 4px 14px rgba(204,0,0,.35)' }}>
-                {loading ? '⏳ Logging in...' : 'Login'}
+                {loading ? '⏳ กำลังเข้าสู่ระบบ...' : 'เข้าสู่ระบบ'}
               </button>
             </form>
           </div>
