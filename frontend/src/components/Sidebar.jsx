@@ -50,7 +50,8 @@ export default function Sidebar({ isOpen, onClose }) {
               CS
             </div>
             <div>
-              <div className="text-white font-semibold text-sm leading-tight">CS.Steel WMS</div>
+              <div className="text-white font-semibold text-sm leading-tight">CS.Smart WMS</div>
+              <div className="text-steel-500 text-[10px] leading-tight">Warehouse&Transport</div>
               <div className="text-steel-400 text-xs">{user?.warehouseName || 'คลังสินค้า'}</div>
             </div>
           </div>

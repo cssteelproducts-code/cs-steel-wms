@@ -37,7 +37,7 @@ const FLAG_ICONS = { th: FlagTH, en: FlagGB, my: FlagMM };
 const LANGS = {
   th: {
     flag: null,
-    title: 'ระบบจัดการคลังสินค้า',
+    title: 'ระบบจัดการคลังสินค้าและจัดส่ง',
     subtitle: 'บริษัท ซี.เอส.สตีล โปรดักส์ จำกัด',
     username: 'ชื่อผู้ใช้',
     password: 'รหัสผ่าน',
@@ -47,7 +47,7 @@ const LANGS = {
     loggingIn: 'กำลังเข้าสู่ระบบ...',
     rememberMe: 'จดจำรหัสผ่าน',
     resetPwd: 'รีเซ็ตรหัสผ่าน',
-    footer: 'CS.Steel Product WMS v1.0 | สงวนสิทธิ์สำหรับพนักงาน',
+    footer: 'CS.Smart WMS v1.0 | สงวนสิทธิ์สำหรับพนักงาน',
     errRequired: 'กรุณากรอก Username และ Password',
     // Reset modal
     resetTitle: 'รีเซ็ตรหัสผ่าน',
@@ -70,7 +70,7 @@ const LANGS = {
   },
   en: {
     flag: null,
-    title: 'Warehouse Management System',
+    title: 'CS.Smart Warehouse&Transport Operation System',
     subtitle: 'CS.Steel Product Co.,Ltd',
     username: 'Username',
     password: 'Password',
@@ -80,7 +80,7 @@ const LANGS = {
     loggingIn: 'Signing in...',
     rememberMe: 'Remember me',
     resetPwd: 'Reset Password',
-    footer: 'CS.Steel Product WMS v1.0 | Authorized personnel only',
+    footer: 'CS.Smart WMS v1.0 | Authorized personnel only',
     errRequired: 'Please enter Username and Password',
     resetTitle: 'Reset Password',
     step1Title: 'Verify Identity',
@@ -102,7 +102,7 @@ const LANGS = {
   },
   my: {
     flag: null,
-    title: 'ကုန်သိုလှောင်ရုံ စီမံခန့်ခွဲမှုစနစ်',
+    title: 'CS.Smart Warehouse&Transport Operation System',
     subtitle: 'CS.Steel Product Co.,Ltd',
     username: 'အကောင့်အမည်',
     password: 'စကားဝှက်',
@@ -112,7 +112,7 @@ const LANGS = {
     loggingIn: 'ဝင်ရောက်နေသည်...',
     rememberMe: 'မှတ်သားထားမည်',
     resetPwd: 'စကားဝှက်ပြန်သတ်မှတ်',
-    footer: 'CS.Steel Product WMS v1.0 | ဝန်ထမ်းများအတွက်သာ',
+    footer: 'CS.Smart WMS v1.0 | ဝန်ထမ်းများအတွက်သာ',
     errRequired: 'Username နှင့် Password ထည့်ပါ',
     resetTitle: 'စကားဝှက် ပြန်သတ်မှတ်ရန်',
     step1Title: 'အထောက်အထားစစ်ဆေးခြင်း',

@@ -20,7 +20,7 @@ const pageTitles = {
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'CS Steel WMS';
+  const title = pageTitles[location.pathname] || 'CS.Smart WMS';
 
   return (
     <div className="flex h-screen overflow-hidden bg-steel-900">

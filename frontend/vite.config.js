@@ -18,10 +18,10 @@ export default defineConfig({
         ]
       },
       manifest: {
-        name: 'CS Steel WMS',
-        short_name: 'WMS',
-        description: 'CS Steel Products - ระบบจัดการคลังสินค้า',
-        theme_color: '#1e3a5f',
+        name: 'CS.Smart Warehouse&Transport Operation System',
+        short_name: 'CS.Smart',
+        description: 'ระบบจัดการคลังสินค้าและจัดส่ง | CS.Steel Product Co.,Ltd',
+        theme_color: '#b91c1c',
         background_color: '#0f172a',
         display: 'standalone',
         orientation: 'portrait-primary',
