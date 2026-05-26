@@ -50,6 +50,19 @@ app.use('/api/plans',         plansRouter);
 
 app.get('/api/health', (_, res) => res.json({ ok: true, ts: new Date().toISOString(), db: process.env.MSSQL_DB || '-', server: process.env.MSSQL_SERVER || '-' }));
 
+app.get('/api/debug-date', async (_, res) => {
+  try {
+    const { getTodayStr, getYearStr } = require('./src/routes/utils');
+    const { query } = require('./src/db/connection');
+    const today = getTodayStr();
+    const year  = getYearStr();
+    const trucks = await query('SELECT TOP 5 [ID],[Date],[Status],[LicensePlate],[CheckinTimestamp] FROM dbo.Trucks ORDER BY [CheckinTimestamp] DESC').catch(e => ({ error: e.message }));
+    res.json({ today, year, trucks });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.get('/api/myip', async (_, res) => {
   try {
     const r = await fetch('https://api.ipify.org?format=json');
