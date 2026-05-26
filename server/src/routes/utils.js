@@ -76,7 +76,7 @@ function getMonthStr()  {
   return n.toLocaleDateString('th-TH', { timeZone: TZ, month: '2-digit', year: 'numeric' }).replace(' ', '/');
 }
 function getYearStr()   {
-  return new Date().toLocaleDateString('th-TH', { timeZone: TZ, year: 'numeric' });
+  return formatDate(new Date()).split('/')[2];
 }
 
 // ==================== Role Access (อ่านจาก DB หรือใช้ default) ====================
