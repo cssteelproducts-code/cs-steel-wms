@@ -153,4 +153,48 @@ router.post('/change-password', authenticate, async (req, res) => {
   }
 });
 
+// POST /api/auth/reset-password — self-service, no token required
+// Verification: username + fullName must match a record in WMS_Users
+router.post('/reset-password', async (req, res) => {
+  try {
+    const { username, fullName, newPassword } = req.body;
+    if (!username || !fullName || !newPassword) {
+      return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
+    }
+    if (newPassword.length < 6) {
+      return res.status(400).json({ success: false, message: 'รหัสผ่านต้องมีอย่างน้อย 6 ตัวอักษร' });
+    }
+
+    const pool = getPool();
+    const result = await pool.request()
+      .input('Username', sql.NVarChar, username.trim())
+      .query('SELECT UserID, FullName, IsActive FROM WMS_Users WHERE Username = @Username');
+
+    if (result.recordset.length === 0) {
+      return res.status(400).json({ success: false, message: 'ไม่พบ Username ในระบบ' });
+    }
+
+    const user = result.recordset[0];
+    if (!user.IsActive) {
+      return res.status(400).json({ success: false, message: 'บัญชีนี้ถูกระงับการใช้งาน' });
+    }
+
+    const nameMatch = user.FullName.trim().toLowerCase() === fullName.trim().toLowerCase();
+    if (!nameMatch) {
+      return res.status(400).json({ success: false, message: 'ชื่อ-นามสกุลไม่ตรงกับที่ลงทะเบียนไว้' });
+    }
+
+    const hashed = await bcrypt.hash(newPassword, 10);
+    await pool.request()
+      .input('UserID', sql.Int, user.UserID)
+      .input('Password', sql.NVarChar, hashed)
+      .query('UPDATE WMS_Users SET Password = @Password WHERE UserID = @UserID');
+
+    res.json({ success: true, message: 'รีเซ็ตรหัสผ่านสำเร็จ กรุณาเข้าสู่ระบบด้วยรหัสผ่านใหม่' });
+  } catch (err) {
+    console.error('Reset password error:', err);
+    res.status(500).json({ success: false, message: 'เกิดข้อผิดพลาดในระบบ' });
+  }
+});
+
 module.exports = router;
