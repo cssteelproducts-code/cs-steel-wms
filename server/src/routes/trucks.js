@@ -60,6 +60,19 @@ router.get('/search', async (req, res) => {
   }
 });
 
+// GET /api/trucks/stations/:truckId  — must be before /:id to avoid conflict
+router.get('/stations/:truckId', async (req, res) => {
+  try {
+    const rows = await query(
+      'SELECT * FROM dbo.LoadingStations WHERE [TruckID]=@tid ORDER BY [EntryTimestamp]',
+      { tid: req.params.truckId }
+    );
+    return res.json({ success: true, stations: rows });
+  } catch (e) {
+    return res.json({ success: false, message: e.message });
+  }
+});
+
 // GET /api/trucks/:id
 router.get('/:id', async (req, res) => {
   try {
@@ -209,19 +222,6 @@ router.post('/station-exit', async (req, res) => {
       );
     }
     return res.json({ success: true, exitTime: time });
-  } catch (e) {
-    return res.json({ success: false, message: e.message });
-  }
-});
-
-// GET /api/trucks/stations/:truckId
-router.get('/stations/:truckId', async (req, res) => {
-  try {
-    const rows = await query(
-      'SELECT * FROM dbo.LoadingStations WHERE [TruckID]=@tid ORDER BY [EntryTimestamp]',
-      { tid: req.params.truckId }
-    );
-    return res.json({ success: true, stations: rows });
   } catch (e) {
     return res.json({ success: false, message: e.message });
   }
