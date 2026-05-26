@@ -1,9 +1,9 @@
 [build]
-builder = "NIXPACKS"
-buildCommand = "npm install --prefix backend && npm install --include=dev --prefix frontend && npm run build --prefix frontend && mkdir -p backend/public && cp -r frontend/dist/. backend/public/"
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
 
 [deploy]
-startCommand = "cd backend && npm start"
+startCommand = "node backend/server.js"
 restartPolicyType = "ON_FAILURE"
 restartPolicyMaxRetries = 3
 
