@@ -50,7 +50,7 @@ export default function Sidebar({ isOpen, onClose }) {
               CS
             </div>
             <div>
-              <div className="text-white font-semibold text-sm leading-tight">CS Steel WMS</div>
+              <div className="text-white font-semibold text-sm leading-tight">CS.Steel WMS</div>
               <div className="text-steel-400 text-xs">{user?.warehouseName || 'คลังสินค้า'}</div>
             </div>
           </div>
@@ -98,7 +98,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
         {/* Footer */}
         <div className="p-3 border-t border-steel-700 text-xs text-steel-500 text-center">
-          CS Steel Products Co., Ltd. © 2025
+          CS.Steel Product Co.,Ltd © 2025
         </div>
       </aside>
     </>

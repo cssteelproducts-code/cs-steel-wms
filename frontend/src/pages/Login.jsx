@@ -6,11 +6,39 @@ import toast from 'react-hot-toast';
 import { Eye, EyeOff, Lock, User, X, ChevronLeft } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
+// SVG flag components — reliable on all platforms (no emoji font needed)
+const FlagTH = () => (
+  <svg viewBox="0 0 30 20" width="28" height="19" xmlns="http://www.w3.org/2000/svg">
+    <rect width="30" height="20" fill="#A51931"/>
+    <rect y="3.33" width="30" height="3.34" fill="#F4F5F8"/>
+    <rect y="6.67" width="30" height="6.66" fill="#2D2A4A"/>
+    <rect y="13.33" width="30" height="3.34" fill="#F4F5F8"/>
+  </svg>
+);
+const FlagGB = () => (
+  <svg viewBox="0 0 30 20" width="28" height="19" xmlns="http://www.w3.org/2000/svg">
+    <rect width="30" height="20" fill="#012169"/>
+    <path d="M0,0 L30,20 M30,0 L0,20" stroke="#fff" strokeWidth="4"/>
+    <path d="M0,0 L30,20 M30,0 L0,20" stroke="#C8102E" strokeWidth="2.4"/>
+    <path d="M15,0 V20 M0,10 H30" stroke="#fff" strokeWidth="6"/>
+    <path d="M15,0 V20 M0,10 H30" stroke="#C8102E" strokeWidth="3.6"/>
+  </svg>
+);
+const FlagMM = () => (
+  <svg viewBox="0 0 30 20" width="28" height="19" xmlns="http://www.w3.org/2000/svg">
+    <rect width="30" height="6.67" fill="#FECB00"/>
+    <rect y="6.67" width="30" height="6.66" fill="#34B233"/>
+    <rect y="13.33" width="30" height="6.67" fill="#EA2839"/>
+    <polygon points="15,3 16.5,7.5 21,7.5 17.5,10 18.8,14.5 15,12 11.2,14.5 12.5,10 9,7.5 13.5,7.5" fill="white"/>
+  </svg>
+);
+const FLAG_ICONS = { th: FlagTH, en: FlagGB, my: FlagMM };
+
 const LANGS = {
   th: {
-    flag: '🇹🇭',
+    flag: null,
     title: 'ระบบจัดการคลังสินค้า',
-    subtitle: 'บริษัท ซีเอสสตีลโปรดักส์ จำกัด',
+    subtitle: 'บริษัท ซี.เอส.สตีล โปรดักส์ จำกัด',
     username: 'ชื่อผู้ใช้',
     password: 'รหัสผ่าน',
     userPlaceholder: 'กรอกชื่อผู้ใช้',
@@ -19,7 +47,7 @@ const LANGS = {
     loggingIn: 'กำลังเข้าสู่ระบบ...',
     rememberMe: 'จดจำรหัสผ่าน',
     resetPwd: 'รีเซ็ตรหัสผ่าน',
-    footer: 'CS Steel WMS v1.0 | สงวนสิทธิ์สำหรับพนักงาน',
+    footer: 'CS.Steel Product WMS v1.0 | สงวนสิทธิ์สำหรับพนักงาน',
     errRequired: 'กรุณากรอก Username และ Password',
     // Reset modal
     resetTitle: 'รีเซ็ตรหัสผ่าน',
@@ -41,9 +69,9 @@ const LANGS = {
     close: 'ปิด',
   },
   en: {
-    flag: '🇬🇧',
+    flag: null,
     title: 'Warehouse Management System',
-    subtitle: 'CS Steel Products Co., Ltd.',
+    subtitle: 'CS.Steel Product Co.,Ltd',
     username: 'Username',
     password: 'Password',
     userPlaceholder: 'Enter username',
@@ -52,7 +80,7 @@ const LANGS = {
     loggingIn: 'Signing in...',
     rememberMe: 'Remember me',
     resetPwd: 'Reset Password',
-    footer: 'CS Steel WMS v1.0 | Authorized personnel only',
+    footer: 'CS.Steel Product WMS v1.0 | Authorized personnel only',
     errRequired: 'Please enter Username and Password',
     resetTitle: 'Reset Password',
     step1Title: 'Verify Identity',
@@ -73,9 +101,9 @@ const LANGS = {
     close: 'Close',
   },
   my: {
-    flag: '🇲🇲',
+    flag: null,
     title: 'ကုန်သိုလှောင်ရုံ စီမံခန့်ခွဲမှုစနစ်',
-    subtitle: 'CS Steel Products ကုမ္ပဏီလီမိတက်',
+    subtitle: 'CS.Steel Product Co.,Ltd',
     username: 'အကောင့်အမည်',
     password: 'စကားဝှက်',
     userPlaceholder: 'အကောင့်အမည် ထည့်ပါ',
@@ -84,7 +112,7 @@ const LANGS = {
     loggingIn: 'ဝင်ရောက်နေသည်...',
     rememberMe: 'မှတ်သားထားမည်',
     resetPwd: 'စကားဝှက်ပြန်သတ်မှတ်',
-    footer: 'CS Steel WMS v1.0 | ဝန်ထမ်းများအတွက်သာ',
+    footer: 'CS.Steel Product WMS v1.0 | ဝန်ထမ်းများအတွက်သာ',
     errRequired: 'Username နှင့် Password ထည့်ပါ',
     resetTitle: 'စကားဝှက် ပြန်သတ်မှတ်ရန်',
     step1Title: 'အထောက်အထားစစ်ဆေးခြင်း',
@@ -400,19 +428,23 @@ export default function Login() {
       <div className="absolute bottom-0 right-0 w-96 h-96 rounded-full pointer-events-none"
         style={{ background: 'radial-gradient(circle, rgba(185,28,28,0.06) 0%, transparent 70%)' }}/>
 
-      {/* Language switcher — flag buttons */}
+      {/* Language switcher — SVG flag buttons */}
       <div className="absolute top-4 right-4 flex gap-1.5 z-10">
-        {(['th','en','my']).map(l => (
-          <button key={l} onClick={() => setLang(l)}
-            className={`w-9 h-9 rounded-lg text-lg flex items-center justify-center transition-all ${
-              lang === l
-                ? 'bg-red-700/60 ring-1 ring-red-500 scale-110 shadow-lg'
-                : 'bg-white/8 hover:bg-white/15 opacity-60 hover:opacity-100'
-            }`}
-            title={l === 'th' ? 'ภาษาไทย' : l === 'en' ? 'English' : 'မြန်မာဘာသာ'}>
-            {LANGS[l].flag}
-          </button>
-        ))}
+        {(['th','en','my']).map(l => {
+          const FlagIcon = FLAG_ICONS[l];
+          return (
+            <button key={l} onClick={() => setLang(l)}
+              className={`rounded-lg flex items-center justify-center transition-all overflow-hidden ${
+                lang === l
+                  ? 'ring-2 ring-red-500 scale-110 shadow-lg opacity-100'
+                  : 'opacity-50 hover:opacity-90 hover:scale-105'
+              }`}
+              style={{ padding: 0, width: 36, height: 24 }}
+              title={l === 'th' ? 'ภาษาไทย' : l === 'en' ? 'English' : 'မြန်မာဘာသာ'}>
+              <FlagIcon/>
+            </button>
+          );
+        })}
       </div>
 
       <div className="w-full max-w-sm relative z-10">
