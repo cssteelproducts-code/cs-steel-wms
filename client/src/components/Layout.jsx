@@ -86,7 +86,7 @@ export default function Layout() {
       </aside>
 
       {/* ── Main ── */}
-      <div style={{ flex:1, display:'flex', flexDirection:'column', overflow:'hidden', minHeight:0 }}>
+      <div style={{ flex:1, display:'flex', flexDirection:'column', minWidth:0 }}>
 
         {/* Topbar */}
         <header style={{ display:'flex', alignItems:'center', gap:10, padding:'0 20px', height:52, background:'#fff', borderBottom:'2px solid #CC0000', flexShrink:0 }}>
@@ -112,7 +112,7 @@ export default function Layout() {
           </div>
         </header>
 
-        <main style={{ flex:1, overflowY:'auto', background:'#fff', minHeight:0 }}>
+        <main style={{ height:'calc(100vh - 52px)', overflowY:'auto', background:'#fff' }}>
           <Outlet/>
         </main>
       </div>
