@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const XLSX = require('xlsx');
+const multer = require('multer');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
 // ==================== WAREHOUSES ====================
 router.get('/warehouses', authenticate, async (req, res) => {
@@ -239,6 +242,51 @@ router.delete('/customers/:id', authenticate, requireAdmin, async (req, res) => 
       .input('CustomerID', sql.Int, req.params.id)
       .query('UPDATE WMS_Customers SET IsActive = 0 WHERE CustomerID = @CustomerID');
     res.json({ success: true, message: 'ลบลูกค้าสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// ==================== CUSTOMERS EXCEL IMPORT/EXPORT ====================
+router.get('/customers/template', authenticate, (req, res) => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['รหัสลูกค้า*', 'ชื่อลูกค้า*', 'โทรศัพท์', 'ที่อยู่'],
+    ['C001', 'บริษัท ตัวอย่าง จำกัด', '02-123-4567', '123 ถนนตัวอย่าง กรุงเทพฯ'],
+  ]);
+  ws['!cols'] = [{ wch: 14 }, { wch: 30 }, { wch: 16 }, { wch: 40 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'ลูกค้า');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="customer_template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+router.post('/customers/import', authenticate, requireAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'ไม่พบไฟล์' });
+  try {
+    const pool = getPool();
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+    let inserted = 0, skipped = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const [code, name, phone, address] = rows[i];
+      if (!code || !name) { skipped++; continue; }
+      const exists = await pool.request()
+        .input('code', sql.NVarChar, String(code).trim())
+        .query('SELECT CustomerID FROM WMS_Customers WHERE CustomerCode = @code');
+      if (exists.recordset.length > 0) { skipped++; continue; }
+      await pool.request()
+        .input('code', sql.NVarChar, String(code).trim())
+        .input('name', sql.NVarChar, String(name).trim())
+        .input('phone', sql.NVarChar, phone ? String(phone).trim() : null)
+        .input('address', sql.NVarChar, address ? String(address).trim() : null)
+        .query('INSERT INTO WMS_Customers (CustomerCode, CustomerName, Phone, Address) VALUES (@code, @name, @phone, @address)');
+      inserted++;
+    }
+    res.json({ success: true, message: `นำเข้าสำเร็จ ${inserted} รายการ (ข้ามซ้ำ ${skipped} รายการ)` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback, Component } from 'react';
-import { Settings, Plus, Edit, Trash2, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
 
 class MapErrorBoundary extends Component {
   constructor(props) { super(props); this.state = { error: false }; }
@@ -98,6 +98,19 @@ export default function Master() {
   const [locSearching, setLocSearching] = useState(false);
   const [recenterTrigger, setRecenterTrigger] = useState(0);
   const locTimer = useRef(null);
+  const importRef = useRef(null);
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    e.target.value = '';
+    try {
+      const res = await api.post('/master/customers/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      if (res.data.success) { toast.success(res.data.message); fetchData('customers'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ'); }
+  };
 
   const searchLocation = async (q) => {
     if (!q.trim()) { setLocResults([]); return; }
@@ -475,9 +488,16 @@ export default function Master() {
       <div className="card">
         <div className="flex items-center justify-between mb-4">
           <h3 className="card-header mb-0">{tabs.find(t => t.key === tab)?.label}</h3>
-          <button onClick={openCreate} className="btn-primary text-sm">
-            <Plus size={14} />เพิ่ม
-          </button>
+          <div className="flex items-center gap-2">
+            {tab === 'customers' && (<>
+              <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
+              <button onClick={() => importRef.current?.click()} className="btn-secondary text-sm"><Upload size={14} />Import Excel</button>
+              <a href="/api/master/customers/template" download className="btn-secondary text-sm flex items-center gap-1.5"><Download size={14} />Template</a>
+            </>)}
+            <button onClick={openCreate} className="btn-primary text-sm">
+              <Plus size={14} />เพิ่ม
+            </button>
+          </div>
         </div>
         <div className="overflow-x-auto">{renderTable()}</div>
       </div>
