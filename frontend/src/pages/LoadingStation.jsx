@@ -31,6 +31,7 @@ export default function LoadingStation() {
   useEffect(() => {
     if (activeTripId) fetchTargetStations(activeTripId);
     else setTripTargetStations([]);
+    setSelectedStation('');
   }, [activeTripId]);
 
   const fetchAll = async () => {
@@ -144,12 +145,14 @@ export default function LoadingStation() {
               <label className="label">เลือกสถานี *</label>
               <select value={selectedStation}
                 onChange={e => { setSelectedStation(e.target.value); fetchActiveForStation(e.target.value); }}
-                className="input-field">
+                className="input-field"
+                disabled={!activeTripId}>
                 <option value="">-- เลือกสถานีขึ้นสินค้า --</option>
-                {stations.map(s => (
+                {(activeTripId ? tripTargetStations : stations).map(s => (
                   <option key={s.StationID} value={s.StationID}>{s.StationName}</option>
                 ))}
               </select>
+              {!activeTripId && <div className="text-slate-400 text-xs mt-1">เลือกรถก่อนเพื่อดูสถานีที่กำหนด</div>}
             </div>
             <div>
               <label className="label">เลือกรถ (Trip) *</label>
