@@ -179,7 +179,7 @@ export default function WeighIn() {
                 <Label>ทะเบียนรถ *</Label>
                 <div className="relative">
                   <input type="text" value={form.licensePlate} onChange={handlePlateChange}
-                    className="input-field w-full py-3 text-slate-900 text-2xl font-bold tracking-widest uppercase placeholder:text-slate-300 placeholder:font-normal placeholder:text-base placeholder:tracking-normal"
+                    className="input-field w-full h-10 text-slate-900 text-xl font-bold tracking-widest uppercase placeholder:text-slate-300 placeholder:font-normal placeholder:text-sm placeholder:tracking-normal"
                     placeholder="เช่น กข-1234" required />
                   {checking && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
@@ -227,25 +227,25 @@ export default function WeighIn() {
                 </div>
               </div>
 
-              {/* Delivery + Tare */}
-              <div className="grid grid-cols-[1fr_130px] gap-3 items-start">
-                <div>
-                  <Label>ขนส่ง</Label>
-                  <div className="grid grid-cols-3 gap-2">
-                    {DELIVERY_TYPES.map(dt => (
-                      <Pill key={dt.id} item={dt} stretch
-                        active={form.deliveryType === dt.id}
-                        onClick={() => setForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
-                    ))}
-                  </div>
+              {/* Delivery type */}
+              <div>
+                <Label>ขนส่ง</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {DELIVERY_TYPES.map(dt => (
+                    <Pill key={dt.id} item={dt} stretch
+                      active={form.deliveryType === dt.id}
+                      onClick={() => setForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
+                  ))}
                 </div>
-                <div>
-                  <Label>น้ำหนักเบา (กก.)</Label>
-                  <input type="number" step="0.01" value={form.tareWeight}
-                    onChange={e => setForm(p => ({ ...p, tareWeight: e.target.value }))}
-                    className="input-field w-full h-10 text-sm"
-                    placeholder="0.00" />
-                </div>
+              </div>
+
+              {/* Tare weight */}
+              <div>
+                <Label>น้ำหนักเบา (กก.)</Label>
+                <input type="number" step="0.01" value={form.tareWeight}
+                  onChange={e => setForm(p => ({ ...p, tareWeight: e.target.value }))}
+                  className="input-field w-full h-10 text-sm"
+                  placeholder="0.00" />
               </div>
 
               {/* Customer */}
@@ -279,9 +279,9 @@ export default function WeighIn() {
               {/* Notes */}
               <div>
                 <Label>หมายเหตุ</Label>
-                <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                  className="input-field w-full py-2.5 text-sm resize-none"
-                  rows={2} placeholder="หมายเหตุ (ถ้ามี)" />
+                <input type="text" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                  className="input-field w-full h-10 text-sm"
+                  placeholder="หมายเหตุ (ถ้ามี)" />
               </div>
 
               {/* Buttons */}
