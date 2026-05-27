@@ -202,12 +202,14 @@ router.get('/trip/:tripId/target-stations', authenticate, async (req, res) => {
       .input('TripID', sql.Int, req.params.tripId)
       .query(`
         SELECT dst.StationID, ls.StationName, ls.StationCode,
-               CASE WHEN lr.RecordID IS NOT NULL THEN 1 ELSE 0 END as IsDone
+               CASE WHEN lr_done.RecordID IS NOT NULL THEN 1 ELSE 0 END as IsDone,
+               CASE WHEN lr_active.RecordID IS NOT NULL THEN 1 ELSE 0 END as IsActive
         FROM WMS_DataStationTargets dst
         JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
-        LEFT JOIN WMS_LoadingRecord lr ON lr.TripID = dst.TripID
-          AND lr.StationID = dst.StationID
-          AND lr.ExitTime IS NOT NULL
+        LEFT JOIN WMS_LoadingRecord lr_done ON lr_done.TripID = dst.TripID
+          AND lr_done.StationID = dst.StationID AND lr_done.ExitTime IS NOT NULL
+        LEFT JOIN WMS_LoadingRecord lr_active ON lr_active.TripID = dst.TripID
+          AND lr_active.StationID = dst.StationID AND lr_active.ExitTime IS NULL
         WHERE dst.TripID = @TripID
         ORDER BY ls.StationName
       `);

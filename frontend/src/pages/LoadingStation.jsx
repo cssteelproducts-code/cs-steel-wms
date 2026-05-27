@@ -159,9 +159,18 @@ export default function LoadingStation() {
                 className="input-field"
                 disabled={!activeTripId}>
                 <option value="">-- เลือกสถานีขึ้นสินค้า --</option>
-                {(activeTripId ? tripTargetStations.filter(s => !s.IsDone) : stations).map(s => (
-                  <option key={s.StationID} value={s.StationID}>{s.StationName}</option>
-                ))}
+                {(activeTripId ? tripTargetStations : stations).map(s => {
+                  const done = s.IsDone;
+                  const active = s.IsActive;
+                  const label = done ? `✓ ${s.StationName} (เสร็จแล้ว)`
+                    : active ? `⏳ ${s.StationName} (กำลังขึ้นสินค้า)`
+                    : s.StationName;
+                  return (
+                    <option key={s.StationID} value={s.StationID} disabled={done || active}>
+                      {label}
+                    </option>
+                  );
+                })}
               </select>
               {!activeTripId && <div className="text-slate-400 text-xs mt-1">เลือกรถก่อนเพื่อดูสถานีที่กำหนด</div>}
             </div>
@@ -182,8 +191,9 @@ export default function LoadingStation() {
                         <span className="text-slate-500">สถานีที่ต้องขึ้นสินค้า:</span>
                         {tripTargetStations.map(s => (
                           <span key={s.StationID}
-                            className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${s.IsDone
-                              ? 'bg-slate-100 text-slate-400 border-slate-200 line-through'
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${
+                              s.IsDone ? 'bg-slate-100 text-slate-400 border-slate-200 line-through'
+                              : s.IsActive ? 'bg-blue-50 text-blue-600 border-blue-300'
                               : 'bg-amber-50 text-amber-600 border-amber-300'}`}>
                             {s.StationName}
                           </span>
