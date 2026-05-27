@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Plus, Edit, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import L from 'leaflet';
@@ -231,6 +231,24 @@ export default function Master() {
     }
   };
 
+  const handleDelete = async (item) => {
+    const labels = { warehouses: 'คลังสินค้า', customers: 'ลูกค้า', vehicleTypes: 'ประเภทรถ', loadingStations: 'สถานีขึ้นสินค้า' };
+    const idFields = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID' };
+    const endpoints = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations' };
+    const name = item.TypeName || item.WarehouseName || item.CustomerName || item.StationName || '';
+    if (!window.confirm(`ยืนยันลบ${labels[tab]} "${name}" ?`)) return;
+    try {
+      const res = await api.delete(`${endpoints[tab]}/${item[idFields[tab]]}`);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        fetchData(tab);
+        if (tab === 'warehouses') fetchWarehouses();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ');
+    }
+  };
+
   const getFormPayload = () => {
     switch (tab) {
       case 'warehouses': return { warehouseCode: form.WarehouseCode || form.warehouseCode, warehouseName: form.WarehouseName || form.warehouseName, location: form.Location || form.location, gpsLat: form.GpsLat || form.gpsLat, gpsLng: form.GpsLng || form.gpsLng, isActive: form.IsActive ?? 1 };
@@ -261,7 +279,7 @@ export default function Master() {
             <td className="table-cell hide-mobile text-slate-600">{i.Location || '-'}</td>
             <td className="table-cell hide-mobile text-xs text-slate-400">{i.GpsLat && i.GpsLng ? `${i.GpsLat}, ${i.GpsLng}` : '-'}</td>
             <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
+            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );
@@ -278,7 +296,7 @@ export default function Master() {
             <td className="table-cell text-slate-900">{i.CustomerName}</td>
             <td className="table-cell hide-mobile text-slate-600">{i.Phone || '-'}</td>
             <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
+            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );
@@ -291,7 +309,7 @@ export default function Master() {
           {items.map(i => <tr key={i.TypeID} className="border-b border-slate-100 hover:bg-slate-50">
             <td className="table-cell text-slate-900 font-medium">{i.TypeName}</td>
             <td className="table-cell hide-mobile text-slate-500">{i.Description || '-'}</td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
+            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );
@@ -310,7 +328,7 @@ export default function Master() {
             <td className="table-cell hide-mobile text-slate-600">{i.WarehouseName || '-'}</td>
             <td className="table-cell text-center text-slate-600">{i.SortOrder}</td>
             <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
+            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );

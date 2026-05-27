@@ -203,4 +203,45 @@ router.delete('/loading-stations/:id', authenticate, requireAdmin, async (req, r
   }
 });
 
+router.delete('/vehicle-types/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    const inUse = await pool.request()
+      .input('TypeID', sql.Int, req.params.id)
+      .query('SELECT TOP 1 TripID FROM WMS_Trips WHERE VehicleTypeID = @TypeID');
+    if (inUse.recordset.length > 0)
+      return res.status(400).json({ success: false, message: 'ไม่สามารถลบได้ มีรถที่ใช้ประเภทนี้อยู่' });
+    await pool.request()
+      .input('TypeID', sql.Int, req.params.id)
+      .query('DELETE FROM WMS_VehicleTypes WHERE TypeID = @TypeID');
+    res.json({ success: true, message: 'ลบประเภทรถสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/warehouses/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('WarehouseID', sql.Int, req.params.id)
+      .query('UPDATE WMS_Warehouses SET IsActive = 0 WHERE WarehouseID = @WarehouseID');
+    res.json({ success: true, message: 'ลบคลังสินค้าสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/customers/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('CustomerID', sql.Int, req.params.id)
+      .query('UPDATE WMS_Customers SET IsActive = 0 WHERE CustomerID = @CustomerID');
+    res.json({ success: true, message: 'ลบลูกค้าสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
