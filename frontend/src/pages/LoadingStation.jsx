@@ -173,7 +173,7 @@ export default function LoadingStation() {
                   <div className="grid grid-cols-2 gap-4 text-sm">
                     <div><span className="text-slate-500">ทะเบียน:</span> <span className="text-slate-900 font-bold">{trip.LicensePlate}</span></div>
                     <div><span className="text-slate-500">ประเภท:</span> <span className="text-slate-900">{trip.VehicleType}</span></div>
-                    <div><span className="text-slate-500">ลูกค้า:</span> <span className="text-slate-900">{trip.CustomerName || '-'}</span></div>
+                    <div><span className="text-slate-500">ขนส่ง:</span> <span className="text-slate-900">{trip.DeliveryType || '-'}</span></div>
                     <div><span className="text-slate-500">คลัง:</span> <span className="text-slate-900">{trip.WarehouseName}</span></div>
                     {trip.PickDocumentNo && <div className="col-span-2"><span className="text-slate-500">เอกสาร Pick:</span> <span className="text-slate-900 font-mono">{trip.PickDocumentNo}</span></div>}
                     {tripTargetStations.length > 0 && (
@@ -216,7 +216,7 @@ export default function LoadingStation() {
                       <span className="text-xs text-slate-500">#{trip.TripID}</span>
                     </div>
                     <div className="text-slate-500 text-sm">
-                      {trip.VehicleType} | {trip.CustomerName || 'ไม่ระบุลูกค้า'} | {trip.WarehouseName}
+                      {trip.VehicleType} | {trip.DeliveryType || '-'} | {trip.WarehouseName}
                     </div>
                     {trip.TargetStation && (
                       <div className="text-amber-600 text-xs mt-1">สถานี: {trip.TargetStation}</div>
@@ -257,7 +257,7 @@ export default function LoadingStation() {
                       </span>
                     </div>
                     <div className="text-slate-500 text-sm">
-                      {record.VehicleType} | {record.CustomerName || 'ไม่ระบุลูกค้า'} | {record.WarehouseName}
+                      {record.VehicleType} | {record.DeliveryType || '-'} | {record.WarehouseName}
                     </div>
                     <div className="flex items-center gap-2 mt-2 text-sm">
                       <Clock size={13} className="text-amber-500" />
