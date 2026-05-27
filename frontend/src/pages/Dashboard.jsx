@@ -627,7 +627,7 @@ export default function Dashboard() {
             <BarChart data={data?.weeklyTrend || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="TripDate" tick={{ fill: '#64748b', fontSize: 11 }}
-                tickFormatter={v => v?.slice(5)} />
+                tickFormatter={v => v ? dayjs(v).format('DD/MM/YY') : ''} />
               <YAxis tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
               <Tooltip
                 contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
