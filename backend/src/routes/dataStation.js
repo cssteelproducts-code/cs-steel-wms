@@ -95,7 +95,7 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-        WHERE t.Status IN ('Data', 'WaitPick')
+        WHERE t.Status = 'Data'
         AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
