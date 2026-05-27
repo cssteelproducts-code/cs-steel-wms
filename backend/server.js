@@ -46,6 +46,7 @@ app.use('/api/alerts', require('./src/routes/alerts'));
 app.use('/api/stock', require('./src/routes/stock'));
 app.use('/api/delivery', require('./src/routes/deliveryPlan'));
 app.use('/api/transfer', require('./src/routes/transfer'));
+app.use('/api/search', require('./src/routes/search'));
 
 // Serve React frontend (production build)
 const publicPath = path.join(__dirname, 'public');

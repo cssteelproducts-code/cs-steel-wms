@@ -1,10 +1,11 @@
-import { useState, useRef, useEffect } from 'react';
+import { useState, useRef, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LanguageContext';
 import { FLAGS } from './FlagIcons';
-import { Menu, LogOut, User, Search, X } from 'lucide-react';
+import { Menu, LogOut, User, Search, X, Truck, Users } from 'lucide-react';
 import AlertBell from './AlertBell';
+import api from '../services/api';
 import dayjs from 'dayjs';
 
 const SEARCH_ITEMS = [
@@ -40,6 +41,9 @@ export default function Header({ onMenuClick, title }) {
   const [showLang, setShowLang] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQ, setSearchQ] = useState('');
+  const [dataResults, setDataResults] = useState({ trips: [], customers: [] });
+  const [searching, setSearching] = useState(false);
+  const searchTimer = useRef(null);
   const [time, setTime] = useState(dayjs().format('HH:mm:ss'));
   const langRef = useRef(null);
   const profileRef = useRef(null);
@@ -85,7 +89,22 @@ export default function Header({ onMenuClick, title }) {
       item.path.includes(q);
   });
 
-  const openSearch = () => { setShowSearch(true); setSearchQ(''); };
+  const fetchData = useCallback(async (q) => {
+    if (q.length < 2) { setDataResults({ trips: [], customers: [] }); return; }
+    setSearching(true);
+    try {
+      const res = await api.get(`/search?q=${encodeURIComponent(q)}`);
+      if (res.data.success) setDataResults({ trips: res.data.trips || [], customers: res.data.customers || [] });
+    } catch {} finally { setSearching(false); }
+  }, []);
+
+  const handleSearchChange = (val) => {
+    setSearchQ(val);
+    clearTimeout(searchTimer.current);
+    searchTimer.current = setTimeout(() => fetchData(val), 300);
+  };
+
+  const openSearch = () => { setShowSearch(true); setSearchQ(''); setDataResults({ trips: [], customers: [] }); };
   const goTo = (path) => { navigate(path); setShowSearch(false); setSearchQ(''); };
 
   const handleLogout = () => { logout(); navigate('/login'); };
@@ -111,7 +130,7 @@ export default function Header({ onMenuClick, title }) {
         onMouseEnter={e => e.currentTarget.style.borderColor = '#dc2626'}
         onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7eb'}>
         <Search size={14} style={{ color: '#9ca3af' }} className="flex-shrink-0" />
-        <span className="text-sm flex-1 text-left" style={{ color: '#9ca3af' }}>ค้นหาเมนู...</span>
+        <span className="text-sm flex-1 text-left" style={{ color: '#9ca3af' }}>ค้นหา...</span>
         <span className="text-xs px-1.5 py-0.5 rounded-lg font-mono flex-shrink-0"
           style={{ background: '#e5e7eb', color: '#9ca3af' }}>Ctrl K</span>
       </button>
@@ -130,31 +149,85 @@ export default function Header({ onMenuClick, title }) {
               <input
                 ref={searchRef}
                 value={searchQ}
-                onChange={e => setSearchQ(e.target.value)}
+                onChange={e => handleSearchChange(e.target.value)}
                 onKeyDown={e => {
                   if (e.key === 'Enter' && filteredMenus.length > 0) goTo(filteredMenus[0].path);
                 }}
                 className="flex-1 text-sm outline-none bg-transparent text-slate-900 placeholder:text-slate-400"
-                placeholder="พิมพ์ชื่อเมนู เช่น ชั่งเข้า, ETA, Dashboard..."
+                placeholder="ค้นหาเมนู, ทะเบียนรถ, ชื่อลูกค้า..."
               />
               <button onClick={() => setShowSearch(false)} className="text-slate-400 hover:text-slate-600 p-0.5">
                 <X size={15} />
               </button>
             </div>
             {/* Results */}
-            <div className="max-h-80 overflow-y-auto py-1.5">
-              {filteredMenus.length === 0 ? (
-                <div className="text-center py-8 text-slate-400 text-sm">ไม่พบเมนูที่ค้นหา</div>
-              ) : filteredMenus.map(item => (
-                <button key={item.path} onClick={() => goTo(item.path)}
-                  className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-red-50 group">
-                  <Search size={13} className="text-slate-300 group-hover:text-red-400 flex-shrink-0" />
-                  <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-slate-900 group-hover:text-red-600">{item.label}</div>
-                    <div className="text-xs text-slate-400">{item.path}</div>
+            <div className="max-h-[420px] overflow-y-auto py-1.5">
+              {/* Menus */}
+              {filteredMenus.length > 0 && (
+                <>
+                  {searchQ && <div className="px-4 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider">เมนู</div>}
+                  {filteredMenus.map(item => (
+                    <button key={item.path} onClick={() => goTo(item.path)}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-red-50 group">
+                      <Search size={13} className="text-slate-300 group-hover:text-red-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-900 group-hover:text-red-600">{item.label}</div>
+                        <div className="text-xs text-slate-400">{item.path}</div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Trips */}
+              {dataResults.trips.length > 0 && (
+                <>
+                  <div className="px-4 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Truck size={10} />ทริป
                   </div>
-                </button>
-              ))}
+                  {dataResults.trips.map(t => (
+                    <button key={t.TripID} onClick={() => goTo('/monitor')}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-blue-50 group">
+                      <Truck size={13} className="text-slate-300 group-hover:text-blue-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-900 group-hover:text-blue-600">
+                          {t.LicensePlate}
+                          <span className="ml-2 text-xs text-slate-400">#{t.TripID}</span>
+                        </div>
+                        <div className="text-xs text-slate-400">
+                          {t.CustomerName || '-'} · {t.VehicleType || '-'} · {t.Status} · {dayjs(t.TripDate).format('DD/MM/YY')}
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {/* Customers */}
+              {dataResults.customers.length > 0 && (
+                <>
+                  <div className="px-4 pt-2 pb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Users size={10} />ลูกค้า
+                  </div>
+                  {dataResults.customers.map(c => (
+                    <button key={c.CustomerID} onClick={() => goTo('/master')}
+                      className="w-full flex items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-emerald-50 group">
+                      <Users size={13} className="text-slate-300 group-hover:text-emerald-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium text-slate-900 group-hover:text-emerald-600">{c.CustomerName}</div>
+                        <div className="text-xs text-slate-400">{c.CustomerCode || ''}</div>
+                      </div>
+                    </button>
+                  ))}
+                </>
+              )}
+
+              {searching && <div className="text-center py-4 text-slate-400 text-xs">กำลังค้นหา...</div>}
+
+              {searchQ.length >= 2 && !searching && filteredMenus.length === 0 && dataResults.trips.length === 0 && dataResults.customers.length === 0 && (
+                <div className="text-center py-8 text-slate-400 text-sm">ไม่พบผลลัพธ์สำหรับ "{searchQ}"</div>
+              )}
+              {!searchQ && <div className="text-center py-6 text-slate-300 text-sm">พิมพ์เพื่อค้นหา...</div>}
             </div>
             <div className="px-4 py-2 border-t border-slate-100 flex items-center gap-3 text-xs text-slate-400">
               <span><kbd className="px-1.5 py-0.5 rounded bg-slate-100 font-mono text-slate-500">↵</kbd> เปิด</span>
