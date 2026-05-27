@@ -155,7 +155,7 @@ export default function LoadingStation() {
                 className="input-field"
                 disabled={!activeTripId}>
                 <option value="">-- เลือกสถานีขึ้นสินค้า --</option>
-                {(activeTripId ? tripTargetStations : stations).map(s => (
+                {(activeTripId ? tripTargetStations.filter(s => !s.IsDone) : stations).map(s => (
                   <option key={s.StationID} value={s.StationID}>{s.StationName}</option>
                 ))}
               </select>
