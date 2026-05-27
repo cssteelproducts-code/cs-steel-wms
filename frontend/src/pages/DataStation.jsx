@@ -115,7 +115,7 @@ export default function DataStation() {
                       )}
                     </div>
                     <div className="text-slate-500 text-xs mt-1">
-                      {trip.VehicleType}{trip.WarehouseName && ` | ${trip.WarehouseName}`}{trip.DeliveryType && ` | ${trip.DeliveryType}`}
+                      {trip.VehicleType}{trip.DeliveryType && ` | ${trip.DeliveryType}`}{trip.WarehouseName && ` | ${trip.WarehouseName}`}
                     </div>
                     {trip.CustomerName && (
                       <div className="text-blue-500 text-xs">{trip.CustomerName}</div>
@@ -154,7 +154,7 @@ export default function DataStation() {
                 <div className="text-purple-600 text-sm font-medium mb-1">รถที่เลือก</div>
                 <div className="text-slate-900 text-xl font-bold">{selected.LicensePlate}</div>
                 <div className="text-slate-500 text-sm">
-                  {selected.VehicleType} | {selected.WarehouseName} | {selected.CustomerName || '-'}
+                  {selected.VehicleType} | {selected.DeliveryType || '-'} | {selected.WarehouseName}
                 </div>
                 <div className="text-slate-400 text-xs mt-1">
                   ชั่งเข้า: {formatDateTime(selected.WeighDateTime)}
