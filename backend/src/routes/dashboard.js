@@ -86,11 +86,19 @@ router.get('/summary', authenticate, async (req, res) => {
       `),
       pool.request().query(`
         SELECT
-          SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(GETDATE() AS DATE) THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as TodayWeight,
-          SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(DATEADD(DAY,-1,GETDATE()) AS DATE) THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as YesterdayWeight
+          SUM(CASE WHEN CAST(t.TripDate AS DATE)=
+            CASE DATEPART(WEEKDAY,GETDATE()) WHEN 2 THEN DATEADD(DAY,-2,CAST(GETDATE() AS DATE))
+            ELSE DATEADD(DAY,-1,CAST(GETDATE() AS DATE)) END
+          THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as YesterdayWeight,
+          SUM(CASE WHEN CAST(t.TripDate AS DATE)=
+            CASE DATEPART(WEEKDAY,GETDATE())
+              WHEN 2 THEN DATEADD(DAY,-3,CAST(GETDATE() AS DATE))
+              WHEN 3 THEN DATEADD(DAY,-3,CAST(GETDATE() AS DATE))
+              ELSE DATEADD(DAY,-2,CAST(GETDATE() AS DATE)) END
+          THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as DayBeforeWeight
         FROM WMS_Trips t
         LEFT JOIN WMS_WeighOut wo ON wo.TripID = t.TripID
-        WHERE CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-2,GETDATE()) AS DATE)
+        WHERE CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-7,GETDATE()) AS DATE)
       `),
       pool.request().query(`
         SELECT vt.TypeName, COUNT(*) as Count

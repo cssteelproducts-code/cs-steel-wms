@@ -207,7 +207,6 @@ export default function Dashboard() {
     <>
     <div className="space-y-5 animate-fade-in">
 
-
       {/* Stat cards: today / month / year (flip to show type breakdown) */}
       <div className="grid grid-cols-3 gap-4">
         <FlipStatCard title="วันนี้" value={counts.TodayTotal ?? 0} icon={Calendar} color="text-blue-500" breakdown={data?.vehicleTypesToday} />
@@ -221,17 +220,17 @@ export default function Dashboard() {
         {!collapsed.weight && (
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <p className="text-xs text-slate-500 mb-1">วันนี้</p>
-              {wh.TodayWeight ? (
-                <p className="text-base font-bold text-blue-600">{fmtKg(wh.TodayWeight)}</p>
+              <p className="text-xs text-slate-500 mb-1">เมื่อวาน</p>
+              {wh.YesterdayWeight ? (
+                <p className="text-base font-bold text-blue-600">{fmtKg(wh.YesterdayWeight)}</p>
               ) : (
                 <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
               )}
             </div>
             <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <p className="text-xs text-slate-500 mb-1">เมื่อวาน</p>
-              {wh.YesterdayWeight ? (
-                <p className="text-base font-bold text-slate-600">{fmtKg(wh.YesterdayWeight)}</p>
+              <p className="text-xs text-slate-500 mb-1">เมื่อวันก่อน</p>
+              {wh.DayBeforeWeight ? (
+                <p className="text-base font-bold text-slate-600">{fmtKg(wh.DayBeforeWeight)}</p>
               ) : (
                 <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
               )}
@@ -239,7 +238,6 @@ export default function Dashboard() {
           </div>
         )}
       </div>
-
 
       {/* ประเภทขนส่ง */}
       <div className="card">
@@ -363,6 +361,40 @@ export default function Dashboard() {
         </div>}
       </div>
 
+      {/* 4 stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="รถทั้งหมดวันนี้"
+          value={todayStats.TotalTrips || 0}
+          sub="เที่ยวรถ"
+          icon={TruckIcon}
+          color="text-blue-500"
+          onClick={() => navigate('/monitor')}
+        />
+        <StatCard
+          title="เสร็จสิ้นแล้ว"
+          value={todayStats.Completed || 0}
+          sub={`เฉลี่ย ${formatDuration(data?.avgProcessingMinutes)}`}
+          icon={CheckCircle}
+          color="text-emerald-500"
+        />
+        <StatCard
+          title="กำลังดำเนินการ"
+          value={todayStats.InProgress || 0}
+          sub="รถในคลัง"
+          icon={Clock}
+          color="text-amber-500"
+          onClick={() => navigate('/monitor')}
+        />
+        <StatCard
+          title="น้ำหนักรวม"
+          value={weight.TotalNetWeight ? `${parseFloat(weight.TotalNetWeight).toLocaleString('th-TH', { maximumFractionDigits: 0 })}` : '0'}
+          sub="กิโลกรัม (สุทธิ)"
+          icon={Scale}
+          color="text-cyan-500"
+        />
+      </div>
+
       {/* ปริมาณรถสะสมที่สถานี */}
       <div className="card">
         <SectionHeader title="ปริมาณรถสะสมที่สถานี" sectionKey="station" collapsed={collapsed.station} onToggle={toggleSection}
@@ -474,7 +506,113 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* รถที่ดำเนินการเสร็จแล้วย้อนหลัง */}
+      {/* Flow status + weekly chart */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="card">
+          <SectionHeader title="สถานะรถในคลัง" sectionKey="flow" collapsed={collapsed.flow} onToggle={toggleSection}
+            extra={<button onClick={() => navigate('/monitor')} className="text-blue-500 hover:text-blue-600 text-xs flex items-center gap-1">ดูทั้งหมด <ArrowRight size={11} /></button>} />
+          {!collapsed.flow && <>
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            {[
+              { status: 'Data', label: 'รอเอกสาร Pick' },
+              { status: 'Loading', label: 'ขึ้นสินค้า' },
+              { status: 'WeighOut', label: 'รอชั่งออก' }
+            ].map(item => {
+              const count = data?.statusFlow?.find(s => s.Status === item.status)?.Count || 0;
+              const cfg = getStatusConfig(item.status);
+              return (
+                <div key={item.status} className="border border-slate-200 rounded-lg p-3 text-center bg-slate-50">
+                  <div className={`text-2xl font-bold ${cfg.color?.split(' ').find(c => c.startsWith('text')) || 'text-slate-900'}`}>
+                    {count}
+                  </div>
+                  <div className="text-xs text-slate-500 mt-1">{item.label}</div>
+                </div>
+              );
+            })}
+          </div>
+          <div>
+            <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">สถานีขึ้นสินค้า</p>
+            <div className="space-y-1.5 max-h-48 overflow-y-auto">
+              {[...(data?.stationLoad || [])].sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(station => (
+                <div key={station.StationName}
+                  className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
+                  <span className="text-slate-700 text-sm truncate">{station.StationName}</span>
+                  <span className={`text-sm font-medium ${station.ActiveTrucks > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                    {station.ActiveTrucks > 0 ? `${station.ActiveTrucks} คัน` : '✓ ว่าง'}
+                  </span>
+                </div>
+              ))}
+              {!data?.stationLoad?.length && (
+                <p className="text-slate-400 text-sm text-center py-4">ยังไม่มีสถานีที่กำหนด</p>
+              )}
+            </div>
+          </div>
+          </>}
+        </div>
+
+        <div className="card">
+          <SectionHeader title="จำนวนรถ 7 วันย้อนหลัง" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection} />
+          {!collapsed.chart && <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={data?.weeklyTrend || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="TripDate" tick={{ fill: '#64748b', fontSize: 11 }}
+                tickFormatter={v => v ? dayjs(v).format('DD/MM/YY') : ''} />
+              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                labelStyle={{ color: '#475569' }}
+                formatter={(value, name) => [value, name === 'TotalTrips' ? 'รวม' : 'เสร็จ']}
+              />
+              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} name="TotalTrips" />
+              <Bar dataKey="Completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Completed" />
+            </BarChart>
+          </ResponsiveContainer>}
+        </div>
+      </div>
+
+      {/* Recent activity */}
+      <div className="card">
+        <SectionHeader title="กิจกรรมล่าสุดวันนี้" sectionKey="activity" collapsed={collapsed.activity} onToggle={toggleSection}
+          icon={Activity} iconColor="text-slate-400" />
+        {!collapsed.activity && <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr className="border-b border-slate-200">
+                <th className="table-header text-left px-4 py-2">ทะเบียน</th>
+                <th className="table-header text-left px-4 py-2 hide-mobile">ลูกค้า</th>
+                <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
+                <th className="table-header text-left px-4 py-2">สถานะ</th>
+                <th className="table-header text-left px-4 py-2 hide-mobile">เวลาเข้า</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data?.recentActivity?.map(trip => (
+                <tr key={trip.TripID}
+                  className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/monitor?tripId=${trip.TripID}`)}>
+                  <td className="table-cell font-medium text-slate-900">
+                    {trip.LicensePlate}
+                    <div className="text-xs text-slate-400">{trip.VehicleType}</div>
+                  </td>
+                  <td className="table-cell hide-mobile">{trip.CustomerName || '-'}</td>
+                  <td className="table-cell hide-mobile">{trip.WarehouseName || '-'}</td>
+                  <td className="table-cell"><StatusBadge status={trip.Status} /></td>
+                  <td className="table-cell hide-mobile">{formatDateTime(trip.CreatedAt)}</td>
+                </tr>
+              ))}
+              {!data?.recentActivity?.length && (
+                <tr>
+                  <td colSpan={5} className="text-center py-8 text-slate-400">
+                    ยังไม่มีข้อมูลวันนี้
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>}
+      </div>
+
+      {/* ย้อนหลัง */}
       <div className="card">
         <SectionHeader title="ย้อนหลัง" sectionKey="hist" collapsed={collapsed.hist} onToggle={toggleSection} />
         {!collapsed.hist && <div className="flex flex-wrap items-end gap-3 mb-4">
@@ -573,148 +711,6 @@ export default function Dashboard() {
           )
           )}
         </>}
-      </div>
-
-      {/* --- เดิม: สถานะรถในคลัง + chart + กิจกรรมล่าสุด --- */}
-
-      {/* Flow status + weekly chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <SectionHeader title="สถานะรถในคลัง" sectionKey="flow" collapsed={collapsed.flow} onToggle={toggleSection}
-            extra={<button onClick={() => navigate('/monitor')} className="text-blue-500 hover:text-blue-600 text-xs flex items-center gap-1">ดูทั้งหมด <ArrowRight size={11} /></button>} />
-          {!collapsed.flow && <>
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {[
-              { status: 'Data', label: 'รอเอกสาร Pick' },
-              { status: 'Loading', label: 'ขึ้นสินค้า' },
-              { status: 'WeighOut', label: 'รอชั่งออก' }
-            ].map(item => {
-              const count = data?.statusFlow?.find(s => s.Status === item.status)?.Count || 0;
-              const cfg = getStatusConfig(item.status);
-              return (
-                <div key={item.status} className="border border-slate-200 rounded-lg p-3 text-center bg-slate-50">
-                  <div className={`text-2xl font-bold ${cfg.color?.split(' ').find(c => c.startsWith('text')) || 'text-slate-900'}`}>
-                    {count}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">{item.label}</div>
-                </div>
-              );
-            })}
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">สถานีขึ้นสินค้า</p>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {[...(data?.stationLoad || [])].sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(station => (
-                <div key={station.StationName}
-                  className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
-                  <span className="text-slate-700 text-sm truncate">{station.StationName}</span>
-                  <span className={`text-sm font-medium ${station.ActiveTrucks > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                    {station.ActiveTrucks > 0 ? `${station.ActiveTrucks} คัน` : '✓ ว่าง'}
-                  </span>
-                </div>
-              ))}
-              {!data?.stationLoad?.length && (
-                <p className="text-slate-400 text-sm text-center py-4">ยังไม่มีสถานีที่กำหนด</p>
-              )}
-            </div>
-          </div>
-          </>}
-        </div>
-
-        <div className="card">
-          <SectionHeader title="จำนวนรถ 7 วันย้อนหลัง" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection} />
-          {!collapsed.chart && <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data?.weeklyTrend || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="TripDate" tick={{ fill: '#64748b', fontSize: 11 }}
-                tickFormatter={v => v ? dayjs(v).format('DD/MM/YY') : ''} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                labelStyle={{ color: '#475569' }}
-                formatter={(value, name) => [value, name === 'TotalTrips' ? 'รวม' : 'เสร็จ']}
-              />
-              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} name="TotalTrips" />
-              <Bar dataKey="Completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Completed" />
-            </BarChart>
-          </ResponsiveContainer>}
-        </div>
-      </div>
-
-      {/* Original 4-card stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="รถทั้งหมดวันนี้"
-          value={todayStats.TotalTrips || 0}
-          sub="เที่ยวรถ"
-          icon={TruckIcon}
-          color="text-blue-500"
-          onClick={() => navigate('/monitor')}
-        />
-        <StatCard
-          title="เสร็จสิ้นแล้ว"
-          value={todayStats.Completed || 0}
-          sub={`เฉลี่ย ${formatDuration(data?.avgProcessingMinutes)}`}
-          icon={CheckCircle}
-          color="text-emerald-500"
-        />
-        <StatCard
-          title="กำลังดำเนินการ"
-          value={todayStats.InProgress || 0}
-          sub="รถในคลัง"
-          icon={Clock}
-          color="text-amber-500"
-          onClick={() => navigate('/monitor')}
-        />
-        <StatCard
-          title="น้ำหนักรวม"
-          value={weight.TotalNetWeight ? `${parseFloat(weight.TotalNetWeight).toLocaleString('th-TH', { maximumFractionDigits: 0 })}` : '0'}
-          sub="กิโลกรัม (สุทธิ)"
-          icon={Scale}
-          color="text-cyan-500"
-        />
-      </div>
-
-      {/* Recent activity */}
-      <div className="card">
-        <SectionHeader title="กิจกรรมล่าสุดวันนี้" sectionKey="activity" collapsed={collapsed.activity} onToggle={toggleSection}
-          icon={Activity} iconColor="text-slate-400" />
-        {!collapsed.activity && <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-slate-200">
-                <th className="table-header text-left px-4 py-2">ทะเบียน</th>
-                <th className="table-header text-left px-4 py-2 hide-mobile">ลูกค้า</th>
-                <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
-                <th className="table-header text-left px-4 py-2">สถานะ</th>
-                <th className="table-header text-left px-4 py-2 hide-mobile">เวลาเข้า</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data?.recentActivity?.map(trip => (
-                <tr key={trip.TripID}
-                  className="border-b border-slate-100 hover:bg-slate-50 transition-colors cursor-pointer"
-                  onClick={() => navigate(`/monitor?tripId=${trip.TripID}`)}>
-                  <td className="table-cell font-medium text-slate-900">
-                    {trip.LicensePlate}
-                    <div className="text-xs text-slate-400">{trip.VehicleType}</div>
-                  </td>
-                  <td className="table-cell hide-mobile">{trip.CustomerName || '-'}</td>
-                  <td className="table-cell hide-mobile">{trip.WarehouseName || '-'}</td>
-                  <td className="table-cell"><StatusBadge status={trip.Status} /></td>
-                  <td className="table-cell hide-mobile">{formatDateTime(trip.CreatedAt)}</td>
-                </tr>
-              ))}
-              {!data?.recentActivity?.length && (
-                <tr>
-                  <td colSpan={5} className="text-center py-8 text-slate-400">
-                    ยังไม่มีข้อมูลวันนี้
-                  </td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>}
       </div>
     </div>
 
