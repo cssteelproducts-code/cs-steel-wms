@@ -238,7 +238,10 @@ export default function ETA() {
                 </tr>
               </thead>
               <tbody>
-                {[...filtered].sort((a, b) => (a.etaMinutes ?? 9999) - (b.etaMinutes ?? 9999)).map(v => {
+                {[...filtered].sort((a, b) => {
+                  if (a.withinRadius !== b.withinRadius) return a.withinRadius ? 1 : -1;
+                  return (a.etaMinutes ?? 9999) - (b.etaMinutes ?? 9999);
+                }).map(v => {
                   const isMoving = v.status === 'Moving';
                   const isSelected = v.vehicleId === selectedId;
                   return (
