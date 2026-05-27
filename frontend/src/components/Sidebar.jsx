@@ -48,14 +48,17 @@ export default function Sidebar({ isOpen, onClose }) {
       `} style={{ background: 'linear-gradient(175deg, #dc2626 0%, #b91c1c 35%, #991b1b 70%, #7f1d1d 100%)' }}>
 
         {/* Logo */}
-        <div className="flex items-center justify-between px-4 h-16 flex-shrink-0"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+        <div className="flex items-center justify-between px-4 flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', paddingTop: 14, paddingBottom: 14 }}>
           <div className="flex items-center gap-3">
-            <img src={logoImg} alt="CS" className="w-9 h-9 object-contain flex-shrink-0"
-              style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 6px rgba(255,255,255,0.4))' }} />
+            <div className="flex-shrink-0 rounded-xl flex items-center justify-center"
+              style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.15)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
+              <img src={logoImg} alt="CS" className="object-contain"
+                style={{ width: 34, height: 34, filter: 'brightness(0) invert(1) drop-shadow(0 1px 4px rgba(0,0,0,0.3))' }} />
+            </div>
             <div>
-              <div className="text-white font-bold text-sm leading-tight tracking-wide">CS.Smart</div>
-              <div className="text-red-200 text-[10px] leading-tight">WMS Platform</div>
+              <div className="text-white font-extrabold leading-tight tracking-wide" style={{ fontSize: 17 }}>CS.Smart</div>
+              <div className="font-medium leading-tight" style={{ fontSize: 10, color: 'rgba(255,220,220,0.85)', letterSpacing: '0.06em' }}>WMS PLATFORM</div>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden text-red-200 hover:text-white p-1 transition-colors">
