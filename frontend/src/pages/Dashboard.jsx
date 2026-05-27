@@ -272,7 +272,9 @@ export default function Dashboard() {
                           <div key={t.key}>
                             <div className="flex items-center justify-between mb-1">
                               <span className={`text-sm font-semibold ${t.color}`}>{t.label}</span>
-                              <span className={`text-sm font-bold ${t.color}`}>{count}</span>
+                              <span className={`text-sm font-bold ${t.color}`}>
+                                {count}<span className="text-xs font-medium text-slate-400 ml-1">/{pct}%</span>
+                              </span>
                             </div>
                             <div className="w-full h-1.5 rounded-full bg-slate-200">
                               <div className={`h-1.5 rounded-full transition-all ${t.bar}`}
