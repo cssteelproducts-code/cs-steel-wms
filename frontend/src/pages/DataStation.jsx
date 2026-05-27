@@ -44,10 +44,7 @@ export default function DataStation() {
     if (!selected) return;
     setLoading(true);
     try {
-      const res = await api.post('/data-station', {
-        tripId: selected.TripID,
-        ...form
-      });
+      const res = await api.post('/data-station', { tripId: selected.TripID, ...form });
       if (res.data.success) {
         toast.success(res.data.message);
         setSelected(null);
@@ -66,20 +63,20 @@ export default function DataStation() {
   );
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Left: Trip list */}
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="card-header mb-0 flex items-center gap-2">
-              <Clock size={18} className="text-purple-400" />
+              <Clock size={18} className="text-purple-500" />
               รออยู่ที่สถานี Data ({filtered.length})
             </h3>
-            <button onClick={fetchPending} className="text-blue-400 text-sm hover:text-blue-300">รีเฟรช</button>
+            <button onClick={fetchPending} className="text-blue-500 text-sm hover:text-blue-600">รีเฟรช</button>
           </div>
 
           <div className="relative mb-3">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-steel-400" />
+            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
             <input type="text" value={search} onChange={e => setSearch(e.target.value)}
               className="input-field pl-8 py-2 text-sm" placeholder="ค้นหาทะเบียน / ลูกค้า..." />
           </div>
@@ -89,30 +86,30 @@ export default function DataStation() {
               <div key={trip.TripID}
                 onClick={() => selectTrip(trip)}
                 className={`p-3 rounded-lg border cursor-pointer transition-all ${selected?.TripID === trip.TripID
-                  ? 'border-purple-500 bg-purple-900/20'
-                  : 'border-steel-600 hover:border-steel-500 bg-steel-700/30'}`}>
+                  ? 'border-purple-400 bg-purple-50'
+                  : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-white font-bold">{trip.LicensePlate}</span>
-                    <span className="text-steel-400 text-xs ml-2">#{trip.TripID}</span>
-                    <div className="text-steel-400 text-xs mt-1">
+                    <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
+                    <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
+                    <div className="text-slate-500 text-xs mt-1">
                       {trip.VehicleType} | {trip.WarehouseName}
                     </div>
                     {trip.CustomerName && (
-                      <div className="text-blue-400 text-xs">{trip.CustomerName}</div>
+                      <div className="text-blue-500 text-xs">{trip.CustomerName}</div>
                     )}
                   </div>
                   <div className="text-right">
-                    <div className="text-amber-400 text-sm font-medium">
+                    <div className="text-amber-500 text-sm font-medium">
                       {trip.WaitMinutes > 0 ? `รอ ${trip.WaitMinutes} นาที` : 'เพิ่งเข้า'}
                     </div>
-                    <div className="text-steel-500 text-xs">{formatDateTime(trip.WeighDateTime)}</div>
+                    <div className="text-slate-400 text-xs">{formatDateTime(trip.WeighDateTime)}</div>
                   </div>
                 </div>
               </div>
             ))}
             {!filtered.length && (
-              <p className="text-center text-steel-500 py-8">ไม่มีรถรอที่สถานี Data</p>
+              <p className="text-center text-slate-400 py-8">ไม่มีรถรอที่สถานี Data</p>
             )}
           </div>
         </div>
@@ -120,25 +117,24 @@ export default function DataStation() {
         {/* Right: Form */}
         <div className="card">
           <h3 className="card-header flex items-center gap-2">
-            <FileText size={18} className="text-purple-400" />
+            <FileText size={18} className="text-purple-500" />
             บันทึกรับเอกสาร Pick
           </h3>
 
           {selected ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Selected trip info */}
-              <div className="bg-purple-900/20 border border-purple-700/40 rounded-lg p-4">
-                <div className="text-purple-300 text-sm font-medium mb-1">รถที่เลือก</div>
-                <div className="text-white text-xl font-bold">{selected.LicensePlate}</div>
-                <div className="text-steel-400 text-sm">
+              <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
+                <div className="text-purple-600 text-sm font-medium mb-1">รถที่เลือก</div>
+                <div className="text-slate-900 text-xl font-bold">{selected.LicensePlate}</div>
+                <div className="text-slate-500 text-sm">
                   {selected.VehicleType} | {selected.WarehouseName} | {selected.CustomerName || '-'}
                 </div>
-                <div className="text-steel-500 text-xs mt-1">
+                <div className="text-slate-400 text-xs mt-1">
                   ชั่งเข้า: {formatDateTime(selected.WeighDateTime)}
                 </div>
               </div>
 
-              {/* Pick document */}
               <div>
                 <label className="label">เลขที่เอกสาร Pick *</label>
                 <input type="text" value={form.pickDocumentNo}
@@ -147,7 +143,6 @@ export default function DataStation() {
                   required autoFocus />
               </div>
 
-              {/* Target station */}
               <div>
                 <label className="label">สถานีที่ต้องไป</label>
                 <select value={form.targetStationId}
@@ -176,7 +171,7 @@ export default function DataStation() {
               </div>
             </form>
           ) : (
-            <div className="flex flex-col items-center justify-center py-16 text-steel-500">
+            <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <FileText size={48} className="mb-4 opacity-30" />
               <p>เลือกรถจากรายการด้านซ้ายเพื่อบันทึก</p>
             </div>

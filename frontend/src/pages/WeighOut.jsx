@@ -20,17 +20,11 @@ export default function WeighOut() {
   }, []);
 
   const fetchPending = async () => {
-    try {
-      const res = await api.get('/weigh-out/pending');
-      setPending(res.data.data || []);
-    } catch {}
+    try { const res = await api.get('/weigh-out/pending'); setPending(res.data.data || []); } catch {}
   };
 
   const fetchCompleted = async () => {
-    try {
-      const res = await api.get('/weigh-out/today');
-      setCompleted(res.data.data || []);
-    } catch {}
+    try { const res = await api.get('/weigh-out/today'); setCompleted(res.data.data || []); } catch {}
   };
 
   const selectTrip = (trip) => {
@@ -41,23 +35,13 @@ export default function WeighOut() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selected || !form.grossWeight) return;
-
     const gross = parseFloat(form.grossWeight);
     const tare = parseFloat(selected.TareWeight || 0);
     const net = gross - tare;
-
-    if (net < 0) {
-      toast.error('น้ำหนักหนักน้อยกว่าน้ำหนักเบา กรุณาตรวจสอบ');
-      return;
-    }
-
+    if (net < 0) { toast.error('น้ำหนักหนักน้อยกว่าน้ำหนักเบา กรุณาตรวจสอบ'); return; }
     setSubmitting(true);
     try {
-      const res = await api.post('/weigh-out', {
-        tripId: selected.TripID,
-        grossWeight: form.grossWeight,
-        notes: form.notes
-      });
+      const res = await api.post('/weigh-out', { tripId: selected.TripID, grossWeight: form.grossWeight, notes: form.notes });
       if (res.data.success) {
         toast.success(res.data.message);
         setSelected(null);
@@ -66,9 +50,7 @@ export default function WeighOut() {
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
-    } finally {
-      setSubmitting(false);
-    }
+    } finally { setSubmitting(false); }
   };
 
   const grossWeight = parseFloat(form.grossWeight || 0);
@@ -76,15 +58,15 @@ export default function WeighOut() {
   const netWeight = grossWeight - tareWeight;
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       {/* Tabs */}
       <div className="flex gap-2">
         <button onClick={() => setTab('weigh')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'weigh' ? 'bg-blue-600 text-white' : 'bg-steel-700 text-steel-300 hover:text-white'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'weigh' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <Scale size={14} className="inline mr-1" />บันทึกชั่งออก ({pending.length} รอ)
         </button>
         <button onClick={() => { setTab('done'); fetchCompleted(); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'done' ? 'bg-emerald-600 text-white' : 'bg-steel-700 text-steel-300 hover:text-white'}`}>
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'done' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <CheckCircle size={14} className="inline mr-1" />เสร็จสิ้นวันนี้ ({completed.length})
         </button>
       </div>
@@ -99,25 +81,25 @@ export default function WeighOut() {
                 <div key={trip.TripID}
                   onClick={() => selectTrip(trip)}
                   className={`p-3 rounded-lg border cursor-pointer transition-all ${selected?.TripID === trip.TripID
-                    ? 'border-cyan-500 bg-cyan-900/20' : 'border-steel-600 hover:border-steel-500 bg-steel-700/30'}`}>
+                    ? 'border-cyan-400 bg-cyan-50' : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50'}`}>
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-white font-bold">{trip.LicensePlate}</span>
-                      <span className="text-steel-400 text-xs ml-2">#{trip.TripID}</span>
-                      <div className="text-steel-400 text-xs mt-1">{trip.VehicleType} | {trip.WarehouseName}</div>
-                      {trip.CustomerName && <div className="text-blue-400 text-xs">{trip.CustomerName}</div>}
-                      {trip.PickDocumentNo && <div className="text-purple-400 text-xs font-mono">{trip.PickDocumentNo}</div>}
+                      <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
+                      <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
+                      <div className="text-slate-500 text-xs mt-1">{trip.VehicleType} | {trip.WarehouseName}</div>
+                      {trip.CustomerName && <div className="text-blue-500 text-xs">{trip.CustomerName}</div>}
+                      {trip.PickDocumentNo && <div className="text-purple-500 text-xs font-mono">{trip.PickDocumentNo}</div>}
                     </div>
                     <div className="text-right">
-                      <div className="text-cyan-400 text-sm">{formatWeight(trip.TareWeight)}</div>
-                      <div className="text-steel-500 text-xs">น้ำหนักเบา</div>
-                      <div className="text-amber-400 text-xs mt-1">{trip.MinutesInWarehouse} นาทีในคลัง</div>
+                      <div className="text-cyan-500 text-sm">{formatWeight(trip.TareWeight)}</div>
+                      <div className="text-slate-400 text-xs">น้ำหนักเบา</div>
+                      <div className="text-amber-500 text-xs mt-1">{trip.MinutesInWarehouse} นาทีในคลัง</div>
                     </div>
                   </div>
                 </div>
               ))}
               {!pending.length && (
-                <p className="text-center text-steel-500 py-8">ไม่มีรถรอชั่งออก</p>
+                <p className="text-center text-slate-400 py-8">ไม่มีรถรอชั่งออก</p>
               )}
             </div>
           </div>
@@ -125,23 +107,22 @@ export default function WeighOut() {
           {/* Weigh-out form */}
           <div className="card">
             <h3 className="card-header flex items-center gap-2">
-              <Scale size={18} className="text-cyan-400" />บันทึกชั่งออก (ชั่งหนัก)
+              <Scale size={18} className="text-cyan-500" />บันทึกชั่งออก (ชั่งหนัก)
             </h3>
 
             {selected ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                {/* Trip info */}
-                <div className="bg-cyan-900/20 border border-cyan-700/40 rounded-lg p-4">
-                  <div className="text-cyan-300 text-sm font-medium mb-2">รถที่เลือก</div>
+                <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
+                  <div className="text-cyan-600 text-sm font-medium mb-2">รถที่เลือก</div>
                   <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-steel-400">ทะเบียน:</span> <span className="text-white font-bold">{selected.LicensePlate}</span></div>
-                    <div><span className="text-steel-400">น้ำหนักเบา:</span> <span className="text-cyan-400 font-bold">{formatWeight(selected.TareWeight)}</span></div>
-                    <div><span className="text-steel-400">ลูกค้า:</span> <span className="text-white">{selected.CustomerName || '-'}</span></div>
-                    <div><span className="text-steel-400">คลัง:</span> <span className="text-white">{selected.WarehouseName}</span></div>
+                    <div><span className="text-slate-500">ทะเบียน:</span> <span className="text-slate-900 font-bold">{selected.LicensePlate}</span></div>
+                    <div><span className="text-slate-500">น้ำหนักเบา:</span> <span className="text-cyan-600 font-bold">{formatWeight(selected.TareWeight)}</span></div>
+                    <div><span className="text-slate-500">ลูกค้า:</span> <span className="text-slate-900">{selected.CustomerName || '-'}</span></div>
+                    <div><span className="text-slate-500">คลัง:</span> <span className="text-slate-900">{selected.WarehouseName}</span></div>
                     {selected.PickDocumentNo && (
                       <div className="col-span-2">
-                        <span className="text-steel-400">เอกสาร:</span>
-                        <span className="text-purple-400 font-mono ml-2">{selected.PickDocumentNo}</span>
+                        <span className="text-slate-500">เอกสาร:</span>
+                        <span className="text-purple-500 font-mono ml-2">{selected.PickDocumentNo}</span>
                       </div>
                     )}
                   </div>
@@ -156,22 +137,22 @@ export default function WeighOut() {
 
                 {/* Weight calculation */}
                 {form.grossWeight && (
-                  <div className="bg-steel-700/50 rounded-lg p-4">
+                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                     <div className="grid grid-cols-3 gap-4 text-center">
                       <div>
-                        <div className="text-steel-400 text-xs mb-1">น้ำหนักหนัก</div>
-                        <div className="text-white font-bold">{grossWeight.toFixed(2)}</div>
+                        <div className="text-slate-500 text-xs mb-1">น้ำหนักหนัก</div>
+                        <div className="text-slate-900 font-bold">{grossWeight.toFixed(2)}</div>
                       </div>
                       <div>
-                        <div className="text-steel-400 text-xs mb-1">น้ำหนักเบา</div>
-                        <div className="text-cyan-400 font-bold">{tareWeight.toFixed(2)}</div>
+                        <div className="text-slate-500 text-xs mb-1">น้ำหนักเบา</div>
+                        <div className="text-cyan-500 font-bold">{tareWeight.toFixed(2)}</div>
                       </div>
                       <div>
-                        <div className="text-steel-400 text-xs mb-1">น้ำหนักสุทธิ</div>
-                        <div className={`text-2xl font-bold ${netWeight >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                        <div className="text-slate-500 text-xs mb-1">น้ำหนักสุทธิ</div>
+                        <div className={`text-2xl font-bold ${netWeight >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
                           {netWeight.toFixed(2)}
                         </div>
-                        <div className="text-steel-500 text-xs">กก.</div>
+                        <div className="text-slate-400 text-xs">กก.</div>
                       </div>
                     </div>
                   </div>
@@ -191,7 +172,7 @@ export default function WeighOut() {
                 </div>
               </form>
             ) : (
-              <div className="flex flex-col items-center justify-center py-16 text-steel-500">
+              <div className="flex flex-col items-center justify-center py-16 text-slate-400">
                 <Scale size={48} className="mb-4 opacity-30" />
                 <p>เลือกรถจากรายการด้านซ้าย</p>
               </div>
@@ -206,7 +187,7 @@ export default function WeighOut() {
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
-                <tr className="border-b border-steel-700">
+                <tr className="border-b border-slate-200">
                   <th className="table-header text-left px-4 py-2">ทะเบียน</th>
                   <th className="table-header text-left px-4 py-2 hide-mobile">ลูกค้า</th>
                   <th className="table-header text-right px-4 py-2">น้ำหนักเบา</th>
@@ -217,27 +198,27 @@ export default function WeighOut() {
               </thead>
               <tbody>
                 {completed.map(t => (
-                  <tr key={t.TripID} className="border-b border-steel-700/50 hover:bg-steel-700/30">
-                    <td className="table-cell font-bold text-white">
+                  <tr key={t.TripID} className="border-b border-slate-100 hover:bg-slate-50">
+                    <td className="table-cell font-bold text-slate-900">
                       {t.LicensePlate}
-                      <div className="text-xs text-steel-500">#{t.TripID}</div>
+                      <div className="text-xs text-slate-400">#{t.TripID}</div>
                     </td>
                     <td className="table-cell hide-mobile">{t.CustomerName || '-'}</td>
-                    <td className="table-cell text-right text-steel-400">{formatWeight(t.TareWeight)}</td>
-                    <td className="table-cell text-right text-steel-300">{formatWeight(t.GrossWeight)}</td>
-                    <td className="table-cell text-right font-bold text-emerald-400">{formatWeight(t.NetWeight)}</td>
+                    <td className="table-cell text-right text-slate-400">{formatWeight(t.TareWeight)}</td>
+                    <td className="table-cell text-right text-slate-600">{formatWeight(t.GrossWeight)}</td>
+                    <td className="table-cell text-right font-bold text-emerald-500">{formatWeight(t.NetWeight)}</td>
                     <td className="table-cell hide-mobile">{formatDateTime(t.WeighOutTime)}</td>
                   </tr>
                 ))}
                 {!completed.length && (
-                  <tr><td colSpan={6} className="text-center py-8 text-steel-500">ยังไม่มีรายการเสร็จสิ้นวันนี้</td></tr>
+                  <tr><td colSpan={6} className="text-center py-8 text-slate-400">ยังไม่มีรายการเสร็จสิ้นวันนี้</td></tr>
                 )}
               </tbody>
               {completed.length > 0 && (
                 <tfoot>
-                  <tr className="border-t-2 border-steel-600">
-                    <td colSpan={4} className="table-cell text-right font-semibold text-steel-300">รวมน้ำหนักสุทธิ:</td>
-                    <td className="table-cell text-right font-bold text-emerald-400 text-lg">
+                  <tr className="border-t-2 border-slate-200">
+                    <td colSpan={4} className="table-cell text-right font-semibold text-slate-600">รวมน้ำหนักสุทธิ:</td>
+                    <td className="table-cell text-right font-bold text-emerald-500 text-lg">
                       {formatWeight(completed.reduce((sum, t) => sum + (parseFloat(t.NetWeight) || 0), 0))}
                     </td>
                     <td className="table-cell hide-mobile" />

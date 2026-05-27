@@ -1,7 +1,68 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Settings, Plus, Edit, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
+
+// Fix Leaflet default marker icons for Vite
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
+  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
+  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
+});
+
+// Custom red pin icon
+const redPinIcon = L.divIcon({
+  className: '',
+  html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 42" width="28" height="42">
+    <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/></filter>
+    <path filter="url(#s)" d="M14 1C7.37 1 2 6.37 2 13c0 10.5 12 28 12 28s12-17.5 12-28C26 6.37 20.63 1 14 1z" fill="#dc2626" stroke="white" stroke-width="1.5"/>
+    <circle cx="14" cy="13" r="5" fill="white"/>
+  </svg>`,
+  iconSize: [28, 42],
+  iconAnchor: [14, 42],
+  popupAnchor: [0, -42],
+});
+
+function RecenterMap({ lat, lng, trigger }) {
+  const map = useMap();
+  useEffect(() => {
+    const la = parseFloat(lat), ln = parseFloat(lng);
+    if (la && ln) map.setView([la, ln], Math.max(map.getZoom(), 15), { animate: true });
+  }, [trigger]);
+  return null;
+}
+
+function DraggableMarker({ lat, lng, onMove }) {
+  const markerRef = useRef(null);
+  const la = parseFloat(lat) || 13.7563;
+  const ln = parseFloat(lng) || 100.5018;
+  return (
+    <Marker
+      position={[la, ln]}
+      icon={redPinIcon}
+      draggable
+      ref={markerRef}
+      eventHandlers={{
+        dragend: () => {
+          const m = markerRef.current;
+          if (m) {
+            const p = m.getLatLng();
+            onMove(p.lat.toFixed(6), p.lng.toFixed(6));
+          }
+        }
+      }}
+    />
+  );
+}
+
+function MapClickHandler({ onClick }) {
+  useMapEvents({ click: e => onClick(e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6)) });
+  return null;
+}
 
 const tabs = [
   { key: 'warehouses', label: 'คลังสินค้า', icon: Warehouse },
@@ -22,6 +83,7 @@ export default function Master() {
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState([]);
   const [locSearching, setLocSearching] = useState(false);
+  const [recenterTrigger, setRecenterTrigger] = useState(0);
   const locTimer = useRef(null);
 
   const searchLocation = async (q) => {
@@ -44,6 +106,25 @@ export default function Master() {
     locTimer.current = setTimeout(() => searchLocation(v), 600);
   };
 
+  const reverseGeocode = async (lat, lng) => {
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=th,en`,
+        { headers: { 'Accept-Language': 'th,en' } }
+      );
+      const data = await res.json();
+      if (data?.display_name) {
+        setForm(p => ({ ...p, Location: data.display_name }));
+        setLocQuery(data.display_name);
+      }
+    } catch {}
+  };
+
+  const handleMapMove = useCallback((lat, lng) => {
+    setForm(p => ({ ...p, GpsLat: lat, GpsLng: lng }));
+    reverseGeocode(lat, lng);
+  }, []);
+
   const pickLocation = (item) => {
     setForm(p => ({
       ...p,
@@ -53,17 +134,18 @@ export default function Master() {
     }));
     setLocQuery(item.display_name);
     setLocResults([]);
+    setRecenterTrigger(t => t + 1);
   };
 
   const useCurrentLocation = () => {
     if (!navigator.geolocation) { toast.error('Browser ไม่รองรับ Geolocation'); return; }
     navigator.geolocation.getCurrentPosition(
       pos => {
-        setForm(p => ({
-          ...p,
-          GpsLat: pos.coords.latitude.toFixed(6),
-          GpsLng: pos.coords.longitude.toFixed(6),
-        }));
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        setForm(p => ({ ...p, GpsLat: lat, GpsLng: lng }));
+        setRecenterTrigger(t => t + 1);
+        reverseGeocode(lat, lng);
         toast.success('ดึงตำแหน่งปัจจุบันสำเร็จ');
       },
       () => toast.error('ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาต Location')
@@ -96,12 +178,18 @@ export default function Master() {
   const openCreate = () => {
     setForm({});
     setEditing(null);
+    setLocQuery('');
+    setLocResults([]);
+    setRecenterTrigger(0);
     setModal(tab);
   };
 
   const openEdit = (item) => {
     setForm(item);
     setEditing(item);
+    setLocQuery(item.Location || item.location || '');
+    setLocResults([]);
+    setRecenterTrigger(t => t + 1);
     setModal(tab);
   };
 
@@ -155,11 +243,11 @@ export default function Master() {
 
   const renderTable = () => {
     const items = data[tab] || [];
-    if (!items.length) return <p className="text-center text-steel-500 py-8">ยังไม่มีข้อมูล</p>;
+    if (!items.length) return <p className="text-center text-slate-400 py-8">ยังไม่มีข้อมูล</p>;
 
     switch (tab) {
       case 'warehouses': return (
-        <table className="w-full"><thead><tr className="border-b border-steel-700">
+        <table className="w-full"><thead><tr className="border-b border-slate-200">
           <th className="table-header text-left px-4 py-2">รหัส</th>
           <th className="table-header text-left px-4 py-2">ชื่อคลัง</th>
           <th className="table-header text-left px-4 py-2 hide-mobile">ที่ตั้ง</th>
@@ -167,48 +255,48 @@ export default function Master() {
           <th className="table-header text-center px-4 py-2">สถานะ</th>
           <th className="table-header px-4 py-2" />
         </tr></thead><tbody>
-          {items.map(i => <tr key={i.WarehouseID} className="border-b border-steel-700/50 hover:bg-steel-700/30">
-            <td className="table-cell font-mono text-blue-400">{i.WarehouseCode}</td>
-            <td className="table-cell text-white font-medium">{i.WarehouseName}</td>
-            <td className="table-cell hide-mobile">{i.Location || '-'}</td>
-            <td className="table-cell hide-mobile text-xs text-steel-500">{i.GpsLat && i.GpsLng ? `${i.GpsLat}, ${i.GpsLng}` : '-'}</td>
-            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-steel-600 text-steel-400 hover:text-white"><Edit size={14} /></button></td>
+          {items.map(i => <tr key={i.WarehouseID} className="border-b border-slate-100 hover:bg-slate-50">
+            <td className="table-cell font-mono text-blue-600">{i.WarehouseCode}</td>
+            <td className="table-cell text-slate-900 font-medium">{i.WarehouseName}</td>
+            <td className="table-cell hide-mobile text-slate-600">{i.Location || '-'}</td>
+            <td className="table-cell hide-mobile text-xs text-slate-400">{i.GpsLat && i.GpsLng ? `${i.GpsLat}, ${i.GpsLng}` : '-'}</td>
+            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
+            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );
       case 'customers': return (
-        <table className="w-full"><thead><tr className="border-b border-steel-700">
+        <table className="w-full"><thead><tr className="border-b border-slate-200">
           <th className="table-header text-left px-4 py-2">รหัส</th>
           <th className="table-header text-left px-4 py-2">ชื่อลูกค้า</th>
           <th className="table-header text-left px-4 py-2 hide-mobile">โทรศัพท์</th>
           <th className="table-header text-center px-4 py-2">สถานะ</th>
           <th className="table-header px-4 py-2" />
         </tr></thead><tbody>
-          {items.map(i => <tr key={i.CustomerID} className="border-b border-steel-700/50 hover:bg-steel-700/30">
-            <td className="table-cell font-mono text-blue-400">{i.CustomerCode}</td>
-            <td className="table-cell text-white">{i.CustomerName}</td>
-            <td className="table-cell hide-mobile">{i.Phone || '-'}</td>
-            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-steel-600 text-steel-400 hover:text-white"><Edit size={14} /></button></td>
+          {items.map(i => <tr key={i.CustomerID} className="border-b border-slate-100 hover:bg-slate-50">
+            <td className="table-cell font-mono text-blue-600">{i.CustomerCode}</td>
+            <td className="table-cell text-slate-900">{i.CustomerName}</td>
+            <td className="table-cell hide-mobile text-slate-600">{i.Phone || '-'}</td>
+            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
+            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );
       case 'vehicleTypes': return (
-        <table className="w-full"><thead><tr className="border-b border-steel-700">
+        <table className="w-full"><thead><tr className="border-b border-slate-200">
           <th className="table-header text-left px-4 py-2">ประเภทรถ</th>
           <th className="table-header text-left px-4 py-2 hide-mobile">รายละเอียด</th>
           <th className="table-header px-4 py-2" />
         </tr></thead><tbody>
-          {items.map(i => <tr key={i.TypeID} className="border-b border-steel-700/50 hover:bg-steel-700/30">
-            <td className="table-cell text-white font-medium">{i.TypeName}</td>
-            <td className="table-cell hide-mobile text-steel-400">{i.Description || '-'}</td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-steel-600 text-steel-400 hover:text-white"><Edit size={14} /></button></td>
+          {items.map(i => <tr key={i.TypeID} className="border-b border-slate-100 hover:bg-slate-50">
+            <td className="table-cell text-slate-900 font-medium">{i.TypeName}</td>
+            <td className="table-cell hide-mobile text-slate-500">{i.Description || '-'}</td>
+            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );
       case 'loadingStations': return (
-        <table className="w-full"><thead><tr className="border-b border-steel-700">
+        <table className="w-full"><thead><tr className="border-b border-slate-200">
           <th className="table-header text-left px-4 py-2">รหัส</th>
           <th className="table-header text-left px-4 py-2">ชื่อสถานี</th>
           <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
@@ -216,13 +304,13 @@ export default function Master() {
           <th className="table-header text-center px-4 py-2">สถานะ</th>
           <th className="table-header px-4 py-2" />
         </tr></thead><tbody>
-          {items.map(i => <tr key={i.StationID} className="border-b border-steel-700/50 hover:bg-steel-700/30">
-            <td className="table-cell font-mono text-blue-400">{i.StationCode}</td>
-            <td className="table-cell text-white font-medium">{i.StationName}</td>
-            <td className="table-cell hide-mobile">{i.WarehouseName || '-'}</td>
-            <td className="table-cell text-center">{i.SortOrder}</td>
-            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-400'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-steel-600 text-steel-400 hover:text-white"><Edit size={14} /></button></td>
+          {items.map(i => <tr key={i.StationID} className="border-b border-slate-100 hover:bg-slate-50">
+            <td className="table-cell font-mono text-blue-600">{i.StationCode}</td>
+            <td className="table-cell text-slate-900 font-medium">{i.StationName}</td>
+            <td className="table-cell hide-mobile text-slate-600">{i.WarehouseName || '-'}</td>
+            <td className="table-cell text-center text-slate-600">{i.SortOrder}</td>
+            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
+            <td className="px-4 py-3"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button></td>
           </tr>)}
         </tbody></table>
       );
@@ -236,53 +324,81 @@ export default function Master() {
           <div><label className="label">รหัสคลัง *</label><input value={form.WarehouseCode || form.warehouseCode || ''} onChange={e => setForm(p => ({ ...p, WarehouseCode: e.target.value }))} className="input-field" placeholder="W001" /></div>
           <div><label className="label">ชื่อคลัง *</label><input value={form.WarehouseName || form.warehouseName || ''} onChange={e => setForm(p => ({ ...p, WarehouseName: e.target.value }))} className="input-field" placeholder="คลังสินค้า 1" /></div>
 
-          {/* Location search via OpenStreetMap Nominatim */}
+          {/* Location search */}
           <div className="col-span-2">
-            <label className="label">ค้นหาที่ตั้งจากแผนที่</label>
+            <label className="label">ค้นหาสถานที่</label>
             <div className="relative">
-              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-steel-400" />
-              <input
-                value={locQuery}
-                onChange={e => handleLocInput(e.target.value)}
-                className="input-field pl-9 pr-10"
-                placeholder="พิมพ์ชื่อสถานที่ เช่น นิคมอุตสาหกรรมบางปู..."
-              />
-              {locSearching && (
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
-              )}
+              <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+              <input value={locQuery} onChange={e => handleLocInput(e.target.value)}
+                className="input-field pl-9 pr-10" placeholder="พิมพ์ชื่อสถานที่ เช่น นิคมอุตสาหกรรมบางปู..." />
+              {locSearching && <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />}
             </div>
             {locResults.length > 0 && (
-              <div className="mt-1 bg-steel-700 border border-steel-600 rounded-lg overflow-hidden shadow-xl max-h-44 overflow-y-auto">
+              <div className="mt-1 rounded-xl overflow-hidden shadow-xl max-h-40 overflow-y-auto z-[9999] relative bg-white border border-slate-200">
                 {locResults.map((item, i) => (
                   <button key={i} type="button" onClick={() => pickLocation(item)}
-                    className="w-full text-left px-3 py-2.5 text-sm text-steel-200 hover:bg-steel-600 hover:text-white border-b border-steel-600/50 last:border-0 flex items-start gap-2">
-                    <MapPin size={13} className="text-red-400 mt-0.5 flex-shrink-0" />
+                    className="w-full text-left px-3 py-2.5 text-sm flex items-start gap-2 transition-colors hover:bg-slate-50 border-b border-slate-100 last:border-0 text-slate-700">
+                    <MapPin size={13} className="text-red-500 mt-0.5 flex-shrink-0" />
                     <span className="line-clamp-2">{item.display_name}</span>
                   </button>
                 ))}
               </div>
             )}
             <button type="button" onClick={useCurrentLocation}
-              className="mt-2 flex items-center gap-1.5 text-xs text-blue-400 hover:text-blue-300 transition-colors">
+              className="mt-1.5 flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors">
               <Navigation size={12} />ใช้ตำแหน่งปัจจุบัน (GPS)
             </button>
           </div>
 
-          <div className="col-span-2"><label className="label">ที่ตั้ง / ที่อยู่</label><input value={form.Location || form.location || ''} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} className="input-field" placeholder="จะกรอกอัตโนมัติเมื่อเลือกจากแผนที่" /></div>
+          {/* Interactive Draggable Map */}
+          <div className="col-span-2">
+            <label className="label flex items-center gap-1.5">
+              <MapPin size={13} className="text-red-500" />
+              แผนที่ — ลากหมุดแดงหรือคลิกบนแผนที่เพื่อตั้งตำแหน่ง
+            </label>
+            <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: 240 }}>
+              <MapContainer
+                center={[parseFloat(form.GpsLat || form.gpsLat) || 13.5792, parseFloat(form.GpsLng || form.gpsLng) || 100.3534]}
+                zoom={parseFloat(form.GpsLat || form.gpsLat) ? 15 : 11}
+                style={{ height: '100%', width: '100%' }}
+                scrollWheelZoom
+              >
+                <TileLayer
+                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
+                />
+                <RecenterMap lat={form.GpsLat || form.gpsLat} lng={form.GpsLng || form.gpsLng} trigger={recenterTrigger} />
+                <DraggableMarker
+                  lat={form.GpsLat || form.gpsLat || 13.5792}
+                  lng={form.GpsLng || form.gpsLng || 100.3534}
+                  onMove={handleMapMove}
+                />
+                <MapClickHandler onClick={handleMapMove} />
+              </MapContainer>
+            </div>
+            <p className="text-[11px] mt-1 text-slate-400">
+              ลากหมุดสีแดง หรือคลิกบนแผนที่ เพื่อเลือกตำแหน่ง · ที่อยู่จะดึงอัตโนมัติ
+            </p>
+          </div>
+
+          <div className="col-span-2">
+            <label className="label">ที่ตั้ง / ที่อยู่</label>
+            <input value={form.Location || form.location || ''} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} className="input-field" placeholder="จะกรอกอัตโนมัติเมื่อย้ายหมุด" />
+          </div>
 
           <div>
             <label className="label">GPS Latitude</label>
-            <input type="number" step="0.000001" value={form.GpsLat || form.gpsLat || ''} onChange={e => setForm(p => ({ ...p, GpsLat: e.target.value }))} className="input-field" placeholder="13.756331" />
+            <input type="number" step="0.000001" value={form.GpsLat || form.gpsLat || ''} onChange={e => { setForm(p => ({ ...p, GpsLat: e.target.value })); setRecenterTrigger(t => t + 1); }} className="input-field" placeholder="13.579319" />
           </div>
           <div>
             <label className="label">GPS Longitude</label>
-            <input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => setForm(p => ({ ...p, GpsLng: e.target.value }))} className="input-field" placeholder="100.501765" />
+            <input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => { setForm(p => ({ ...p, GpsLng: e.target.value })); setRecenterTrigger(t => t + 1); }} className="input-field" placeholder="100.353664" />
           </div>
 
-          {form.GpsLat && form.GpsLng && (
+          {(form.GpsLat || form.gpsLat) && (form.GpsLng || form.gpsLng) && (
             <div className="col-span-2">
-              <a href={`https://www.google.com/maps?q=${form.GpsLat},${form.GpsLng}`} target="_blank" rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-emerald-400 hover:text-emerald-300 transition-colors">
+              <a href={`https://www.google.com/maps?q=${form.GpsLat || form.gpsLat},${form.GpsLng || form.gpsLng}`} target="_blank" rel="noreferrer"
+                className="inline-flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 transition-colors">
                 <MapPin size={12} />ดูตำแหน่งบน Google Maps
               </a>
             </div>
@@ -313,11 +429,11 @@ export default function Master() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto space-y-6">
+    <div className="space-y-6">
       <div className="flex flex-wrap gap-2">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 transition-colors ${tab === t.key ? 'bg-blue-600 text-white' : 'bg-steel-700 text-steel-300 hover:text-white'}`}>
+            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${tab === t.key ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
             <t.icon size={14} />{t.label}
           </button>
         ))}
@@ -334,13 +450,13 @@ export default function Master() {
       </div>
 
       {modal && (
-        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-50 p-4">
-          <div className="bg-steel-800 border border-steel-700 rounded-2xl w-full max-w-md p-6">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+          <div className={`rounded-2xl w-full p-6 bg-white border border-slate-200 shadow-xl ${modal === 'warehouses' ? 'max-w-xl' : 'max-w-md'}`}>
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-white">
+              <h3 className="text-lg font-bold text-slate-900">
                 {editing ? 'แก้ไข' : 'เพิ่ม'} {tabs.find(t => t.key === tab)?.label}
               </h3>
-              <button onClick={() => setModal(null)} className="text-steel-400 hover:text-white p-1"><X size={18} /></button>
+              <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
             </div>
             {renderForm()}
             <div className="flex gap-3 mt-5">

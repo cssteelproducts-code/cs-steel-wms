@@ -40,7 +40,7 @@ export default function Profile() {
     <div>
       <label className="label">{label}</label>
       <div className="relative">
-        <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-steel-400" />
+        <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
         <input
           type={show[field] ? 'text' : 'password'}
           value={form[field === 'current' ? 'currentPassword' : field === 'new' ? 'newPassword' : 'confirmPassword']}
@@ -50,7 +50,7 @@ export default function Profile() {
           autoComplete={field === 'current' ? 'current-password' : 'new-password'}
         />
         <button type="button" onClick={() => setShow(p => ({ ...p, [field]: !p[field] }))}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-steel-400 hover:text-white transition-colors">
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors">
           {show[field] ? <EyeOff size={15} /> : <Eye size={15} />}
         </button>
       </div>
@@ -58,25 +58,25 @@ export default function Profile() {
   );
 
   return (
-    <div className="max-w-xl mx-auto space-y-6">
+    <div className="space-y-6">
 
       {/* User info card */}
       <div className="card">
         <div className="flex items-center gap-4">
-          <div className="w-16 h-16 bg-red-700 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
+          <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
             <span className="text-white text-2xl font-bold">{user?.fullName?.charAt(0) || 'U'}</span>
           </div>
           <div>
-            <h2 className="text-xl font-bold text-white">{user?.fullName}</h2>
+            <h2 className="text-xl font-bold text-slate-900">{user?.fullName}</h2>
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs bg-red-900/40 text-red-400 border border-red-700/50 px-2 py-0.5 rounded-full font-medium">
+              <span className="text-xs bg-red-50 text-red-600 border border-red-200 px-2 py-0.5 rounded-full font-medium">
                 {user?.roleName}
               </span>
               {user?.warehouseName && (
-                <span className="text-xs text-steel-400">{user.warehouseName}</span>
+                <span className="text-xs text-slate-500">{user.warehouseName}</span>
               )}
             </div>
-            <p className="text-steel-500 text-xs mt-1">@{user?.username}</p>
+            <p className="text-slate-400 text-xs mt-1">@{user?.username}</p>
           </div>
         </div>
       </div>
@@ -89,15 +89,14 @@ export default function Profile() {
         </div>
         <form onSubmit={handleChange} className="space-y-4">
           <PassInput field="current" label="รหัสผ่านปัจจุบัน" />
-          <div className="border-t border-steel-700 pt-4">
+          <div className="border-t border-slate-100 pt-4">
             <PassInput field="new" label="รหัสผ่านใหม่" />
           </div>
           <PassInput field="confirm" label="ยืนยันรหัสผ่านใหม่" />
           {form.confirmPassword && form.newPassword !== form.confirmPassword && (
-            <p className="text-xs text-red-400">รหัสผ่านไม่ตรงกัน</p>
+            <p className="text-xs text-red-500">รหัสผ่านไม่ตรงกัน</p>
           )}
-          <button type="submit" disabled={saving} className="btn-primary w-full py-3"
-            style={{ background: 'linear-gradient(135deg,#b91c1c,#991b1b)' }}>
+          <button type="submit" disabled={saving} className="btn-primary w-full py-3">
             {saving
               ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
               : <><Save size={15} />บันทึกรหัสผ่านใหม่</>}

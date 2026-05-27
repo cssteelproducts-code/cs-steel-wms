@@ -106,7 +106,7 @@ const LANGS = {
   en: {
     flag: null,
     title: 'CS.Smart Warehouse&Transport Operation System',
-    subtitle: 'CS.Steel Product Co.,Ltd',
+    subtitle: 'CS Steel Product Co.,Ltd.',
     username: 'Username',
     password: 'Password',
     userPlaceholder: 'Enter username',
@@ -138,7 +138,7 @@ const LANGS = {
   my: {
     flag: null,
     title: 'CS.Smart Warehouse&Transport Operation System',
-    subtitle: 'CS.Steel Product Co.,Ltd',
+    subtitle: 'CS Steel Product Co.,Ltd.',
     username: 'အကောင့်အမည်',
     password: 'စကားဝှက်',
     userPlaceholder: 'အကောင့်အမည် ထည့်ပါ',
@@ -482,30 +482,28 @@ export default function Login() {
                 borderRadius: 4,
               }}
             >
-              <FlagIcon/>
+              <FlagIcon size={0.85}/>
             </button>
           );
         })}
       </div>
 
-      <div className="w-full max-w-sm relative z-10">
+      <div className="w-full max-w-md relative z-10">
 
-        {/* Logo — frameless, direct with glow */}
-        <div className="text-center mb-6">
-          <div className="inline-block mb-3">
-            <img
-              src={logoImg}
-              alt="CS Steel"
-              className="w-28 h-28 object-contain rounded-2xl"
-              style={{ filter: 'drop-shadow(0 0 24px rgba(185,28,28,0.55)) drop-shadow(0 4px 16px rgba(0,0,0,0.7))' }}
-            />
-          </div>
-          <h1 className="text-2xl font-bold text-white leading-tight">{t.title}</h1>
-          <p className="text-gray-400 mt-1 text-sm">{t.subtitle}</p>
+        {/* Logo */}
+        <div className="text-center mb-8">
+          <img
+            src={logoImg}
+            alt="CS Steel"
+            className="w-40 h-40 object-contain mx-auto mb-4"
+            style={{ filter: 'drop-shadow(0 0 40px rgba(220,38,38,0.75)) drop-shadow(0 0 12px rgba(220,38,38,0.4)) drop-shadow(0 6px 20px rgba(0,0,0,0.9))' }}
+          />
+          <h1 className="text-3xl font-bold text-white leading-tight">{t.title}</h1>
+          <p className="text-gray-400 mt-1.5 text-base">{t.subtitle}</p>
         </div>
 
         {/* Form card */}
-        <div className="rounded-2xl p-6 shadow-2xl border"
+        <div className="rounded-2xl p-8 shadow-2xl border"
           style={{ background: 'rgba(10,10,10,0.82)', backdropFilter: 'blur(16px)',
                    borderColor: 'rgba(185,28,28,0.4)',
                    boxShadow: '0 8px 48px rgba(0,0,0,0.6), 0 0 0 1px rgba(185,28,28,0.15)' }}>

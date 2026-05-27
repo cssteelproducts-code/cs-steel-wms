@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Menu, Bell, LogOut, User, RefreshCw } from 'lucide-react';
+import { Menu, LogOut, User } from 'lucide-react';
+import AlertBell from './AlertBell';
 import dayjs from 'dayjs';
 
 export default function Header({ onMenuClick, title }) {
@@ -21,23 +22,26 @@ export default function Header({ onMenuClick, title }) {
   };
 
   return (
-    <header className="h-16 bg-steel-900 border-b border-steel-700 flex items-center justify-between px-4 flex-shrink-0 sticky top-0 z-30">
+    <header className="h-16 flex items-center justify-between px-4 flex-shrink-0 sticky top-0 z-30"
+      style={{ background: '#ffffff', borderBottom: '1px solid #e2e8f0', borderTop: '3px solid #dc2626', boxShadow: '0 1px 4px rgba(0,0,0,0.04)' }}>
       <div className="flex items-center gap-3">
         <button
           onClick={onMenuClick}
-          className="lg:hidden text-steel-400 hover:text-white p-2 rounded-lg hover:bg-steel-700 transition-colors"
+          className="lg:hidden text-slate-500 hover:text-slate-900 p-2 rounded-lg hover:bg-slate-100 transition-colors"
         >
           <Menu size={20} />
         </button>
-        <h1 className="text-white font-semibold text-lg hidden sm:block">{title}</h1>
+        <h1 className="font-semibold text-base hidden sm:block" style={{ color: '#1e293b' }}>{title}</h1>
       </div>
 
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+        <AlertBell />
         {/* Live clock */}
-        <div className="hidden md:flex items-center gap-2 bg-steel-800 px-3 py-1.5 rounded-lg">
-          <span className="w-2 h-2 bg-emerald-400 rounded-full animate-pulse" />
-          <span className="text-emerald-400 font-mono text-sm font-medium">{time}</span>
-          <span className="text-steel-500 text-xs">
+        <div className="hidden md:flex items-center gap-2 h-9 px-3 rounded-xl"
+          style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse flex-shrink-0" />
+          <span className="text-emerald-600 font-mono text-sm font-medium">{time}</span>
+          <span className="text-sm font-medium" style={{ color: '#64748b' }}>
             {dayjs().format('DD/MM/YYYY')}
           </span>
         </div>
@@ -46,36 +50,41 @@ export default function Header({ onMenuClick, title }) {
         <div className="relative">
           <button
             onClick={() => setShowProfile(!showProfile)}
-            className="flex items-center gap-2 bg-steel-800 hover:bg-steel-700 px-3 py-1.5 rounded-lg transition-colors"
+            className="flex items-center gap-2 h-9 px-3 rounded-xl transition-all ml-1"
+            style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+            onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
           >
-            <div className="w-7 h-7 bg-blue-600 rounded-full flex items-center justify-center">
-              <span className="text-white text-xs font-bold">
-                {user?.fullName?.charAt(0) || 'U'}
-              </span>
+            <div className="w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0 text-white text-xs font-bold"
+              style={{ background: 'linear-gradient(135deg, #dc2626, #991b1b)' }}>
+              {user?.fullName?.charAt(0) || 'U'}
             </div>
-            <span className="text-white text-sm font-medium hidden sm:block max-w-24 truncate">
-              {user?.fullName}
-            </span>
           </button>
 
           {showProfile && (
-            <div className="absolute right-0 top-full mt-2 w-56 bg-steel-800 border border-steel-700 rounded-xl shadow-xl z-50 overflow-hidden">
-              <div className="px-4 py-3 border-b border-steel-700">
-                <div className="text-white font-medium">{user?.fullName}</div>
-                <div className="text-steel-400 text-xs mt-0.5">{user?.roleName}</div>
+            <div className="absolute right-0 top-full mt-2 w-64 rounded-2xl shadow-xl z-50 overflow-hidden"
+              style={{ background: '#ffffff', border: '1px solid #e2e8f0', boxShadow: '0 8px 32px rgba(0,0,0,0.12)' }}>
+              <div className="px-4 py-3" style={{ borderBottom: '1px solid #f1f5f9' }}>
+                <div className="font-semibold text-sm" style={{ color: '#0f172a' }}>{user?.fullName}</div>
+                <div className="text-xs mt-0.5" style={{ color: '#94a3b8' }}>{user?.roleName}</div>
               </div>
               <button
                 onClick={() => { setShowProfile(false); navigate('/profile'); }}
-                className="w-full flex items-center gap-3 px-4 py-3 text-steel-300 hover:text-white hover:bg-steel-700 transition-colors text-sm"
+                className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-sm whitespace-nowrap"
+                style={{ color: '#475569' }}
+                onMouseEnter={e => { e.currentTarget.style.background = '#f8fafc'; e.currentTarget.style.color = '#0f172a'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#475569'; }}
               >
-                <User size={16} />
+                <User size={15} />
                 โปรไฟล์ / เปลี่ยนรหัสผ่าน
               </button>
               <button
                 onClick={handleLogout}
-                className="w-full flex items-center gap-3 px-4 py-3 text-red-400 hover:text-red-300 hover:bg-red-900/30 transition-colors text-sm"
+                className="w-full flex items-center gap-3 px-4 py-3 transition-colors text-sm text-red-500"
+                onMouseEnter={e => { e.currentTarget.style.background = '#fff5f5'; }}
+                onMouseLeave={e => { e.currentTarget.style.background = ''; }}
               >
-                <LogOut size={16} />
+                <LogOut size={15} />
                 ออกจากระบบ
               </button>
             </div>

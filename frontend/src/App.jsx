@@ -16,6 +16,9 @@ import ETA from './pages/ETA';
 import Users from './pages/Users';
 import Master from './pages/Master';
 import Profile from './pages/Profile';
+import Alerts from './pages/Alerts';
+import Stock from './pages/Stock';
+import DeliveryPlan from './pages/DeliveryPlan';
 
 const ProtectedRoute = ({ children, menuCode }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -62,6 +65,9 @@ function AppRoutes() {
         <Route path="users" element={<ProtectedRoute menuCode="USERS"><Users /></ProtectedRoute>} />
         <Route path="master" element={<ProtectedRoute menuCode="MASTER"><Master /></ProtectedRoute>} />
         <Route path="profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+        <Route path="alerts" element={<ProtectedRoute menuCode="ALERTS"><Alerts /></ProtectedRoute>} />
+        <Route path="stock" element={<ProtectedRoute menuCode="STOCK"><Stock /></ProtectedRoute>} />
+        <Route path="delivery" element={<ProtectedRoute menuCode="DELIVERY_PLAN"><DeliveryPlan /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

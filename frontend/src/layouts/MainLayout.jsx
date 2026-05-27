@@ -15,7 +15,10 @@ const pageTitles = {
   '/users': 'จัดการผู้ใช้งาน',
   '/master': 'ข้อมูลหลัก',
   '/reports': 'รายงาน',
-  '/profile': 'โปรไฟล์ / เปลี่ยนรหัสผ่าน'
+  '/profile': 'โปรไฟล์ / เปลี่ยนรหัสผ่าน',
+  '/alerts': 'การแจ้งเตือน',
+  '/stock': 'สต็อกสินค้า',
+  '/delivery': 'แผนจัดส่ง (VRP)'
 };
 
 export default function MainLayout() {
@@ -24,7 +27,7 @@ export default function MainLayout() {
   const title = pageTitles[location.pathname] || 'CS.Smart WMS';
 
   return (
-    <div className="flex h-screen overflow-hidden bg-steel-900">
+    <div className="flex h-screen overflow-hidden" style={{ background: '#f1f5f9' }}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} title={title} />

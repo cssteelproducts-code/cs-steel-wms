@@ -9,16 +9,18 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-router-dom": "^6.21.1",
     "axios": "^1.6.2",
     "dayjs": "^1.11.10",
-    "recharts": "^2.10.3",
-    "lucide-react": "^0.303.0",
-    "react-hot-toast": "^2.4.1",
     "html5-qrcode": "^2.3.8",
-    "react-to-print": "^2.15.1"
+    "leaflet": "^1.9.4",
+    "lucide-react": "^0.303.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-hot-toast": "^2.4.1",
+    "react-leaflet": "^5.0.0",
+    "react-router-dom": "^6.21.1",
+    "react-to-print": "^2.15.1",
+    "recharts": "^2.10.3"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^4.2.1",

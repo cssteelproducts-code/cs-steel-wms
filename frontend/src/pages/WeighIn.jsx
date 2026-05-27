@@ -1,26 +1,42 @@
-import { useState, useEffect } from 'react';
-import { Scale, Plus, Search, AlertCircle, CheckCircle } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Scale, Clock, Search, AlertCircle, CheckCircle, RotateCcw, Truck, Hash } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatWeight } from '../utils/helpers';
 import StatusBadge from '../components/StatusBadge';
-import LoadingSpinner from '../components/LoadingSpinner';
+
+const DELIVERY_TYPES = [
+  { id: 'CSS', label: 'CSS.' },
+  { id: 'Customer', label: 'Customer' },
+  { id: 'Supplier', label: 'Sup.' }
+];
 
 export default function WeighIn() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const timeNow = () => new Date().toTimeString().slice(0, 5);
+
   const [form, setForm] = useState({
     licensePlate: '', vehicleTypeId: '', warehouseId: '',
-    customerId: '', tareWeight: '', notes: ''
+    customerId: '', deliveryType: '', tareWeight: '',
+    entryTime: timeNow(), notes: ''
   });
   const [masters, setMasters] = useState({ vehicleTypes: [], warehouses: [], customers: [] });
   const [todayList, setTodayList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
   const [plateCheck, setPlateCheck] = useState(null);
-  const [tab, setTab] = useState('form'); // form | list
+  const [custQuery, setCustQuery] = useState('');
+  const [custResults, setCustResults] = useState([]);
+  const [custName, setCustName] = useState('');
+  const [showCustDrop, setShowCustDrop] = useState(false);
+  const custTimer = useRef(null);
+  const plateTimer = useRef(null);
 
   useEffect(() => {
     fetchMasters();
     fetchTodayList();
+    const interval = setInterval(fetchTodayList, 30000);
+    return () => clearInterval(interval);
   }, []);
 
   const fetchMasters = async () => {
@@ -31,9 +47,9 @@ export default function WeighIn() {
         api.get('/master/customers')
       ]);
       setMasters({
-        vehicleTypes: vt.data.data,
-        warehouses: wh.data.data,
-        customers: cu.data.data
+        vehicleTypes: vt.data.data || [],
+        warehouses: wh.data.data || [],
+        customers: cu.data.data || []
       });
     } catch {}
   };
@@ -46,207 +62,335 @@ export default function WeighIn() {
   };
 
   const checkPlate = async (plate) => {
-    if (!plate || plate.length < 4) { setPlateCheck(null); return; }
+    if (!plate || plate.length < 3) { setPlateCheck(null); return; }
     setChecking(true);
     try {
       const res = await api.get(`/weigh-in/check/${encodeURIComponent(plate.toUpperCase())}`);
       setPlateCheck(res.data);
-    } catch {} finally {
-      setChecking(false);
-    }
+    } catch {} finally { setChecking(false); }
   };
 
   const handlePlateChange = (e) => {
     const val = e.target.value.toUpperCase();
     setForm(p => ({ ...p, licensePlate: val }));
-    const timer = setTimeout(() => checkPlate(val), 500);
-    return () => clearTimeout(timer);
+    clearTimeout(plateTimer.current);
+    plateTimer.current = setTimeout(() => checkPlate(val), 500);
+  };
+
+  const handleCustInput = (val) => {
+    setCustQuery(val);
+    setCustName('');
+    setForm(p => ({ ...p, customerId: '' }));
+    clearTimeout(custTimer.current);
+    if (!val.trim()) { setCustResults([]); setShowCustDrop(false); return; }
+    custTimer.current = setTimeout(() => {
+      const q = val.toLowerCase();
+      const filtered = masters.customers.filter(c =>
+        c.ARCode?.toLowerCase().includes(q) || c.CustomerName?.toLowerCase().includes(q)
+      ).slice(0, 8);
+      setCustResults(filtered);
+      setShowCustDrop(filtered.length > 0);
+    }, 200);
+  };
+
+  const pickCustomer = (c) => {
+    setCustQuery(c.ARCode || '');
+    setCustName(c.CustomerName);
+    setForm(p => ({ ...p, customerId: c.CustomerID }));
+    setShowCustDrop(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (plateCheck?.inYard) {
-      toast.error(`ทะเบียน ${form.licensePlate} ยังอยู่ในคลัง (Trip #${plateCheck.trip?.TripID})`);
+      toast.error(`ทะเบียน ${form.licensePlate} ยังอยู่ในคลัง`);
       return;
     }
+    if (!form.warehouseId) { toast.error('กรุณาเลือกคลังสินค้า'); return; }
+    if (!form.vehicleTypeId) { toast.error('กรุณาเลือกประเภทรถ'); return; }
     setLoading(true);
     try {
       const res = await api.post('/weigh-in', form);
       if (res.data.success) {
         toast.success(res.data.message);
-        setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', tareWeight: '', notes: '' });
+        setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', tareWeight: '', entryTime: timeNow(), notes: '' });
         setPlateCheck(null);
+        setCustQuery('');
+        setCustName('');
         fetchTodayList();
-        setTab('list');
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   };
 
+  const resetForm = () => {
+    setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', tareWeight: '', entryTime: timeNow(), notes: '' });
+    setPlateCheck(null);
+    setCustQuery('');
+    setCustName('');
+  };
+
+  const Pill = ({ item, active, onClick }) => (
+    <button type="button" onClick={onClick}
+      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+        active
+          ? 'bg-red-600 border-red-600 text-white shadow-sm'
+          : 'bg-white border-slate-200 text-slate-600 hover:border-red-400 hover:text-red-600'
+      }`}>
+      {item.label || item.TypeName || item.WarehouseName}
+    </button>
+  );
+
+  const totalToday = todayList.length;
+
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      {/* Tab switcher */}
-      <div className="flex gap-2">
-        <button
-          onClick={() => setTab('form')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'form' ? 'bg-blue-600 text-white' : 'bg-steel-700 text-steel-300 hover:text-white'}`}
-        >
-          <Plus size={14} className="inline mr-1" />บันทึกชั่งเข้า
-        </button>
-        <button
-          onClick={() => { setTab('list'); fetchTodayList(); }}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'list' ? 'bg-blue-600 text-white' : 'bg-steel-700 text-steel-300 hover:text-white'}`}
-        >
-          <Scale size={14} className="inline mr-1" />รายการวันนี้ ({todayList.length})
-        </button>
+    <div className="h-full flex flex-col gap-4">
+      {/* ── Top stat bar ── */}
+      <div className="grid grid-cols-3 gap-3 flex-shrink-0">
+        <div className="card py-3 flex items-center gap-3">
+          <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Truck size={18} className="text-red-500" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 leading-none">{totalToday}</div>
+            <div className="text-xs text-slate-500 mt-0.5">รถเข้าวันนี้</div>
+          </div>
+        </div>
+        <div className="card py-3 flex items-center gap-3">
+          <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Scale size={18} className="text-amber-500" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 leading-none">
+              {todayList.filter(t => t.Status === 'Data' || t.Status === 'WeighIn').length}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">อยู่ในคลัง</div>
+          </div>
+        </div>
+        <div className="card py-3 flex items-center gap-3">
+          <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
+            <CheckCircle size={18} className="text-emerald-600" />
+          </div>
+          <div>
+            <div className="text-2xl font-bold text-slate-900 leading-none">
+              {todayList.filter(t => t.Status === 'Complete').length}
+            </div>
+            <div className="text-xs text-slate-500 mt-0.5">เสร็จสิ้น</div>
+          </div>
+        </div>
       </div>
 
-      {tab === 'form' && (
-        <div className="card">
-          <h3 className="card-header flex items-center gap-2">
-            <Scale size={20} className="text-blue-400" />สถานีชั่งเข้า (ชั่งเบา)
-          </h3>
+      {/* ── Main 2-column layout ── */}
+      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-4 min-h-0">
 
-          <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {/* ── LEFT: Form ── */}
+        <div className="card overflow-hidden flex flex-col p-0">
+          {/* Form body */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3.5">
+            {/* Date / Time */}
+            <div className="grid grid-cols-2 gap-2.5">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1 text-slate-500">วันที่</div>
+                <div className="rounded-lg px-3 h-10 flex items-center text-sm font-medium text-slate-700 bg-slate-100">{todayStr}</div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1 flex items-center gap-1 text-slate-500">
+                  <Clock size={10} />เวลาเข้า
+                </div>
+                <input type="time" value={form.entryTime}
+                  onChange={e => setForm(p => ({ ...p, entryTime: e.target.value }))}
+                  className="input-field w-full h-10 text-sm" />
+                <div className="text-red-500 text-[10px] mt-0.5">แก้ไขเวลาได้ก่อนบันทึก</div>
+              </div>
+            </div>
+
+            {/* Warehouse pills */}
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">คลังสินค้า *</div>
+              <div className="flex flex-wrap gap-1.5">
+                {masters.warehouses.map(w => (
+                  <Pill key={w.WarehouseID} item={w}
+                    active={String(form.warehouseId) === String(w.WarehouseID)}
+                    onClick={() => setForm(p => ({ ...p, warehouseId: w.WarehouseID }))} />
+                ))}
+              </div>
+            </div>
+
             {/* License plate */}
-            <div className="sm:col-span-2">
-              <label className="label">ทะเบียนรถ *</label>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ทะเบียนรถ *</div>
               <div className="relative">
-                <input
-                  type="text"
-                  value={form.licensePlate}
-                  onChange={handlePlateChange}
-                  className="input-field text-xl font-bold tracking-wider uppercase"
-                  placeholder="เช่น กข-1234"
-                  required
-                />
+                <input type="text" value={form.licensePlate} onChange={handlePlateChange}
+                  className="input-field w-full py-2.5 text-slate-900 text-xl font-bold tracking-widest uppercase placeholder:text-slate-400 placeholder:font-normal placeholder:text-sm placeholder:tracking-normal"
+                  placeholder="เช่น กข-1234" required />
                 {checking && (
                   <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
                   </div>
                 )}
               </div>
               {plateCheck?.inYard && (
-                <div className="mt-2 flex items-center gap-2 text-red-400 bg-red-900/20 border border-red-900/40 rounded-lg p-3">
-                  <AlertCircle size={16} />
-                  <span className="text-sm">ทะเบียนนี้ยังอยู่ในคลัง! Trip #{plateCheck.trip?.TripID} | สถานะ: {plateCheck.trip?.Status}</span>
+                <div className="mt-1.5 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-2">
+                  <AlertCircle size={13} /><span className="text-xs font-medium">ยังอยู่ในคลัง! Trip #{plateCheck.trip?.TripID}</span>
                 </div>
               )}
               {plateCheck && !plateCheck.inYard && form.licensePlate && (
-                <div className="mt-2 flex items-center gap-2 text-emerald-400 text-sm">
-                  <CheckCircle size={14} />ทะเบียนนี้ไม่อยู่ในคลัง
+                <div className="mt-1 flex items-center gap-1 text-emerald-600 text-xs font-medium">
+                  <CheckCircle size={11} />พร้อมบันทึก
                 </div>
               )}
             </div>
 
-            {/* Vehicle type */}
+            {/* Vehicle type pills */}
             <div>
-              <label className="label">ประเภทรถ *</label>
-              <select value={form.vehicleTypeId} onChange={e => setForm(p => ({ ...p, vehicleTypeId: e.target.value }))}
-                className="input-field" required>
-                <option value="">-- เลือกประเภทรถ --</option>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ประเภทรถ *</div>
+              <div className="flex flex-wrap gap-1.5">
                 {masters.vehicleTypes.map(vt => (
-                  <option key={vt.TypeID} value={vt.TypeID}>{vt.TypeName}</option>
+                  <Pill key={vt.TypeID} item={vt}
+                    active={String(form.vehicleTypeId) === String(vt.TypeID)}
+                    onClick={() => setForm(p => ({ ...p, vehicleTypeId: vt.TypeID }))} />
                 ))}
-              </select>
+              </div>
             </div>
 
-            {/* Warehouse */}
+            {/* Delivery type pills */}
             <div>
-              <label className="label">คลังสินค้า *</label>
-              <select value={form.warehouseId} onChange={e => setForm(p => ({ ...p, warehouseId: e.target.value }))}
-                className="input-field" required>
-                <option value="">-- เลือกคลัง --</option>
-                {masters.warehouses.map(w => (
-                  <option key={w.WarehouseID} value={w.WarehouseID}>{w.WarehouseName}</option>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ขนส่ง</div>
+              <div className="flex gap-1.5">
+                {DELIVERY_TYPES.map(dt => (
+                  <Pill key={dt.id} item={dt}
+                    active={form.deliveryType === dt.id}
+                    onClick={() => setForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
                 ))}
-              </select>
+              </div>
             </div>
 
             {/* Customer */}
             <div>
-              <label className="label">ลูกค้า</label>
-              <select value={form.customerId} onChange={e => setForm(p => ({ ...p, customerId: e.target.value }))}
-                className="input-field">
-                <option value="">-- เลือกลูกค้า --</option>
-                {masters.customers.map(c => (
-                  <option key={c.CustomerID} value={c.CustomerID}>{c.CustomerName}</option>
-                ))}
-              </select>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ลูกค้า (ARCODE / ชื่อ)</div>
+              <div className="relative">
+                <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input type="text" value={custQuery} onChange={e => handleCustInput(e.target.value)}
+                  onBlur={() => setTimeout(() => setShowCustDrop(false), 150)}
+                  className="input-field w-full pl-9 pr-3 py-2 text-sm"
+                  placeholder="พิมพ์ ARCODE หรือชื่อลูกค้า" />
+                {showCustDrop && (
+                  <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-44 overflow-y-auto">
+                    {custResults.map(c => (
+                      <button key={c.CustomerID} type="button" onMouseDown={() => pickCustomer(c)}
+                        className="w-full text-left px-3 py-2 hover:bg-slate-50 transition-colors border-b border-slate-100 last:border-0">
+                        <div className="text-sm font-semibold text-slate-900">{c.ARCode}</div>
+                        <div className="text-xs text-slate-500">{c.CustomerName}</div>
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {custName && (
+                <div className="mt-1 text-xs text-red-600 px-2.5 py-1 rounded-lg bg-red-50 border border-red-200">
+                  {custName}
+                </div>
+              )}
             </div>
 
             {/* Tare weight */}
             <div>
-              <label className="label">น้ำหนักเบา (กิโลกรัม)</label>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">น้ำหนักเบา (กก.)</div>
               <input type="number" step="0.01" value={form.tareWeight}
                 onChange={e => setForm(p => ({ ...p, tareWeight: e.target.value }))}
-                className="input-field" placeholder="0.00" />
+                className="input-field w-full py-2 text-sm"
+                placeholder="0.00" />
             </div>
 
             {/* Notes */}
-            <div className="sm:col-span-2">
-              <label className="label">หมายเหตุ</label>
+            <div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">หมายเหตุ</div>
               <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                className="input-field resize-none" rows={2} placeholder="หมายเหตุ (ถ้ามี)" />
+                className="input-field w-full py-2 text-sm resize-none"
+                rows={2} placeholder="หมายเหตุ (ถ้ามี)" />
             </div>
 
-            <div className="sm:col-span-2 flex gap-3">
+            {/* Buttons */}
+            <div className="space-y-2 pt-1 pb-2">
               <button type="submit" disabled={loading || plateCheck?.inYard}
-                className="btn-success flex-1 py-3">
-                {loading ? <><span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />กำลังบันทึก...</> : <><Scale size={16} />บันทึกชั่งเข้า</>}
+                className="w-full py-3.5 rounded-xl text-white font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg,#dc2626 0%,#b91c1c 60%,#991b1b 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.3)' }}>
+                {loading
+                  ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />กำลังบันทึก...</span>
+                  : '✓  บันทึกรับรถ'}
               </button>
-              <button type="button" onClick={() => setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', tareWeight: '', notes: '' })}
-                className="btn-secondary px-6">ล้าง</button>
+              <button type="button" onClick={resetForm}
+                className="w-full py-2 rounded-xl text-slate-500 text-sm font-medium flex items-center justify-center gap-1.5 transition-all hover:text-slate-700 bg-slate-100 border border-slate-200">
+                <RotateCcw size={12} />ล้างข้อมูล
+              </button>
             </div>
           </form>
         </div>
-      )}
 
-      {tab === 'list' && (
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="card-header mb-0">รายการชั่งเข้าวันนี้</h3>
-            <button onClick={fetchTodayList} className="text-blue-400 hover:text-blue-300 text-sm">รีเฟรช</button>
+        {/* ── RIGHT: Today list ── */}
+        <div className="card flex flex-col min-h-0 overflow-hidden">
+          <div className="flex items-center justify-between mb-3 flex-shrink-0">
+            <div className="flex items-center gap-2">
+              <Truck size={17} className="text-red-500" />
+              <span className="font-semibold text-slate-900">รายการวันนี้</span>
+              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{todayList.length}</span>
+            </div>
+            <button onClick={fetchTodayList} className="text-xs text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1">
+              <RotateCcw size={11} />รีเฟรช
+            </button>
           </div>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-steel-700">
-                  <th className="table-header text-left px-4 py-2">ทะเบียน</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">ประเภท</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">ลูกค้า</th>
-                  <th className="table-header text-right px-4 py-2">น้ำหนักเบา</th>
-                  <th className="table-header text-left px-4 py-2">สถานะ</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">เวลา</th>
-                </tr>
-              </thead>
-              <tbody>
-                {todayList.map(t => (
-                  <tr key={t.TripID} className="border-b border-steel-700/50 hover:bg-steel-700/30">
-                    <td className="table-cell font-bold text-white">
-                      #{t.TripID}<br />
-                      <span className="text-sm font-normal">{t.LicensePlate}</span>
-                    </td>
-                    <td className="table-cell hide-mobile">{t.VehicleType}</td>
-                    <td className="table-cell hide-mobile">{t.WarehouseName}</td>
-                    <td className="table-cell hide-mobile">{t.CustomerName || '-'}</td>
-                    <td className="table-cell text-right">{formatWeight(t.TareWeight)}</td>
-                    <td className="table-cell"><StatusBadge status={t.Status} /></td>
-                    <td className="table-cell hide-mobile">{formatDateTime(t.WeighDateTime)}</td>
-                  </tr>
+
+          <div className="flex-1 overflow-y-auto -mx-4 px-4">
+            {todayList.length === 0 ? (
+              <div className="flex flex-col items-center justify-center h-40 text-slate-400">
+                <Scale size={32} className="mb-2 opacity-30" />
+                <span className="text-sm">ยังไม่มีรายการวันนี้</span>
+              </div>
+            ) : (
+              <div className="space-y-1.5">
+                {todayList.map((t, i) => (
+                  <div key={t.TripID} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
+                    {/* Index */}
+                    <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
+                      <span className="text-red-500 text-xs font-bold">{i + 1}</span>
+                    </div>
+
+                    {/* Plate + details */}
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-slate-900 font-bold text-sm tracking-wide">{t.LicensePlate}</span>
+                        <span className="text-slate-400 text-xs">#{t.TripID}</span>
+                      </div>
+                      <div className="text-xs text-slate-500 truncate mt-0.5">
+                        {t.VehicleType}
+                        {t.WarehouseName && ` · ${t.WarehouseName}`}
+                        {t.CustomerName && ` · ${t.CustomerName}`}
+                      </div>
+                    </div>
+
+                    {/* Weight */}
+                    <div className="text-right flex-shrink-0">
+                      <div className="text-sm font-semibold text-slate-700">
+                        {t.TareWeight ? `${Number(t.TareWeight).toLocaleString()} กก.` : '—'}
+                      </div>
+                      <div className="text-xs text-slate-400">
+                        {t.WeighDateTime ? new Date(t.WeighDateTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
+                      </div>
+                    </div>
+
+                    {/* Status */}
+                    <div className="flex-shrink-0">
+                      <StatusBadge status={t.Status} />
+                    </div>
+                  </div>
                 ))}
-                {!todayList.length && (
-                  <tr><td colSpan={7} className="text-center py-8 text-steel-500">ยังไม่มีรายการวันนี้</td></tr>
-                )}
-              </tbody>
-            </table>
+              </div>
+            )}
           </div>
         </div>
-      )}
+
+      </div>
     </div>
   );
 }

@@ -1,21 +1,26 @@
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
-  MapPin, Users, Settings, X, ChevronRight, Activity
+  MapPin, Users, Settings, X, Activity,
+  Bell, Boxes, Route
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, label: 'Dashboard', code: 'DASHBOARD' },
   { path: '/monitor', icon: Activity, label: 'Monitor รถ', code: 'TRIP_MONITOR' },
-  { label: '— สถานี —', divider: true },
+  { label: 'สถานี', divider: true },
   { path: '/weigh-in', icon: Scale, label: 'สถานีชั่งเข้า', code: 'WEIGH_IN' },
   { path: '/data-station', icon: FileText, label: 'สถานี Data', code: 'DATA_STATION' },
   { path: '/loading-station', icon: Package, label: 'สถานีขึ้นสินค้า', code: 'LOADING_STATION' },
   { path: '/checker', icon: CheckSquare, label: 'เช็คเกอร์', code: 'CHECKER' },
   { path: '/weigh-out', icon: TruckIcon, label: 'สถานีชั่งออก', code: 'WEIGH_OUT' },
-  { label: '— ระบบ —', divider: true },
+  { label: 'คลัง & จัดส่ง', divider: true },
+  { path: '/stock', icon: Boxes, label: 'สต็อกสินค้า', code: 'STOCK' },
+  { path: '/delivery', icon: Route, label: 'แผนจัดส่ง', code: 'DELIVERY_PLAN' },
+  { label: 'ระบบ', divider: true },
+  { path: '/alerts', icon: Bell, label: 'การแจ้งเตือน', code: 'ALERTS' },
   { path: '/eta', icon: MapPin, label: 'ETA / GPS รถ', code: 'ETA' },
   { path: '/users', icon: Users, label: 'จัดการผู้ใช้', code: 'USERS' },
   { path: '/master', icon: Settings, label: 'ข้อมูลหลัก', code: 'MASTER' }
@@ -23,7 +28,6 @@ const menuItems = [
 
 export default function Sidebar({ isOpen, onClose }) {
   const { user, hasPermission } = useAuth();
-  const location = useLocation();
 
   const visibleItems = menuItems.filter(item => {
     if (item.divider) return true;
@@ -32,47 +36,59 @@ export default function Sidebar({ isOpen, onClose }) {
 
   return (
     <>
-      {/* Mobile overlay */}
       {isOpen && (
         <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={onClose} />
       )}
 
-      {/* Sidebar */}
       <aside className={`
-        fixed top-0 left-0 h-full w-64 bg-steel-900 border-r border-steel-700 z-50
+        fixed top-0 left-0 h-full w-60 z-50
         flex flex-col transition-transform duration-300 ease-out
         lg:translate-x-0 lg:static lg:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `}>
+      `} style={{ background: 'linear-gradient(175deg, #dc2626 0%, #b91c1c 35%, #991b1b 70%, #7f1d1d 100%)' }}>
+
         {/* Logo */}
-        <div className="flex items-center justify-between p-4 border-b border-steel-700 h-16">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-lg overflow-hidden flex-shrink-0 bg-white flex items-center justify-center">
-              <img src={logoImg} alt="CS" className="w-8 h-8 object-contain" />
-            </div>
+        <div className="flex items-center justify-between px-4 h-16 flex-shrink-0"
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.15)' }}>
+          <div className="flex items-center gap-3">
+            <img src={logoImg} alt="CS" className="w-9 h-9 object-contain flex-shrink-0"
+              style={{ filter: 'brightness(0) invert(1) drop-shadow(0 0 6px rgba(255,255,255,0.4))' }} />
             <div>
-              <div className="text-white font-semibold text-sm leading-tight">CS.Smart WMS</div>
-              <div className="text-steel-400 text-[10px] leading-tight">คลังสินค้าและจัดส่ง</div>
+              <div className="text-white font-bold text-sm leading-tight tracking-wide">CS.Smart</div>
+              <div className="text-red-200 text-[10px] leading-tight">WMS Platform</div>
             </div>
           </div>
-          <button onClick={onClose} className="lg:hidden text-steel-400 hover:text-white p-1">
-            <X size={18} />
+          <button onClick={onClose} className="lg:hidden text-red-200 hover:text-white p-1 transition-colors">
+            <X size={16} />
           </button>
         </div>
 
         {/* User info */}
-        <div className="px-4 py-3 border-b border-steel-700 bg-steel-800/50">
-          <div className="text-white text-sm font-medium truncate">{user?.fullName}</div>
-          <div className="text-steel-400 text-xs mt-0.5">{user?.roleName}</div>
+        <div className="mx-3 my-2 px-3 py-2.5 rounded-xl flex-shrink-0"
+          style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.15)' }}>
+          <div className="flex items-center gap-2.5">
+            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs"
+              style={{ background: 'rgba(255,255,255,0.9)', color: '#b91c1c' }}>
+              {user?.fullName?.charAt(0) || 'U'}
+            </div>
+            <div className="min-w-0">
+              <div className="text-white text-xs font-semibold truncate">{user?.fullName}</div>
+              <div className="text-red-200 text-[10px] truncate">{user?.roleName}</div>
+            </div>
+          </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2 px-2">
+        <nav className="flex-1 overflow-y-auto py-1 px-2 space-y-0.5">
           {visibleItems.map((item, idx) => {
             if (item.divider) {
               return (
-                <div key={idx} className="px-2 pt-4 pb-1 text-xs text-steel-500 font-medium uppercase tracking-wider">
-                  {item.label}
+                <div key={idx} className="px-2 pt-4 pb-1.5 flex items-center gap-2">
+                  <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.2)' }} />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-red-200">
+                    {item.label}
+                  </span>
+                  <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.2)' }} />
                 </div>
               );
             }
@@ -80,26 +96,31 @@ export default function Sidebar({ isOpen, onClose }) {
               <NavLink
                 key={item.path}
                 to={item.path}
+                end={item.path === '/'}
                 onClick={onClose}
-                className={({ isActive }) => `
-                  flex items-center gap-3 px-3 py-2.5 rounded-lg mb-0.5 text-sm font-medium
-                  transition-colors duration-150 group
-                  ${isActive
-                    ? 'bg-blue-600/20 text-blue-400 border border-blue-600/30'
-                    : 'text-steel-400 hover:text-white hover:bg-steel-700/50'}
-                `}
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group"
+                style={({ isActive }) => isActive
+                  ? { background: 'rgba(255,255,255,0.92)', color: '#b91c1c', border: '1px solid rgba(255,255,255,0.3)' }
+                  : { color: 'rgba(255,255,255,0.85)', border: '1px solid transparent' }
+                }
               >
-                <item.icon size={17} className="flex-shrink-0" />
-                <span className="flex-1">{item.label}</span>
-                <ChevronRight size={14} className="opacity-0 group-hover:opacity-100 transition-opacity" />
+                {({ isActive }) => (
+                  <>
+                    <item.icon size={16} className="flex-shrink-0" />
+                    <span className="flex-1 text-[13px]">{item.label}</span>
+                    {isActive && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#b91c1c' }} />}
+                  </>
+                )}
               </NavLink>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="p-3 border-t border-steel-700 text-xs text-steel-500 text-center">
-          CS.Steel Product Co.,Ltd © 2025
+        <div className="px-4 py-3 flex-shrink-0 text-center"
+          style={{ borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+          <div className="text-[10px] text-red-200">CS Steel Product Co.,Ltd.</div>
+          <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>v1.0 © 2026</div>
         </div>
       </aside>
     </>

@@ -54,10 +54,10 @@ export default function TripMonitor() {
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h2 className="page-title flex items-center gap-2">
-            <Activity size={24} className="text-emerald-400" />
+            <Activity size={24} className="text-emerald-500" />
             Monitor รถในคลัง
           </h2>
-          <p className="text-steel-400 text-sm mt-1">
+          <p className="text-slate-500 text-sm mt-1">
             {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
           </p>
         </div>
@@ -76,11 +76,11 @@ export default function TripMonitor() {
               onClick={() => setFilter(filter === step.key ? 'all' : step.key)}
               className={`p-3 rounded-xl border text-center transition-all ${filter === step.key
                 ? `${cfg.color} scale-105`
-                : 'border-steel-600 bg-steel-700/30 hover:border-steel-500'}`}>
-              <div className={`text-2xl font-bold ${filter === step.key ? '' : count > 0 ? 'text-white' : 'text-steel-500'}`}>
+                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}>
+              <div className={`text-2xl font-bold ${filter === step.key ? '' : count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
                 {count}
               </div>
-              <div className="text-xs mt-1 text-steel-400">{step.shortLabel}</div>
+              <div className="text-xs mt-1 text-slate-500">{step.shortLabel}</div>
             </button>
           );
         })}
@@ -88,11 +88,11 @@ export default function TripMonitor() {
 
       {/* Trip cards */}
       {loading ? (
-        <div className="text-center py-16 text-steel-500">กำลังโหลด...</div>
+        <div className="text-center py-16 text-slate-400">กำลังโหลด...</div>
       ) : filtered.length === 0 ? (
         <div className="card text-center py-16">
-          <TruckIcon size={48} className="mx-auto text-steel-600 mb-3" />
-          <p className="text-steel-400">ไม่มีรถในคลังขณะนี้</p>
+          <TruckIcon size={48} className="mx-auto text-slate-300 mb-3" />
+          <p className="text-slate-400">ไม่มีรถในคลังขณะนี้</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -102,37 +102,37 @@ export default function TripMonitor() {
 
             return (
               <div key={trip.TripID}
-                className={`card border-l-4 ${cfg.color.split(' ').find(c => c.startsWith('border')) || 'border-steel-600'} hover:border-l-4 transition-all`}>
+                className={`card border-l-4 ${cfg.color.split(' ').find(c => c.startsWith('border')) || 'border-slate-300'} transition-all`}>
                 <div className="flex items-start justify-between gap-4">
                   {/* Main info */}
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
-                      <span className="text-white font-bold text-xl">{trip.LicensePlate}</span>
+                      <span className="text-slate-900 font-bold text-xl">{trip.LicensePlate}</span>
                       <StatusBadge status={trip.Status} />
                       {trip.CurrentStation && (
-                        <span className="text-xs bg-amber-900/30 text-amber-400 border border-amber-500/30 px-2 py-0.5 rounded-full">
+                        <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">
                           📍 {trip.CurrentStation}
                         </span>
                       )}
                     </div>
 
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 mt-3 text-sm">
-                      <div><span className="text-steel-500">Trip:</span> <span className="text-steel-300">#{trip.TripID}</span></div>
-                      <div><span className="text-steel-500">ประเภท:</span> <span className="text-steel-300">{trip.VehicleType || '-'}</span></div>
-                      <div><span className="text-steel-500">คลัง:</span> <span className="text-steel-300">{trip.WarehouseName || '-'}</span></div>
-                      <div><span className="text-steel-500">ลูกค้า:</span> <span className="text-blue-400">{trip.CustomerName || '-'}</span></div>
+                      <div><span className="text-slate-400">Trip:</span> <span className="text-slate-600">#{trip.TripID}</span></div>
+                      <div><span className="text-slate-400">ประเภท:</span> <span className="text-slate-600">{trip.VehicleType || '-'}</span></div>
+                      <div><span className="text-slate-400">คลัง:</span> <span className="text-slate-600">{trip.WarehouseName || '-'}</span></div>
+                      <div><span className="text-slate-400">ลูกค้า:</span> <span className="text-blue-500">{trip.CustomerName || '-'}</span></div>
                       {trip.WeighInTime && (
-                        <div><span className="text-steel-500">ชั่งเข้า:</span> <span className="text-steel-300">{formatDateTime(trip.WeighInTime)}</span></div>
+                        <div><span className="text-slate-400">ชั่งเข้า:</span> <span className="text-slate-600">{formatDateTime(trip.WeighInTime)}</span></div>
                       )}
                       {trip.PickDocumentNo && (
-                        <div><span className="text-steel-500">เอกสาร:</span> <span className="text-purple-400 font-mono">{trip.PickDocumentNo}</span></div>
+                        <div><span className="text-slate-400">เอกสาร:</span> <span className="text-purple-500 font-mono">{trip.PickDocumentNo}</span></div>
                       )}
                       {trip.TargetStation && (
-                        <div><span className="text-steel-500">เป้าหมาย:</span> <span className="text-amber-400">{trip.TargetStation}</span></div>
+                        <div><span className="text-slate-400">เป้าหมาย:</span> <span className="text-amber-500">{trip.TargetStation}</span></div>
                       )}
                       <div>
-                        <span className="text-steel-500">เวลาในคลัง:</span>
-                        <span className={`ml-1 font-medium ${trip.MinutesInWarehouse > 120 ? 'text-red-400' : trip.MinutesInWarehouse > 60 ? 'text-amber-400' : 'text-emerald-400'}`}>
+                        <span className="text-slate-400">เวลาในคลัง:</span>
+                        <span className={`ml-1 font-medium ${trip.MinutesInWarehouse > 120 ? 'text-red-500' : trip.MinutesInWarehouse > 60 ? 'text-amber-500' : 'text-emerald-500'}`}>
                           {formatDuration(trip.MinutesInWarehouse)}
                         </span>
                       </div>
@@ -144,12 +144,12 @@ export default function TripMonitor() {
                     <div className="flex items-center gap-1">
                       {FLOW_STEPS.slice(0, 5).map((step, idx) => (
                         <div key={step.key} className="flex items-center">
-                          <div className={`w-2 h-2 rounded-full ${idx < currentStep ? 'bg-emerald-400' : idx === currentStep ? `${cfg.dot} animate-pulse` : 'bg-steel-600'}`} />
-                          {idx < 4 && <div className={`w-4 h-0.5 ${idx < currentStep ? 'bg-emerald-400' : 'bg-steel-600'}`} />}
+                          <div className={`w-2 h-2 rounded-full ${idx < currentStep ? 'bg-emerald-500' : idx === currentStep ? `${cfg.dot} animate-pulse` : 'bg-slate-300'}`} />
+                          {idx < 4 && <div className={`w-4 h-0.5 ${idx < currentStep ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
                         </div>
                       ))}
                     </div>
-                    <div className={`text-xs ${cfg.color.split(' ').find(c => c.startsWith('text')) || 'text-steel-400'}`}>
+                    <div className={`text-xs ${cfg.color.split(' ').find(c => c.startsWith('text')) || 'text-slate-400'}`}>
                       ขั้นตอน {currentStep + 1}/5
                     </div>
                   </div>
