@@ -138,7 +138,7 @@ router.get('/today', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_Users u ON wo.OperatorID = u.UserID
-        WHERE CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
+        WHERE CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
         ORDER BY wo.WeighDateTime DESC
       `);
     res.json({ success: true, data: result.recordset });

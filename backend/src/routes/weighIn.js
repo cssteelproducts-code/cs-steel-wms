@@ -78,7 +78,7 @@ router.get('/today', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_Users u ON wi.OperatorID = u.UserID
-        WHERE CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
+        WHERE CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
         ORDER BY wi.WeighDateTime DESC
       `);
     res.json({ success: true, data: result.recordset });
@@ -131,7 +131,7 @@ router.get('/check/:licensePlate', authenticate, async (req, res) => {
         FROM WMS_Trips
         WHERE LicensePlate = @LicensePlate
         AND Status NOT IN ('Complete', 'Cancelled')
-        AND CAST(TripDate AS DATE) = CAST(GETDATE() AS DATE)
+        AND CAST(TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
       `);
 
     res.json({

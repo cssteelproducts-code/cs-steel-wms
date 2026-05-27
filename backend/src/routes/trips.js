@@ -17,7 +17,7 @@ router.get('/', authenticate, async (req, res) => {
       whereClause += ' AND CAST(t.TripDate AS DATE) = @Date';
       request.input('Date', sql.Date, date);
     } else {
-      whereClause += ' AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)';
+      whereClause += ' AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)';
     }
 
     if (status) {
