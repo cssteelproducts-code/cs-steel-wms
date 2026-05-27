@@ -117,7 +117,17 @@ router.get('/vehicle-types', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_VehicleTypes WHERE IsActive = 1 ORDER BY TypeName ASC');
+      .query(`SELECT * FROM WMS_VehicleTypes WHERE IsActive = 1 ORDER BY
+        CASE
+          WHEN TypeName LIKE N'%4 ล้อ%'    THEN 1
+          WHEN TypeName LIKE N'%6 ล้อ%'    THEN 2
+          WHEN TypeName LIKE N'%10 ล้อ%'   THEN 3
+          WHEN TypeName LIKE N'%12 ล้อ%'   THEN 4
+          WHEN TypeName LIKE N'%18 ล้อ%'   THEN 5
+          WHEN TypeName LIKE N'%พ่วง%'     THEN 6
+          WHEN TypeName LIKE N'%เทรลเลอร์%' THEN 7
+          ELSE 8
+        END`);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
