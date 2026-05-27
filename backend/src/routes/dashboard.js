@@ -8,12 +8,9 @@ router.get('/summary', authenticate, async (req, res) => {
   try {
     const pool = getPool();
 
-    const [
-      todayStats, weightStats, statusFlow, avgTime, recentActivity,
-      stationLoad, weeklyTrend, tripCounts, weightHistory,
-      vehicleTypesToday, onTimeStats, vtBreakdownMonth, vtBreakdownYear,
-      incompleteLoading, completedToday
-    ] = await Promise.all([
+    const settle = r => r.status === 'fulfilled' ? r.value : null;
+
+    const results = await Promise.allSettled([
       pool.request().query(`
         SELECT
           COUNT(*) as TotalTrips,
@@ -87,14 +84,9 @@ router.get('/summary', authenticate, async (req, res) => {
         FROM WMS_Trips
       `),
       pool.request().query(`
-        DECLARE @PrevWorkDay DATE =
-          CASE WHEN ((DATEPART(WEEKDAY,GETDATE())+@@DATEFIRST-2)%7+1) = 1
-            THEN CAST(DATEADD(DAY,-2,GETDATE()) AS DATE)
-            ELSE CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
-          END;
         SELECT
           SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(GETDATE() AS DATE) THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as TodayWeight,
-          SUM(CASE WHEN CAST(t.TripDate AS DATE)=@PrevWorkDay THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as YesterdayWeight
+          SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(DATEADD(DAY,-1,GETDATE()) AS DATE) THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as YesterdayWeight
         FROM WMS_Trips t
         LEFT JOIN WMS_WeighOut wo ON wo.TripID = t.TripID
         WHERE CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-2,GETDATE()) AS DATE)
@@ -174,11 +166,7 @@ router.get('/summary', authenticate, async (req, res) => {
         WHERE t.Status='Complete' AND CAST(t.CompletedAt AS DATE)=CAST(GETDATE() AS DATE)
         ORDER BY t.CompletedAt DESC
       `),
-    ]);
-
-    let deliveryTypeStats = [];
-    try {
-      const dtResult = await pool.request().query(`
+      pool.request().query(`
         SELECT
           ISNULL(DeliveryType,'') as DeliveryType,
           SUM(CASE WHEN CAST(TripDate AS DATE)=CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) as TodayCount,
@@ -187,28 +175,41 @@ router.get('/summary', authenticate, async (req, res) => {
         FROM WMS_Trips
         WHERE DeliveryType IS NOT NULL AND DeliveryType != ''
         GROUP BY DeliveryType
-      `);
-      deliveryTypeStats = dtResult.recordset;
-    } catch (_) {}
+      `)
+    ]);
+
+    const [
+      todayStats, weightStats, statusFlow, avgTime, recentActivity,
+      stationLoad, weeklyTrend, tripCounts, weightHistory,
+      vehicleTypesToday, onTimeStats, vtBreakdownMonth, vtBreakdownYear,
+      incompleteLoading, completedToday, deliveryTypeResult
+    ] = results.map(settle);
+
+    // Log any failed queries for debugging
+    results.forEach((r, i) => {
+      if (r.status === 'rejected') console.warn(`Dashboard query[${i}] failed:`, r.reason?.message);
+    });
+
+    const deliveryTypeStats = deliveryTypeResult?.recordset || [];
 
     res.json({
       success: true,
       data: {
-        today: todayStats.recordset[0],
-        weight: weightStats.recordset[0],
-        statusFlow: statusFlow.recordset,
-        avgProcessingMinutes: avgTime.recordset[0]?.AvgMinutes || 0,
-        recentActivity: recentActivity.recordset,
-        stationLoad: stationLoad.recordset,
-        weeklyTrend: weeklyTrend.recordset,
-        tripCounts: tripCounts.recordset[0],
-        weightHistory: weightHistory.recordset[0],
-        vehicleTypesToday: vehicleTypesToday.recordset,
-        onTimeStats: onTimeStats.recordset[0],
-        vtBreakdownMonth: vtBreakdownMonth.recordset,
-        vtBreakdownYear: vtBreakdownYear.recordset,
-        incompleteLoading: incompleteLoading.recordset,
-        completedToday: completedToday.recordset,
+        today: todayStats?.recordset[0] || {},
+        weight: weightStats?.recordset[0] || {},
+        statusFlow: statusFlow?.recordset || [],
+        avgProcessingMinutes: avgTime?.recordset[0]?.AvgMinutes || 0,
+        recentActivity: recentActivity?.recordset || [],
+        stationLoad: stationLoad?.recordset || [],
+        weeklyTrend: weeklyTrend?.recordset || [],
+        tripCounts: tripCounts?.recordset[0] || {},
+        weightHistory: weightHistory?.recordset[0] || {},
+        vehicleTypesToday: vehicleTypesToday?.recordset || [],
+        onTimeStats: onTimeStats?.recordset[0] || {},
+        vtBreakdownMonth: vtBreakdownMonth?.recordset || [],
+        vtBreakdownYear: vtBreakdownYear?.recordset || [],
+        incompleteLoading: incompleteLoading?.recordset || [],
+        completedToday: completedToday?.recordset || [],
         deliveryTypeStats
       }
     });
