@@ -123,17 +123,6 @@ export default function Header({ onMenuClick, title }) {
         <h1 className="font-bold truncate hidden sm:block" style={{ color: '#374151', fontSize: 21 }}>{title}</h1>
       </div>
 
-      {/* Center: search bar (clickable) */}
-      <button onClick={openSearch}
-        className="flex-1 max-w-md mx-auto hidden md:flex items-center gap-2 px-4 h-10 rounded-2xl transition-all cursor-text"
-        style={{ background: '#f9fafb', border: '1.5px solid #e5e7eb' }}
-        onMouseEnter={e => e.currentTarget.style.borderColor = '#dc2626'}
-        onMouseLeave={e => e.currentTarget.style.borderColor = '#e5e7eb'}>
-        <Search size={14} style={{ color: '#9ca3af' }} className="flex-shrink-0" />
-        <span className="text-sm flex-1 text-left" style={{ color: '#9ca3af' }}>ค้นหา...</span>
-        <span className="text-xs px-1.5 py-0.5 rounded-lg font-mono flex-shrink-0"
-          style={{ background: '#e5e7eb', color: '#9ca3af' }}>Ctrl K</span>
-      </button>
 
       {/* Search Palette Modal */}
       {showSearch && (
