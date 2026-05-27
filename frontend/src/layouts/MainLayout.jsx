@@ -26,7 +26,7 @@ export default function MainLayout() {
   const location = useLocation();
   const { t } = useLang();
   const titleKey = pageTitleKeys[location.pathname];
-  const title = titleKey ? t(titleKey) : 'CS.Smart WMS';
+  const title = titleKey ? t(titleKey) : 'CS.Smart';
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#f0f4f8' }}>

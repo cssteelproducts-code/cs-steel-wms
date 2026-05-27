@@ -57,7 +57,7 @@ export default function Sidebar({ isOpen, onClose }) {
             <img src={logoImg} alt="CS.Smart" className="h-10 w-auto object-contain flex-shrink-0" />
             <div>
               <div className="font-black leading-tight tracking-tight" style={{ fontSize: 15, color: '#111827' }}>CS.Smart</div>
-              <div className="font-medium leading-tight" style={{ fontSize: 9, color: '#9ca3af', letterSpacing: '0.12em' }}>WMS PLATFORM</div>
+              <div className="font-medium leading-tight" style={{ fontSize: 9, color: '#9ca3af', letterSpacing: '0.12em' }}>PLATFORM</div>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors">
