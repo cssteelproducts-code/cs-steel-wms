@@ -101,7 +101,7 @@ export default function Header({ onMenuClick, title }) {
           className="lg:hidden p-2 rounded-xl hover:bg-gray-100 transition-colors flex-shrink-0" style={{ color: '#6b7280' }}>
           <Menu size={20} />
         </button>
-        <h1 className="font-bold text-sm truncate hidden sm:block" style={{ color: '#374151' }}>{title}</h1>
+        <h1 className="font-bold truncate hidden sm:block" style={{ color: '#374151', fontSize: 21 }}>{title}</h1>
       </div>
 
       {/* Center: search bar (clickable) */}
