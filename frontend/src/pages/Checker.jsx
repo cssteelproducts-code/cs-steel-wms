@@ -88,7 +88,7 @@ export default function Checker() {
                     <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                     <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
                     <div className="text-slate-500 text-xs mt-1">
-                      {trip.VehicleType} | {trip.WarehouseName}
+                      {trip.VehicleType}{trip.DeliveryType ? ` | ${trip.DeliveryType}` : ''}{trip.WarehouseName ? ` | ${trip.WarehouseName}` : ''}
                     </div>
                     {trip.CustomerName && <div className="text-blue-500 text-xs">{trip.CustomerName}</div>}
                     {trip.PickDocumentNo && (
