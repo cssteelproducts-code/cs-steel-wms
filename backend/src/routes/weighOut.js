@@ -107,16 +107,17 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        WHERE t.Status NOT IN ('Complete', 'Cancelled')
-        AND t.Status != 'Checker'
-        AND NOT EXISTS (
-          SELECT 1 FROM WMS_WeighOut wo
-          WHERE wo.TripID = t.TripID
-          AND wo.WeighDateTime >= (
-            SELECT ISNULL(MAX(cr.CheckTime), '2000-01-01')
-            FROM WMS_CheckerRecord cr WHERE cr.TripID = t.TripID AND cr.IsApproved = 0
-          )
-        )
+        LEFT JOIN (
+          SELECT TripID, MAX(WeighDateTime) as LastWeighOut
+          FROM WMS_WeighOut GROUP BY TripID
+        ) wo_agg ON wo_agg.TripID = t.TripID
+        LEFT JOIN (
+          SELECT TripID, MAX(CheckTime) as LastFailTime
+          FROM WMS_CheckerRecord WHERE IsApproved = 0 GROUP BY TripID
+        ) cr_agg ON cr_agg.TripID = t.TripID
+        WHERE t.Status NOT IN ('Complete', 'Cancelled', 'Checker')
+        AND (wo_agg.LastWeighOut IS NULL
+             OR wo_agg.LastWeighOut < ISNULL(cr_agg.LastFailTime, '1900-01-01'))
         AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
