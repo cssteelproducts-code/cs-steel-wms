@@ -3,7 +3,7 @@
 @tailwind utilities;
 
 @layer base {
-  html { font-size: 70%; }
+  html { font-size: 87.5%; }
   * { font-family: 'Sarabun', system-ui, sans-serif; }
   body {
     @apply antialiased;
