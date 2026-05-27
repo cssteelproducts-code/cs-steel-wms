@@ -48,28 +48,45 @@ export default function Sidebar({ isOpen, onClose }) {
         flex flex-col transition-transform duration-300 ease-out
         lg:translate-x-0 lg:static lg:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `} style={{ background: '#ffffff', borderRight: '1px solid #f3f4f6', boxShadow: '4px 0 24px rgba(0,0,0,0.04)' }}>
+      `} style={{
+        background: '#ffffff',
+        borderRight: '1px solid #e8eaed',
+        boxShadow: '2px 0 16px rgba(0,0,0,0.06)',
+      }}>
 
         {/* Logo */}
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-          style={{ borderBottom: '1px solid #f3f4f6' }}>
+          style={{ borderBottom: '1px solid #f0f2f5' }}>
           <div className="flex-1 flex justify-center">
-            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 60 }} />
+            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 58 }} />
           </div>
-          <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors">
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-xl hover:bg-red-50 transition-colors flex-shrink-0"
+            style={{ color: '#9ca3af' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#dc2626'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}>
             <X size={15} />
           </button>
         </div>
 
+        {/* Red brand accent line */}
+        <div style={{
+          height: 2,
+          background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)',
+          flexShrink: 0,
+        }} />
+
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
           {visibleItems.map((item, idx) => {
             if (item.divider) {
               return (
-                <div key={idx} className="px-2 pt-5 pb-2">
-                  <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: '#d1d5db' }}>
+                <div key={idx} className="px-2 pt-5 pb-2 flex items-center gap-2">
+                  <div style={{ flex: 1, height: 1, background: '#f0f2f5' }} />
+                  <span className="text-[10px] font-black uppercase tracking-[0.14em]"
+                    style={{ color: '#b0b8c8' }}>
                     {t(item.key)}
                   </span>
+                  <div style={{ flex: 1, height: 1, background: '#f0f2f5' }} />
                 </div>
               );
             }
@@ -79,21 +96,25 @@ export default function Sidebar({ isOpen, onClose }) {
                 to={item.path}
                 end={item.path === '/'}
                 onClick={onClose}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-150"
+                className="group flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-150 relative"
                 style={({ isActive }) => isActive
-                  ? { background: 'linear-gradient(135deg,#dc2626,#b91c1c)', color: '#ffffff', boxShadow: '0 4px 12px rgba(220,38,38,0.30)' }
-                  : { color: '#6b7280' }
+                  ? {
+                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
+                      color: '#ffffff',
+                      boxShadow: '0 4px 14px rgba(185,28,28,0.30), inset 0 1px 0 rgba(255,255,255,0.15)',
+                    }
+                  : { color: '#64748b' }
                 }
                 onMouseEnter={e => {
-                  if (!e.currentTarget.style.background.includes('gradient')) {
-                    e.currentTarget.style.background = '#f9fafb';
-                    e.currentTarget.style.color = '#111827';
+                  if (!e.currentTarget.style.background.includes('dc2626')) {
+                    e.currentTarget.style.background = '#fef2f2';
+                    e.currentTarget.style.color = '#dc2626';
                   }
                 }}
                 onMouseLeave={e => {
-                  if (!e.currentTarget.style.background.includes('gradient')) {
+                  if (!e.currentTarget.style.background.includes('dc2626')) {
                     e.currentTarget.style.background = '';
-                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.color = '#64748b';
                   }
                 }}
               >
@@ -105,9 +126,13 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-3 flex-shrink-0" style={{ borderTop: '1px solid #f3f4f6' }}>
-          <div className="text-[11px] font-semibold" style={{ color: '#9ca3af' }}>CS Steel Product Co.,Ltd.</div>
-          <div className="text-[10px]" style={{ color: '#d1d5db' }}>v1.0 © 2026</div>
+        <div className="px-5 py-3 flex-shrink-0" style={{ borderTop: '1px solid #f0f2f5' }}>
+          <div className="text-[11px] font-black uppercase tracking-[0.1em]" style={{ color: '#94a3b8' }}>
+            CS Steel Products Co., Ltd.
+          </div>
+          <div className="text-[10px] mt-0.5" style={{ color: '#cbd5e1' }}>
+            WMS v1.0 © 2026
+          </div>
         </div>
       </aside>
     </>
