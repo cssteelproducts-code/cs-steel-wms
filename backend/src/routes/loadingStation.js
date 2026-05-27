@@ -120,10 +120,12 @@ router.put('/exit/:recordId', authenticate, async (req, res) => {
         .input('TripID', sql.Int, tripId)
         .query(`UPDATE WMS_Trips SET Status='WaitPick' WHERE TripID=@TripID AND Status='Loading'`);
     } else {
-      // All stations done — auto-advance to WeighOut
+      // All stations done — advance to WeighOut regardless of current sub-status
+      // (trip may be WaitPick if a concurrent station exit already moved it back)
       await pool.request()
         .input('TripID', sql.Int, tripId)
-        .query(`UPDATE WMS_Trips SET Status='WeighOut' WHERE TripID=@TripID AND Status='Loading'`);
+        .query(`UPDATE WMS_Trips SET Status='WeighOut'
+                WHERE TripID=@TripID AND Status IN ('Loading','WaitPick')`);
     }
 
     res.json({
