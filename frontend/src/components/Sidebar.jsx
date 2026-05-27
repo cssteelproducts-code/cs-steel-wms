@@ -100,7 +100,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 to={item.path}
                 end={item.path === '/'}
                 onClick={onClose}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-150 group"
+                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all duration-150 group"
                 style={({ isActive }) => isActive
                   ? { background: 'rgba(255,255,255,0.92)', color: '#b91c1c', border: '1px solid rgba(255,255,255,0.3)' }
                   : { color: 'rgba(255,255,255,0.85)', border: '1px solid transparent' }
@@ -108,8 +108,8 @@ export default function Sidebar({ isOpen, onClose }) {
               >
                 {({ isActive }) => (
                   <>
-                    <item.icon size={16} className="flex-shrink-0" />
-                    <span className="flex-1 text-[13px]">{item.label}</span>
+                    <item.icon size={14} className="flex-shrink-0" />
+                    <span className="flex-1 text-[12px]">{item.label}</span>
                     {isActive && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#b91c1c' }} />}
                   </>
                 )}
