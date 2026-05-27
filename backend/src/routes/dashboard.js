@@ -57,14 +57,15 @@ router.get('/summary', authenticate, async (req, res) => {
       `),
       pool.request().query(`
         SELECT ls.StationName,
-               COUNT(lr.RecordID) as ActiveTrucks
+               COUNT(dst.TripID) as ActiveTrucks
         FROM WMS_LoadingStations ls
-        LEFT JOIN WMS_LoadingRecord lr ON ls.StationID = lr.StationID
-          AND lr.ExitTime IS NULL
-          AND EXISTS(SELECT 1 FROM WMS_Trips t WHERE t.TripID = lr.TripID
-                     AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE))
+        LEFT JOIN WMS_DataStationTargets dst ON ls.StationID = dst.StationID
+        LEFT JOIN WMS_Trips t ON dst.TripID = t.TripID
+          AND t.Status IN ('WaitPick','Loading')
+          AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
         WHERE ls.IsActive = 1
         GROUP BY ls.StationID, ls.StationName, ls.SortOrder
+        HAVING COUNT(dst.TripID) > 0
         ORDER BY ls.SortOrder
       `),
       pool.request().query(`

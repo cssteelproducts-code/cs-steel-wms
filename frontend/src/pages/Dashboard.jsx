@@ -392,11 +392,11 @@ export default function Dashboard() {
       {/* ปริมาณรถสะสมที่สถานี */}
       <div className="card">
         <SectionHeader title="ปริมาณรถสะสมที่สถานี" sectionKey="station" collapsed={collapsed.station} onToggle={toggleSection}
-          extra={<span className="text-xs text-slate-500">{data?.stationLoad?.length || 0} สถานี</span>} />
+          extra={<span className="text-xs text-slate-500">{data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length || 0} สถานี</span>} />
         {!collapsed.station && (
-          data?.stationLoad?.length ? (
+          data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length ? (
             <div className="space-y-2">
-              {[...data.stationLoad].sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(st => {
+              {[...data.stationLoad].filter(s => s.ActiveTrucks > 0).sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(st => {
                 const pct = Math.min(st.ActiveTrucks * 20, 100);
                 return (
                   <div key={st.StationName}
@@ -420,7 +420,7 @@ export default function Dashboard() {
               })}
             </div>
           ) : (
-            <p className="text-sm text-slate-400">ยังไม่มีสถานีที่กำหนด</p>
+            <p className="text-sm text-slate-400">ยังไม่มีรถที่ถูก assign สถานีจากเมนู Pick</p>
           )
         )}
       </div>

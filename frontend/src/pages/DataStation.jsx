@@ -32,7 +32,10 @@ export default function DataStation() {
   const fetchStations = async () => {
     try {
       const res = await api.get('/master/loading-stations');
-      setStations(res.data.data || []);
+      const sorted = (res.data.data || []).sort((a, b) =>
+        a.StationName.localeCompare(b.StationName, undefined, { numeric: true })
+      );
+      setStations(sorted);
     } catch {}
   };
 
