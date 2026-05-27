@@ -8,100 +8,124 @@
   body {
     @apply antialiased;
     -webkit-tap-highlight-color: transparent;
-    background: #f1f5f9;
-    color: #0f172a;
+    background: #f0f4f8;
+    color: #111827;
   }
-  ::-webkit-scrollbar { width: 5px; height: 5px; }
+  ::-webkit-scrollbar { width: 4px; height: 4px; }
   ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.13); border-radius: 10px; }
-  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.22); }
+  ::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.10); border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.18); }
 }
 
 @layer components {
+  /* ── Buttons ── */
   .btn-primary {
-    @apply bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-medium px-4 py-2.5 rounded-xl transition-all duration-150 flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed;
-    box-shadow: 0 1px 12px rgba(220,38,38,0.18);
+    @apply bg-red-600 hover:bg-red-700 active:bg-red-800 text-white font-semibold px-5 py-2.5 rounded-2xl transition-all duration-150 flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed;
+    box-shadow: 0 2px 12px rgba(220,38,38,0.28);
   }
   .btn-secondary {
-    @apply font-medium px-4 py-2.5 rounded-xl transition-all duration-150 flex items-center gap-2 justify-center;
+    @apply font-semibold px-5 py-2.5 rounded-2xl transition-all duration-150 flex items-center gap-2 justify-center;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    color: #475569;
+    border: 1.5px solid #e5e7eb;
+    color: #374151;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.04);
   }
   .btn-secondary:hover {
-    background: #f8fafc;
-    border-color: #cbd5e1;
-    color: #0f172a;
+    background: #f9fafb;
+    border-color: #d1d5db;
+    color: #111827;
   }
   .btn-success {
-    @apply bg-emerald-600 hover:bg-emerald-700 text-white font-medium px-4 py-2.5 rounded-xl transition-all duration-150 flex items-center gap-2 justify-center disabled:opacity-50 disabled:cursor-not-allowed;
+    @apply bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-5 py-2.5 rounded-2xl transition-all duration-150 flex items-center gap-2 justify-center disabled:opacity-50;
   }
   .btn-danger {
-    @apply bg-red-600 hover:bg-red-700 text-white font-medium px-4 py-2.5 rounded-xl transition-all duration-150 flex items-center gap-2 justify-center;
+    @apply bg-red-600 hover:bg-red-700 text-white font-semibold px-5 py-2.5 rounded-2xl transition-all duration-150 flex items-center gap-2 justify-center;
   }
   .btn-warning {
-    @apply bg-amber-500 hover:bg-amber-600 text-white font-medium px-4 py-2.5 rounded-xl transition-all duration-150 flex items-center gap-2 justify-center;
+    @apply bg-amber-500 hover:bg-amber-600 text-white font-semibold px-5 py-2.5 rounded-2xl transition-all duration-150 flex items-center gap-2 justify-center;
   }
+
+  /* ── Cards ── */
   .card {
-    @apply rounded-2xl p-4;
+    @apply rounded-3xl p-5;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-top: 3px solid #dc2626;
-    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+    border: 1px solid rgba(0,0,0,0.06);
+    box-shadow: 0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04);
   }
   .card-header {
-    @apply text-lg font-semibold mb-4;
-    color: #0f172a;
+    @apply text-base font-bold mb-4;
+    color: #111827;
   }
-  .input-field {
-    @apply w-full rounded-xl px-3 py-2.5 transition-all duration-150 outline-none text-sm;
-    background: #ffffff;
-    border: 1px solid #e2e8f0;
-    color: #0f172a;
-  }
-  .input-field::placeholder { color: #94a3b8; }
-  .input-field:focus {
-    border-color: rgba(220,38,38,0.55);
-    box-shadow: 0 0 0 3px rgba(220,38,38,0.09);
-  }
-  .label {
-    @apply block text-sm font-medium mb-1;
-    color: #475569;
-  }
-  .badge-status {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
-  .table-header {
-    @apply text-xs uppercase tracking-wider font-semibold;
-    color: #64748b;
-  }
-  .table-cell {
-    @apply px-4 py-3 text-sm whitespace-nowrap;
-    color: #334155;
-  }
-  .page-title {
-    @apply text-2xl font-bold;
-    color: #0f172a;
-  }
+
+  /* ── Stat Card ── */
   .stat-card {
-    @apply card transition-all duration-150 cursor-default;
+    @apply card transition-all duration-200 cursor-default;
   }
   .stat-card:hover {
-    border-color: rgba(220,38,38,0.4);
-    box-shadow: 0 4px 16px rgba(220,38,38,0.08);
+    box-shadow: 0 4px 16px rgba(220,38,38,0.10), 0 1px 4px rgba(0,0,0,0.06);
+    transform: translateY(-1px);
   }
+
+  /* ── Inputs ── */
+  .input-field {
+    @apply w-full rounded-2xl px-4 py-2.5 transition-all duration-150 outline-none text-sm font-medium;
+    background: #f9fafb;
+    border: 1.5px solid #e5e7eb;
+    color: #111827;
+  }
+  .input-field::placeholder { color: #9ca3af; }
+  .input-field:focus {
+    background: #ffffff;
+    border-color: rgba(220,38,38,0.5);
+    box-shadow: 0 0 0 3px rgba(220,38,38,0.08);
+  }
+  .label {
+    @apply block text-xs font-semibold mb-1.5 uppercase tracking-wide;
+    color: #6b7280;
+  }
+
+  /* ── Badges ── */
+  .badge-status {
+    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold;
+  }
+
+  /* ── Table ── */
+  .table-header {
+    @apply text-xs uppercase tracking-widest font-bold;
+    color: #9ca3af;
+  }
+  .table-cell {
+    @apply px-4 py-3 text-sm;
+    color: #374151;
+  }
+
+  /* ── Page title ── */
+  .page-title {
+    @apply text-2xl font-extrabold;
+    color: #111827;
+    letter-spacing: -0.02em;
+  }
+
+  /* ── Mobile btn ── */
   .mobile-btn {
-    @apply w-full py-4 text-lg font-semibold rounded-2xl transition-all active:scale-95;
+    @apply w-full py-4 text-lg font-bold rounded-3xl transition-all active:scale-95;
   }
 }
 
-/* Print styles */
+/* Print */
 @media print {
   .no-print { display: none !important; }
   body { background: white; color: black; }
 }
 
-/* Mobile optimizations */
+/* Mobile */
 @media (max-width: 640px) {
   .hide-mobile { display: none !important; }
 }
+
+/* Fade-in animation */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-in { animation: fadeIn 0.25s ease-out; }

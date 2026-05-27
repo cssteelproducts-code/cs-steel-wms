@@ -13,6 +13,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import { formatDateTime, formatDuration, formatWeight, getStatusConfig } from '../utils/helpers';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
+import 'dayjs/locale/th';
+dayjs.locale('th');
 
 const StatCard = ({ title, value, sub, icon: Icon, color, onClick }) => (
   <div onClick={onClick} className={`stat-card ${onClick ? 'cursor-pointer hover:scale-[1.02] transition-transform' : ''}`}>
@@ -113,16 +115,34 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-5 animate-fade-in">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="page-title">Dashboard</h2>
-          <p className="text-slate-500 text-sm mt-0.5">ภาพรวมคลังสินค้า — อัพเดตอัตโนมัติทุก 30 วินาที</p>
+
+      {/* Hero section */}
+      <div className="rounded-3xl overflow-hidden relative"
+        style={{ background: 'linear-gradient(135deg,#dc2626 0%,#b91c1c 50%,#7f1d1d 100%)', minHeight: 160 }}>
+        <div className="absolute inset-0 opacity-10"
+          style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} />
+        <div className="relative px-7 py-6 flex items-center justify-between">
+          <div>
+            <p className="text-red-200 text-sm font-semibold mb-1">{dayjs().format('dddd, DD MMMM YYYY')}</p>
+            <h2 className="text-3xl font-black text-white leading-tight tracking-tight">
+              ภาพรวมการดำเนินงาน
+            </h2>
+            <p className="text-red-200 text-sm mt-1.5">CS Steel Products — อัพเดตอัตโนมัติทุก 30 วินาที</p>
+            <button onClick={fetchData}
+              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold transition-all"
+              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}>
+              <RefreshCw size={13} /> รีเฟรชข้อมูล
+            </button>
+          </div>
+          <div className="hidden md:flex flex-col items-end gap-2">
+            <div className="text-right">
+              <div className="text-5xl font-black text-white tabular-nums">{counts.TodayTotal ?? 0}</div>
+              <div className="text-red-200 text-sm font-semibold mt-0.5">คันวันนี้</div>
+            </div>
+          </div>
         </div>
-        <button onClick={fetchData} className="btn-secondary text-sm px-3 py-2">
-          <RefreshCw size={14} />
-          <span className="hidden sm:inline">รีเฟรช</span>
-        </button>
       </div>
 
       {/* Stat cards: today / month / year */}

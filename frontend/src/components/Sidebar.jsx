@@ -39,57 +39,58 @@ export default function Sidebar({ isOpen, onClose }) {
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/60 z-40 lg:hidden" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm" onClick={onClose} />
       )}
 
       <aside className={`
-        fixed top-0 left-0 h-full w-60 z-50
+        fixed top-0 left-0 h-full w-64 z-50
         flex flex-col transition-transform duration-300 ease-out
         lg:translate-x-0 lg:static lg:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `} style={{ background: 'linear-gradient(175deg, #dc2626 0%, #b91c1c 35%, #991b1b 70%, #7f1d1d 100%)' }}>
+      `} style={{ background: '#ffffff', borderRight: '1px solid #f3f4f6', boxShadow: '4px 0 24px rgba(0,0,0,0.04)' }}>
 
         {/* Logo */}
-        <div className="flex items-center justify-between px-4 flex-shrink-0"
-          style={{ background: '#ffffff', borderBottom: '3px solid #dc2626', paddingTop: 12, paddingBottom: 12 }}>
+        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
+          style={{ borderBottom: '1px solid #f3f4f6' }}>
           <div className="flex items-center gap-3">
-            <img src={logoImg} alt="CS" className="object-contain flex-shrink-0" style={{ width: 38, height: 38 }} />
+            <div className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
+              style={{ background: 'linear-gradient(135deg,#dc2626,#7f1d1d)' }}>
+              <img src={logoImg} alt="CS" className="w-6 h-6 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
+            </div>
             <div>
-              <div className="font-extrabold leading-tight" style={{ fontSize: 16, color: '#dc2626' }}>CS.Smart</div>
-              <div className="font-semibold leading-tight tracking-widest" style={{ fontSize: 9, color: '#94a3b8' }}>WMS PLATFORM</div>
+              <div className="font-black leading-tight tracking-tight" style={{ fontSize: 15, color: '#111827' }}>CS.Smart</div>
+              <div className="font-medium leading-tight" style={{ fontSize: 9, color: '#9ca3af', letterSpacing: '0.12em' }}>WMS PLATFORM</div>
             </div>
           </div>
-          <button onClick={onClose} className="lg:hidden text-slate-400 hover:text-slate-700 p-1 transition-colors">
-            <X size={16} />
+          <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors">
+            <X size={15} />
           </button>
         </div>
 
-        {/* User info */}
-        <div className="mx-3 my-2 px-3 py-2.5 rounded-xl flex-shrink-0"
-          style={{ background: 'rgba(0,0,0,0.2)', border: '1px solid rgba(255,255,255,0.15)' }}>
+        {/* User chip */}
+        <div className="mx-3 mt-3 mb-1 px-3 py-2.5 rounded-2xl flex-shrink-0"
+          style={{ background: '#fef2f2', border: '1px solid #fee2e2' }}>
           <div className="flex items-center gap-2.5">
-            <div className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 font-bold text-xs"
-              style={{ background: 'rgba(255,255,255,0.9)', color: '#b91c1c' }}>
+            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-xs text-white"
+              style={{ background: 'linear-gradient(135deg,#dc2626,#991b1b)' }}>
               {user?.fullName?.charAt(0) || 'U'}
             </div>
             <div className="min-w-0">
-              <div className="text-white text-xs font-semibold truncate">{user?.fullName}</div>
-              <div className="text-red-200 text-[10px] truncate">{user?.roleName}</div>
+              <div className="text-sm font-bold truncate" style={{ color: '#111827' }}>{user?.fullName}</div>
+              <div className="text-xs font-medium truncate" style={{ color: '#ef4444' }}>{user?.roleName}</div>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-1 px-2 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto py-2 px-3 space-y-0.5">
           {visibleItems.map((item, idx) => {
             if (item.divider) {
               return (
-                <div key={idx} className="px-2 pt-4 pb-1.5 flex items-center gap-2">
-                  <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.2)' }} />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-red-200">
+                <div key={idx} className="px-2 pt-5 pb-2">
+                  <span className="text-[10px] font-bold uppercase tracking-[0.12em]" style={{ color: '#d1d5db' }}>
                     {t(item.key)}
                   </span>
-                  <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.2)' }} />
                 </div>
               );
             }
@@ -99,29 +100,35 @@ export default function Sidebar({ isOpen, onClose }) {
                 to={item.path}
                 end={item.path === '/'}
                 onClick={onClose}
-                className="flex items-center gap-2 px-3 py-1.5 rounded-xl text-sm font-medium transition-all duration-150 group"
+                className="flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-150"
                 style={({ isActive }) => isActive
-                  ? { background: 'rgba(255,255,255,0.92)', color: '#b91c1c', border: '1px solid rgba(255,255,255,0.3)' }
-                  : { color: 'rgba(255,255,255,0.85)', border: '1px solid transparent' }
+                  ? { background: 'linear-gradient(135deg,#dc2626,#b91c1c)', color: '#ffffff', boxShadow: '0 4px 12px rgba(220,38,38,0.30)' }
+                  : { color: '#6b7280' }
                 }
+                onMouseEnter={e => {
+                  if (!e.currentTarget.style.background.includes('gradient')) {
+                    e.currentTarget.style.background = '#f9fafb';
+                    e.currentTarget.style.color = '#111827';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!e.currentTarget.style.background.includes('gradient')) {
+                    e.currentTarget.style.background = '';
+                    e.currentTarget.style.color = '#6b7280';
+                  }
+                }}
               >
-                {({ isActive }) => (
-                  <>
-                    <item.icon size={14} className="flex-shrink-0" />
-                    <span className="flex-1 text-[12px]">{t(item.key)}</span>
-                    {isActive && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#b91c1c' }} />}
-                  </>
-                )}
+                <item.icon size={16} className="flex-shrink-0" />
+                <span className="flex-1 text-[13px]">{t(item.key)}</span>
               </NavLink>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-3 flex-shrink-0 text-center"
-          style={{ borderTop: '1px solid rgba(255,255,255,0.15)' }}>
-          <div className="text-[10px] text-red-200">CS Steel Product Co.,Ltd.</div>
-          <div className="text-[10px]" style={{ color: 'rgba(255,255,255,0.4)' }}>v1.0 © 2026</div>
+        <div className="px-5 py-3 flex-shrink-0" style={{ borderTop: '1px solid #f3f4f6' }}>
+          <div className="text-[11px] font-semibold" style={{ color: '#9ca3af' }}>CS Steel Product Co.,Ltd.</div>
+          <div className="text-[10px]" style={{ color: '#d1d5db' }}>v1.0 © 2026</div>
         </div>
       </aside>
     </>

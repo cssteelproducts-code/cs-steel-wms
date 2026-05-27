@@ -24,7 +24,7 @@ import DeliveryPlan from './pages/DeliveryPlan';
 const ProtectedRoute = ({ children, menuCode }) => {
   const { user, loading, hasPermission } = useAuth();
   if (loading) return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50">
+    <div className="min-h-screen flex items-center justify-center" style={{ background: '#f0f4f8' }}>
       <LoadingSpinner size="xl" text="กำลังโหลดระบบ..." />
     </div>
   );
