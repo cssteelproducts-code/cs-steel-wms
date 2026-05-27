@@ -115,7 +115,7 @@ export default function DataStation() {
                       )}
                     </div>
                     <div className="text-slate-500 text-xs mt-1">
-                      {trip.VehicleType} | {trip.WarehouseName}
+                      {trip.VehicleType}{trip.WarehouseName && ` | ${trip.WarehouseName}`}{trip.DeliveryType && ` | ${trip.DeliveryType}`}
                     </div>
                     {trip.CustomerName && (
                       <div className="text-blue-500 text-xs">{trip.CustomerName}</div>
