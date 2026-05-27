@@ -181,7 +181,7 @@ export default function LoadingStation() {
               {loadingTrips.filter(t => String(t.TripID) === activeTripId).map(trip => (
                 <div key={trip.TripID} className="bg-slate-50 border border-slate-200 rounded-lg p-4 mb-4">
                   <div className="grid grid-cols-2 gap-4 text-sm">
-                    <div><span className="text-slate-500">ทะเบียน:</span> <span className="text-slate-900 font-bold">{trip.LicensePlate}</span></div>
+                    <div className="flex items-center gap-2"><span className="text-slate-500">ทะเบียน:</span> <span className="text-slate-900 font-bold">{trip.LicensePlate}</span><PriorityBadge priority={trip.Priority} /></div>
                     <div><span className="text-slate-500">ประเภท:</span> <span className="text-slate-900">{trip.VehicleType}</span></div>
                     <div><span className="text-slate-500">ขนส่ง:</span> <span className="text-slate-900">{trip.DeliveryType || '-'}</span></div>
                     <div><span className="text-slate-500">คลัง:</span> <span className="text-slate-900">{trip.WarehouseName}</span></div>
