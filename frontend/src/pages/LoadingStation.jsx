@@ -48,7 +48,7 @@ export default function LoadingStation() {
       if (activeRes.status === 'fulfilled') setActiveRecords(activeRes.value.data.data || []);
       if (tripsRes.status === 'fulfilled') {
         const all = tripsRes.value.data.data || [];
-        setLoadingTrips(all.filter(t => t.DataStationID && (t.Status === 'WaitPick' || (t.Status === 'Loading' && t.RemainingStations > 0))).sort((a, b) => a.TripID - b.TripID));
+        setLoadingTrips(all.filter(t => t.DataStationID && (t.Status === 'WaitPick' || t.Status === 'Loading') && (t.RemainingStations == null || t.RemainingStations > 0)).sort((a, b) => a.TripID - b.TripID));
         setLoadingDoneTrips(all.filter(t => t.Status === 'Loading' && t.RemainingStations === 0));
       }
     } finally { setPageLoading(false); }

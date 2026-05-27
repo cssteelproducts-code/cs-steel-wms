@@ -118,7 +118,7 @@ router.get('/active', authenticate, async (req, res) => {
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
         LEFT JOIN WMS_LoadingStations ls_target ON ds.TargetStationID = ls_target.StationID
         WHERE t.Status NOT IN ('Complete', 'Cancelled')
-        AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
+        AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
         ORDER BY t.CreatedAt DESC
       `);
     res.json({ success: true, data: result.recordset });

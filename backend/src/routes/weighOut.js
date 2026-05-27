@@ -102,22 +102,12 @@ router.get('/pending', authenticate, async (req, res) => {
                ds.PickDocumentNo,
                DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse
         FROM WMS_Trips t
-        INNER JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        LEFT JOIN (
-          SELECT TripID, MAX(WeighDateTime) as LastWeighOut
-          FROM WMS_WeighOut GROUP BY TripID
-        ) wo_agg ON wo_agg.TripID = t.TripID
-        LEFT JOIN (
-          SELECT TripID, MAX(CheckTime) as LastFailTime
-          FROM WMS_CheckerRecord WHERE IsApproved = 0 GROUP BY TripID
-        ) cr_agg ON cr_agg.TripID = t.TripID
-        WHERE t.Status NOT IN ('Complete', 'Cancelled', 'Checker')
-        AND (wo_agg.LastWeighOut IS NULL
-             OR wo_agg.LastWeighOut < ISNULL(cr_agg.LastFailTime, '1900-01-01'))
+        WHERE t.Status = 'WeighOut'
         AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
