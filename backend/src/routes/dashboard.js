@@ -66,7 +66,7 @@ router.get('/summary', authenticate, async (req, res) => {
         AND EXISTS(SELECT 1 FROM WMS_Trips t WHERE t.TripID = lr.TripID
                    AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE))
       WHERE ls.IsActive = 1
-      GROUP BY ls.StationID, ls.StationName
+      GROUP BY ls.StationID, ls.StationName, ls.SortOrder
       ORDER BY ls.SortOrder
     `);
 
