@@ -39,7 +39,7 @@ router.post('/', authenticate, async (req, res) => {
     if (isApproved) {
       await pool.request()
         .input('TripID', sql.Int, tripId)
-        .query(`UPDATE WMS_Trips SET Status = 'WeighOut' WHERE TripID = @TripID`);
+        .query(`UPDATE WMS_Trips SET Status='Complete', CompletedAt=GETDATE() WHERE TripID=@TripID`);
     }
 
     const tripInfo = await pool.request()

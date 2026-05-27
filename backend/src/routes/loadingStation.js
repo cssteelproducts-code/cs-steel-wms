@@ -47,6 +47,11 @@ router.post('/entry', authenticate, async (req, res) => {
         WHERE t.TripID = @TripID AND ls.StationID = @StationID
       `);
 
+    // Move trip status to Loading
+    await pool.request()
+      .input('TripID', sql.Int, tripId)
+      .query(`UPDATE WMS_Trips SET Status='Loading' WHERE TripID=@TripID AND Status IN ('WaitPick','Data')`);
+
     const recordId = result.recordset[0].RecordID;
     const info2 = info.recordset[0];
 
@@ -96,6 +101,23 @@ router.put('/exit/:recordId', authenticate, async (req, res) => {
       success: true,
       message: `บันทึกออกจากสถานี "${r.StationName}" สำเร็จ | ทะเบียน: ${r.LicensePlate} | เวลาอยู่: ${durationMinutes} นาที`
     });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/loading-station/done/:tripId - Mark loading complete, send to WeighOut
+router.put('/done/:tripId', authenticate, async (req, res) => {
+  try {
+    const pool = getPool();
+    const info = await pool.request()
+      .input('TripID', sql.Int, req.params.tripId)
+      .query(`SELECT LicensePlate FROM WMS_Trips WHERE TripID=@TripID`);
+    await pool.request()
+      .input('TripID', sql.Int, req.params.tripId)
+      .query(`UPDATE WMS_Trips SET Status='WeighOut' WHERE TripID=@TripID AND Status='Loading'`);
+    const plate = info.recordset[0]?.LicensePlate || '';
+    res.json({ success: true, message: `ส่งชั่งออกแล้ว | ทะเบียน: ${plate}` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

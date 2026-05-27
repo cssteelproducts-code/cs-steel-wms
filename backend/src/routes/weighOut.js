@@ -50,7 +50,7 @@ router.post('/', authenticate, async (req, res) => {
 
       await transaction.request()
         .input('TripID', sql.Int, tripId)
-        .query(`UPDATE WMS_Trips SET Status='Complete', CompletedAt=GETDATE() WHERE TripID=@TripID`);
+        .query(`UPDATE WMS_Trips SET Status='Checker' WHERE TripID=@TripID`);
 
       await transaction.commit();
 

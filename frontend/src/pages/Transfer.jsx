@@ -483,14 +483,14 @@ export default function Transfer() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>จำนวนมัด (วางแผน)</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>จำนวนมัด</label>
                   <input type="number" value={jobForm.plannedBundles}
                     onChange={e => setJobForm(f => ({ ...f, plannedBundles: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
                     placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>น้ำหนักรวม กก. (วางแผน)</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>น้ำหนักรวม กก.</label>
                   <input type="number" value={jobForm.plannedWeightKg}
                     onChange={e => setJobForm(f => ({ ...f, plannedWeightKg: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}

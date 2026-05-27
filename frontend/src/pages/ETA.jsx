@@ -115,7 +115,7 @@ export default function ETA() {
     if (v.etaMinutes < 60) return <span className="font-bold text-amber-600 text-xs">{v.etaMinutes} นาที</span>;
     const h = Math.floor(v.etaMinutes / 60);
     const m = v.etaMinutes % 60;
-    return <span className="font-bold text-blue-600 text-xs">{h}ชม. {m > 0 ? `${m}น.` : ''}</span>;
+    return <span className="font-bold text-blue-600 text-xs">{h} ชั่วโมง{m > 0 ? ` ${m} นาที` : ''}</span>;
   };
 
   return (
@@ -234,7 +234,6 @@ export default function ETA() {
                     <span className="flex items-center gap-1"><Clock size={11} />ETA ถึงคลัง</span>
                   </th>
                   <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5 whitespace-nowrap">อัพเดต</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5 whitespace-nowrap">สถานะ</th>
                 </tr>
               </thead>
               <tbody>
@@ -291,12 +290,6 @@ export default function ETA() {
                         {v.lastUpdate ? formatDateTime(v.lastUpdate) : '-'}
                       </td>
 
-                      <td className="px-4 py-3">
-                        <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold ${isMoving ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'}`}>
-                          <span className={`w-1.5 h-1.5 rounded-full ${isMoving ? 'bg-emerald-500' : 'bg-red-400'}`} />
-                          {isMoving ? 'เคลื่อนที่' : 'จอด'}
-                        </span>
-                      </td>
                     </tr>
                   );
                 })}

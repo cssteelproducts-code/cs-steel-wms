@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Package, LogIn, LogOut, Clock, RefreshCw } from 'lucide-react';
+import { Package, LogIn, LogOut, Clock, RefreshCw, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatDuration } from '../utils/helpers';
@@ -12,6 +12,7 @@ export default function LoadingStation() {
   const [selectedStation, setSelectedStation] = useState('');
   const [activeTripId, setActiveTripId] = useState('');
   const [loadingTrips, setLoadingTrips] = useState([]);
+  const [loadingDoneTrips, setLoadingDoneTrips] = useState([]);
   const [tab, setTab] = useState('entry');
   const [submitting, setSubmitting] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -23,27 +24,34 @@ export default function LoadingStation() {
   }, []);
 
   useEffect(() => {
-    if (selectedStation) fetchActiveForStation(selectedStation);
+    if (selectedStation) fetchActiveForStation();
   }, [selectedStation]);
 
   const fetchAll = async () => {
     try {
-      const [stRes, statusRes, activeRes] = await Promise.allSettled([
+      const [stRes, statusRes, activeRes, tripsRes] = await Promise.allSettled([
         api.get('/master/loading-stations'),
         api.get('/loading-station/stations-status'),
-        api.get('/loading-station/active')
+        api.get('/loading-station/active'),
+        api.get('/trips/active')
       ]);
       if (stRes.status === 'fulfilled') setStations(stRes.value.data.data || []);
       if (statusRes.status === 'fulfilled') setStationStatus(statusRes.value.data.data || []);
       if (activeRes.status === 'fulfilled') setActiveRecords(activeRes.value.data.data || []);
+      if (tripsRes.status === 'fulfilled') {
+        const all = tripsRes.value.data.data || [];
+        setLoadingTrips(all.filter(t => t.Status === 'WaitPick'));
+        setLoadingDoneTrips(all.filter(t => t.Status === 'Loading'));
+      }
     } finally { setPageLoading(false); }
   };
 
-  const fetchActiveForStation = async (stationId) => {
+  const fetchActiveForStation = async () => {
     try {
       const res = await api.get('/trips/active');
-      const trips = res.data.data?.filter(t => t.Status === 'Loading') || [];
-      setLoadingTrips(trips);
+      const all = res.data.data || [];
+      setLoadingTrips(all.filter(t => t.Status === 'WaitPick'));
+      setLoadingDoneTrips(all.filter(t => t.Status === 'Loading'));
     } catch {}
   };
 
@@ -60,6 +68,16 @@ export default function LoadingStation() {
         setActiveTripId('');
         fetchAll();
       }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+    } finally { setSubmitting(false); }
+  };
+
+  const handleDone = async (tripId) => {
+    setSubmitting(true);
+    try {
+      const res = await api.put(`/loading-station/done/${tripId}`);
+      if (res.data.success) { toast.success(res.data.message); fetchAll(); }
     } catch (err) {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
     } finally { setSubmitting(false); }
@@ -131,6 +149,10 @@ export default function LoadingStation() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'exit' ? 'bg-amber-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <LogOut size={14} className="inline mr-1" />บันทึกออกสถานี ({activeRecords.length})
         </button>
+        <button onClick={() => setTab('done')}
+          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'done' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+          <CheckCircle size={14} className="inline mr-1" />ส่งชั่งออก ({loadingDoneTrips.length})
+        </button>
       </div>
 
       {tab === 'entry' && (
@@ -184,6 +206,44 @@ export default function LoadingStation() {
               </button>
             </div>
           )}
+        </div>
+      )}
+
+      {tab === 'done' && (
+        <div className="card">
+          <h3 className="card-header flex items-center gap-2">
+            <CheckCircle size={18} className="text-emerald-500" />ขึ้นสินค้าเสร็จแล้ว — ส่งไปชั่งออก
+          </h3>
+          <div className="space-y-3">
+            {loadingDoneTrips.map(trip => (
+              <div key={trip.TripID} className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-1">
+                      <span className="text-slate-900 font-bold text-lg">{trip.LicensePlate}</span>
+                      <span className="text-xs text-slate-500">#{trip.TripID}</span>
+                    </div>
+                    <div className="text-slate-500 text-sm">
+                      {trip.VehicleType} | {trip.CustomerName || 'ไม่ระบุลูกค้า'} | {trip.WarehouseName}
+                    </div>
+                    {trip.TargetStation && (
+                      <div className="text-amber-600 text-xs mt-1">สถานี: {trip.TargetStation}</div>
+                    )}
+                  </div>
+                  <button onClick={() => handleDone(trip.TripID)} disabled={submitting}
+                    className="btn-success px-4 py-2 text-sm flex-shrink-0">
+                    <CheckCircle size={14} />ส่งชั่งออก
+                  </button>
+                </div>
+              </div>
+            ))}
+            {!loadingDoneTrips.length && (
+              <div className="text-center text-slate-400 py-12">
+                <CheckCircle size={48} className="mx-auto mb-3 opacity-30" />
+                ไม่มีรถที่รอส่งชั่งออก
+              </div>
+            )}
+          </div>
         </div>
       )}
 
