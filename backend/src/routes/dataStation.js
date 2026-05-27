@@ -84,7 +84,7 @@ router.get('/pending', authenticate, async (req, res) => {
     const result = await pool.request()
       .query(`
         SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-               t.DeliveryType,
+               t.DeliveryType, t.Priority,
                vt.TypeName as VehicleType,
                w.WarehouseName,
                c.CustomerName,

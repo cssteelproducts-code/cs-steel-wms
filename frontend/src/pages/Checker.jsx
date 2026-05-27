@@ -4,6 +4,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PriorityBadge from '../components/PriorityBadge';
 
 function fmtDuration(seconds) {
   if (seconds < 60) return `${seconds} วินาที`;
@@ -210,6 +211,7 @@ export default function Checker() {
                     <div>
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
+                      <span className="ml-1"><PriorityBadge priority={trip.Priority} /></span>
                       <div className="text-slate-500 text-xs mt-1">
                         {trip.VehicleType}{trip.DeliveryType ? ` | ${trip.DeliveryType}` : ''}{trip.WarehouseName ? ` | ${trip.WarehouseName}` : ''}
                       </div>

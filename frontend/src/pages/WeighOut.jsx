@@ -4,6 +4,7 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatWeight } from '../utils/helpers';
 import LoadingSpinner from '../components/LoadingSpinner';
+import PriorityBadge from '../components/PriorityBadge';
 
 export default function WeighOut() {
   const [pending, setPending] = useState([]);
@@ -150,6 +151,7 @@ export default function WeighOut() {
                     <div>
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
+                      <span className="ml-1"><PriorityBadge priority={trip.Priority} /></span>
                       {trip.Status && trip.Status !== 'WeighOut' && (
                         <span className="ml-2 text-xs bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{trip.Status}</span>
                       )}

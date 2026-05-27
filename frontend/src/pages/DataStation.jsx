@@ -3,6 +3,7 @@ import { FileText, Check, Clock, HourglassIcon, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatDuration } from '../utils/helpers';
+import PriorityBadge from '../components/PriorityBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function DataStation() {
@@ -110,6 +111,7 @@ export default function DataStation() {
                     <div className="flex items-center gap-2">
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs">#{trip.TripID}</span>
+                      <PriorityBadge priority={trip.Priority} />
                       {trip.Status === 'WaitPick' && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
                       )}

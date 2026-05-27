@@ -169,7 +169,7 @@ router.get('/active', authenticate, async (req, res) => {
     const result = await request.query(`
       SELECT lr.RecordID, lr.TripID, lr.StationID, lr.EntryTime, lr.Notes,
              ls.StationName, ls.StationCode,
-             t.LicensePlate, t.Status, t.DeliveryType,
+             t.LicensePlate, t.Status, t.DeliveryType, t.Priority,
              vt.TypeName as VehicleType,
              c.CustomerName,
              w.WarehouseName,

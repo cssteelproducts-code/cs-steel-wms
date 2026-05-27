@@ -3,6 +3,7 @@ import { Package, LogIn, LogOut, Clock, RefreshCw, CheckCircle } from 'lucide-re
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatDuration } from '../utils/helpers';
+import PriorityBadge from '../components/PriorityBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function LoadingStation() {
@@ -214,6 +215,7 @@ export default function LoadingStation() {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-slate-900 font-bold text-lg">{trip.LicensePlate}</span>
                       <span className="text-xs text-slate-500">#{trip.TripID}</span>
+                      <PriorityBadge priority={trip.Priority} />
                     </div>
                     <div className="text-slate-500 text-sm">
                       {trip.VehicleType} | {trip.DeliveryType || '-'} | {trip.WarehouseName}
@@ -255,6 +257,7 @@ export default function LoadingStation() {
                       <span className="text-xs bg-amber-100 text-amber-600 border border-amber-300 px-2 py-0.5 rounded-full">
                         {record.StationName}
                       </span>
+                      <PriorityBadge priority={record.Priority} />
                     </div>
                     <div className="text-slate-500 text-sm">
                       {record.VehicleType} | {record.DeliveryType || '-'} | {record.WarehouseName}

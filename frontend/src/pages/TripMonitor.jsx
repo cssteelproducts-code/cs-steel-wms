@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Activity, RefreshCw, TruckIcon, Clock, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
+import PriorityBadge from '../components/PriorityBadge';
 import { formatDateTime, formatDuration, getStatusConfig } from '../utils/helpers';
 import toast from 'react-hot-toast';
 
@@ -128,8 +129,8 @@ export default function TripMonitor() {
                       {trip.DeliveryType && (
                         <div><span className="text-slate-400">ขนส่ง:</span> <span className="text-indigo-500 font-medium">{trip.DeliveryType}</span></div>
                       )}
-                      {trip.Priority && trip.Priority !== 'ปกติ' && (
-                        <div><span className="text-slate-400">ความเร่งด่วน:</span> <span className="text-red-500 font-medium">{trip.Priority}</span></div>
+                      {trip.Priority && (
+                        <div className="flex items-center gap-2"><span className="text-slate-400">ความเร่งด่วน:</span> <PriorityBadge priority={trip.Priority} /></div>
                       )}
                       {trip.PickDocumentNo && (
                         <div><span className="text-slate-400">เอกสาร:</span> <span className="text-purple-500 font-mono">{trip.PickDocumentNo}</span></div>
