@@ -6,12 +6,13 @@ import { formatDateTime, formatDuration, getStatusConfig } from '../utils/helper
 import toast from 'react-hot-toast';
 
 const FLOW_STEPS = [
-  { key: 'WeighIn', label: 'ชั่งเข้า', shortLabel: '1.ชั่งเข้า' },
-  { key: 'Data', label: 'รับเอกสาร', shortLabel: '2.Data' },
-  { key: 'Loading', label: 'ขึ้นสินค้า', shortLabel: '3.ขึ้นสินค้า' },
-  { key: 'Checker', label: 'เช็คเกอร์', shortLabel: '4.ตรวจสอบ' },
-  { key: 'WeighOut', label: 'รอชั่งออก', shortLabel: '5.ชั่งออก' },
-  { key: 'Complete', label: 'เสร็จสิ้น', shortLabel: '✓ เสร็จ' }
+  { key: 'WeighIn',  label: 'ชั่งเข้า',       shortLabel: '1.ชั่งเข้า' },
+  { key: 'Data',     label: 'รับเอกสาร',       shortLabel: '2.Data' },
+  { key: 'WaitPick', label: 'รอเอกสาร Pick',   shortLabel: '3.Pick' },
+  { key: 'Loading',  label: 'ขึ้นสินค้า',      shortLabel: '4.ขึ้นสินค้า' },
+  { key: 'Checker',  label: 'เช็คเกอร์',       shortLabel: '5.เช็คเกอร์' },
+  { key: 'WeighOut', label: 'รอชั่งออก',       shortLabel: '6.ชั่งออก' },
+  { key: 'Complete', label: 'เสร็จสิ้น',       shortLabel: '✓ เสร็จ' }
 ];
 
 export default function TripMonitor() {
@@ -43,7 +44,7 @@ export default function TripMonitor() {
   const filtered = filter === 'all' ? trips :
     trips.filter(t => t.Status === filter);
 
-  const statusCounts = FLOW_STEPS.slice(0, 5).reduce((acc, step) => {
+  const statusCounts = FLOW_STEPS.slice(0, 6).reduce((acc, step) => {
     acc[step.key] = trips.filter(t => t.Status === step.key).length;
     return acc;
   }, {});
@@ -67,8 +68,8 @@ export default function TripMonitor() {
       </div>
 
       {/* Flow summary */}
-      <div className="grid grid-cols-5 gap-2">
-        {FLOW_STEPS.slice(0, 5).map(step => {
+      <div className="grid grid-cols-6 gap-2">
+        {FLOW_STEPS.slice(0, 6).map(step => {
           const count = statusCounts[step.key] || 0;
           const cfg = getStatusConfig(step.key);
           return (
@@ -142,15 +143,15 @@ export default function TripMonitor() {
                   {/* Progress */}
                   <div className="hidden md:flex flex-col items-end gap-1">
                     <div className="flex items-center gap-1">
-                      {FLOW_STEPS.slice(0, 5).map((step, idx) => (
+                      {FLOW_STEPS.slice(0, 6).map((step, idx) => (
                         <div key={step.key} className="flex items-center">
                           <div className={`w-2 h-2 rounded-full ${idx < currentStep ? 'bg-emerald-500' : idx === currentStep ? `${cfg.dot} animate-pulse` : 'bg-slate-300'}`} />
-                          {idx < 4 && <div className={`w-4 h-0.5 ${idx < currentStep ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
+                          {idx < 5 && <div className={`w-4 h-0.5 ${idx < currentStep ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
                         </div>
                       ))}
                     </div>
                     <div className={`text-xs ${cfg.color.split(' ').find(c => c.startsWith('text')) || 'text-slate-400'}`}>
-                      ขั้นตอน {currentStep + 1}/5
+                      ขั้นตอน {currentStep + 1}/6
                     </div>
                   </div>
                 </div>

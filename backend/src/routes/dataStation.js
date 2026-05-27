@@ -61,10 +61,10 @@ router.post('/', authenticate, async (req, res) => {
       }
     }
 
-    // Update trip status
+    // Update trip status to WaitPick (waiting for Pick document before loading)
     await pool.request()
       .input('TripID', sql.Int, tripId)
-      .query(`UPDATE WMS_Trips SET Status = 'Loading' WHERE TripID = @TripID`);
+      .query(`UPDATE WMS_Trips SET Status = 'WaitPick' WHERE TripID = @TripID`);
 
     const trip = tripCheck.recordset[0];
     res.json({
