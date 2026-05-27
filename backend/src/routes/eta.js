@@ -21,6 +21,55 @@ const haversine = (lat1, lng1, lat2, lng2) => {
 // Road distance cache (5 min TTL, ~1 km position bucket)
 const distCache = new Map();
 
+// Reverse geocode cache (30 min TTL, ~1 km bucket) + rate-limited queue (1 req/sec)
+const geocodeCache = new Map();
+const geocodeQueue = [];
+let geocodeRunning = false;
+
+const processGeocodeQueue = async () => {
+  if (geocodeRunning || geocodeQueue.length === 0) return;
+  geocodeRunning = true;
+  while (geocodeQueue.length > 0) {
+    const { lat, lng, key } = geocodeQueue.shift();
+    try {
+      const resp = await axios.get('https://nominatim.openstreetmap.org/reverse', {
+        params: { lat, lon: lng, format: 'json', 'accept-language': 'th' },
+        timeout: 5000,
+        headers: { 'User-Agent': 'CS-Steel-WMS/1.0' }
+      });
+      if (resp.data?.display_name) {
+        const a = resp.data.address || {};
+        const road     = a.road || a.pedestrian || a.footway || '';
+        const district = a.city_district || a.suburb || a.neighbourhood || '';
+        const city     = a.city || a.town || a.county || a.state_district || '';
+        const province = a.state || '';
+        const parts = [road, district, city, province].filter(Boolean);
+        const addr = parts.slice(0, 3).join(' ') ||
+          (resp.data.display_name.split(',').slice(0, 3).join(',').trim());
+        geocodeCache.set(key, addr);
+        setTimeout(() => geocodeCache.delete(key), 30 * 60 * 1000);
+      } else {
+        geocodeCache.delete(key); // allow retry next time
+      }
+    } catch {
+      geocodeCache.delete(key);
+    }
+    await new Promise(r => setTimeout(r, 1100)); // respect Nominatim 1 req/sec
+  }
+  geocodeRunning = false;
+};
+
+// Returns cached address immediately; triggers background geocode if not cached
+const getCachedAddress = (lat, lng) => {
+  if (!lat || !lng || lat === 0 || lng === 0) return '';
+  const key = `${lat.toFixed(2)},${lng.toFixed(2)}`;
+  if (geocodeCache.has(key)) return geocodeCache.get(key);
+  geocodeCache.set(key, ''); // placeholder — prevents duplicate queue entries
+  geocodeQueue.push({ lat, lng, key });
+  processGeocodeQueue(); // fire-and-forget
+  return '';
+};
+
 const getRoadDistanceKm = async (lat, lng, wLat, wLng) => {
   const key = `${lat.toFixed(2)},${lng.toFixed(2)},${wLat.toFixed(4)},${wLng.toFixed(4)}`;
   if (distCache.has(key)) return distCache.get(key);
@@ -183,7 +232,7 @@ router.get('/vehicles', authenticate, async (req, res) => {
       status: v.status_name_en || (parseFloat(v.gps_speed || 0) > 0 ? 'Moving' : 'Stopped'),
       statusTh: v.status_name_th || '',
       lastUpdate: v.time || new Date().toISOString(),
-      address: v.address || v.location || '',
+      address: v.address || v.location || v.addr || v.place_name || '',
       heading: v.heading || 0,
     }));
 
@@ -203,6 +252,7 @@ router.get('/vehicles', authenticate, async (req, res) => {
     };
     const result = await Promise.all(transportVehicles.map(async v => ({
       ...v,
+      address: v.address || getCachedAddress(v.lat, v.lng),
       ...(await enrichWithEta(v.lat, v.lng, v.speed, pickWh(v.vehicleId)))
     })));
 
