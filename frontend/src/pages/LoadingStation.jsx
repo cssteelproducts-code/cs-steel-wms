@@ -47,7 +47,7 @@ export default function LoadingStation() {
       if (activeRes.status === 'fulfilled') setActiveRecords(activeRes.value.data.data || []);
       if (tripsRes.status === 'fulfilled') {
         const all = tripsRes.value.data.data || [];
-        setLoadingTrips(all.filter(t => t.Status === 'WaitPick' && t.DataStationID));
+        setLoadingTrips(all.filter(t => t.Status === 'WaitPick' && t.DataStationID).sort((a, b) => a.TripID - b.TripID));
         setLoadingDoneTrips(all.filter(t => t.Status === 'Loading'));
       }
     } finally { setPageLoading(false); }
