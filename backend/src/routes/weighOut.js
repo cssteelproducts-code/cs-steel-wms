@@ -81,12 +81,13 @@ router.get('/pending', authenticate, async (req, res) => {
     const result = await pool.request()
       .query(`
         SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+               t.DeliveryType,
                vt.TypeName as VehicleType,
                w.WarehouseName,
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
                ds.PickDocumentNo,
-               DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse
+               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID

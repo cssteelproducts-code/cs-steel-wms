@@ -98,14 +98,20 @@ export default function WeighOut() {
                     <div>
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
-                      <div className="text-slate-500 text-xs mt-1">{trip.VehicleType} | {trip.WarehouseName}</div>
+                      <div className="text-slate-500 text-xs mt-1">
+                        {trip.VehicleType}{trip.DeliveryType ? ` | ${trip.DeliveryType}` : ''}{trip.WarehouseName ? ` | ${trip.WarehouseName}` : ''}
+                      </div>
                       {trip.CustomerName && <div className="text-blue-500 text-xs">{trip.CustomerName}</div>}
                       {trip.PickDocumentNo && <div className="text-purple-500 text-xs font-mono">{trip.PickDocumentNo}</div>}
                     </div>
                     <div className="text-right">
                       <div className="text-cyan-500 text-sm">{formatWeight(trip.TareWeight)}</div>
                       <div className="text-slate-400 text-xs">น้ำหนักเบา</div>
-                      <div className="text-amber-500 text-xs mt-1">{trip.MinutesInWarehouse} นาทีในคลัง</div>
+                      <div className="text-amber-500 text-xs mt-1">
+                        {trip.MinutesInWarehouse <= 0 ? 'เพิ่งเข้า'
+                          : trip.MinutesInWarehouse < 60 ? `รอ ${trip.MinutesInWarehouse} นาที`
+                          : `รอ ${Math.floor(trip.MinutesInWarehouse / 60)} ชั่วโมง ${trip.MinutesInWarehouse % 60} นาที`}
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -144,36 +150,34 @@ export default function WeighOut() {
                   <label className="label">น้ำหนักหนัก (Gross Weight) กิโลกรัม *</label>
                   <input type="number" step="0.01" min="0" value={form.grossWeight}
                     onChange={e => setForm(p => ({ ...p, grossWeight: e.target.value }))}
-                    className="input-field text-2xl font-bold" placeholder="0.00" required autoFocus />
+                    className="input-field h-10 text-xl font-bold" placeholder="0.00" required autoFocus />
                 </div>
 
                 {/* Weight calculation */}
-                {form.grossWeight && (
-                  <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                    <div className="grid grid-cols-3 gap-4 text-center">
-                      <div>
-                        <div className="text-slate-500 text-xs mb-1">น้ำหนักหนัก</div>
-                        <div className="text-slate-900 font-bold">{grossWeight.toFixed(2)}</div>
+                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
+                  <div className="grid grid-cols-3 gap-4 text-center">
+                    <div>
+                      <div className="text-slate-500 text-xs mb-1">น้ำหนักหนัก</div>
+                      <div className="text-slate-900 font-bold">{form.grossWeight ? grossWeight.toFixed(2) : '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500 text-xs mb-1">น้ำหนักเบา</div>
+                      <div className="text-cyan-500 font-bold">{tareWeight > 0 ? tareWeight.toFixed(2) : '-'}</div>
+                    </div>
+                    <div>
+                      <div className="text-slate-500 text-xs mb-1">น้ำหนักสุทธิ</div>
+                      <div className={`text-2xl font-bold ${form.grossWeight ? (netWeight >= 0 ? 'text-emerald-500' : 'text-red-500') : 'text-slate-300'}`}>
+                        {form.grossWeight ? netWeight.toFixed(2) : '-'}
                       </div>
-                      <div>
-                        <div className="text-slate-500 text-xs mb-1">น้ำหนักเบา</div>
-                        <div className="text-cyan-500 font-bold">{tareWeight.toFixed(2)}</div>
-                      </div>
-                      <div>
-                        <div className="text-slate-500 text-xs mb-1">น้ำหนักสุทธิ</div>
-                        <div className={`text-2xl font-bold ${netWeight >= 0 ? 'text-emerald-500' : 'text-red-500'}`}>
-                          {netWeight.toFixed(2)}
-                        </div>
-                        <div className="text-slate-400 text-xs">กก.</div>
-                      </div>
+                      <div className="text-slate-400 text-xs">กก.</div>
                     </div>
                   </div>
-                )}
+                </div>
 
                 <div>
                   <label className="label">หมายเหตุ</label>
-                  <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                    className="input-field resize-none" rows={2} placeholder="หมายเหตุ (ถ้ามี)" />
+                  <input type="text" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
+                    className="input-field h-10 text-sm" placeholder="หมายเหตุ (ถ้ามี)" />
                 </div>
 
                 <div className="flex gap-3">
