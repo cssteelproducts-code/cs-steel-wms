@@ -142,6 +142,17 @@ export default function LoadingStation() {
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
+              <label className="label">เลือกรถ (Trip) *</label>
+              <select value={activeTripId} onChange={e => setActiveTripId(e.target.value)} className="input-field">
+                <option value="">-- เลือกรถที่เข้าสถานี --</option>
+                {loadingTrips.map(t => (
+                  <option key={t.TripID} value={t.TripID}>
+                    #{t.TripID} - {t.LicensePlate} ({t.CustomerName || '-'})
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div>
               <label className="label">เลือกสถานี *</label>
               <select value={selectedStation}
                 onChange={e => { setSelectedStation(e.target.value); fetchActiveForStation(e.target.value); }}
@@ -153,17 +164,6 @@ export default function LoadingStation() {
                 ))}
               </select>
               {!activeTripId && <div className="text-slate-400 text-xs mt-1">เลือกรถก่อนเพื่อดูสถานีที่กำหนด</div>}
-            </div>
-            <div>
-              <label className="label">เลือกรถ (Trip) *</label>
-              <select value={activeTripId} onChange={e => setActiveTripId(e.target.value)} className="input-field">
-                <option value="">-- เลือกรถที่เข้าสถานี --</option>
-                {loadingTrips.map(t => (
-                  <option key={t.TripID} value={t.TripID}>
-                    #{t.TripID} - {t.LicensePlate} ({t.CustomerName || '-'})
-                  </option>
-                ))}
-              </select>
             </div>
           </div>
 
