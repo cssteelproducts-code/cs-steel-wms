@@ -133,9 +133,9 @@ export default function WeighIn() {
     setCustName('');
   };
 
-  const Pill = ({ item, active, onClick }) => (
+  const Pill = ({ item, active, onClick, stretch }) => (
     <button type="button" onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all ${
+      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all text-center ${stretch ? 'w-full' : ''} ${
         active
           ? 'bg-red-600 border-red-600 text-white shadow-sm'
           : 'bg-white border-slate-200 text-slate-600 hover:border-red-400 hover:text-red-600'
@@ -253,9 +253,9 @@ export default function WeighIn() {
             {/* Vehicle type pills */}
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ประเภทรถ *</div>
-              <div className="flex flex-wrap gap-1.5">
+              <div className="grid grid-cols-4 gap-1.5">
                 {masters.vehicleTypes.map(vt => (
-                  <Pill key={vt.TypeID} item={vt}
+                  <Pill key={vt.TypeID} item={vt} stretch
                     active={String(form.vehicleTypeId) === String(vt.TypeID)}
                     onClick={() => setForm(p => ({ ...p, vehicleTypeId: vt.TypeID }))} />
                 ))}
@@ -265,9 +265,9 @@ export default function WeighIn() {
             {/* Delivery type pills */}
             <div>
               <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ขนส่ง</div>
-              <div className="flex gap-1.5">
+              <div className="grid grid-cols-3 gap-1.5">
                 {DELIVERY_TYPES.map(dt => (
-                  <Pill key={dt.id} item={dt}
+                  <Pill key={dt.id} item={dt} stretch
                     active={form.deliveryType === dt.id}
                     onClick={() => setForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
                 ))}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Search, Check, Clock } from 'lucide-react';
+import { FileText, Search, Check, Clock, HourglassIcon } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatDuration } from '../utils/helpers';
@@ -11,6 +11,7 @@ export default function DataStation() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ targetStationId: '', pickDocumentNo: '', notes: '' });
   const [loading, setLoading] = useState(false);
+  const [waitLoading, setWaitLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [search, setSearch] = useState('');
 
@@ -38,6 +39,23 @@ export default function DataStation() {
   const selectTrip = (trip) => {
     setSelected(trip);
     setForm({ targetStationId: '', pickDocumentNo: '', notes: '' });
+  };
+
+  const markWaitPick = async () => {
+    if (!selected) return;
+    setWaitLoading(true);
+    try {
+      const res = await api.put(`/data-station/${selected.TripID}/wait-pick`);
+      if (res.data.success) {
+        toast.success(`${selected.LicensePlate} — มาร์กรอเอกสาร Pick แล้ว`);
+        setSelected(null);
+        fetchPending();
+      }
+    } catch {
+      toast.error('ไม่สามารถเปลี่ยนสถานะได้');
+    } finally {
+      setWaitLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -97,8 +115,13 @@ export default function DataStation() {
                   : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50'}`}>
                 <div className="flex items-center justify-between">
                   <div>
-                    <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
-                    <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
+                      <span className="text-slate-400 text-xs">#{trip.TripID}</span>
+                      {trip.Status === 'WaitPick' && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร Pick</span>
+                      )}
+                    </div>
                     <div className="text-slate-500 text-xs mt-1">
                       {trip.VehicleType} | {trip.WarehouseName}
                     </div>
@@ -176,6 +199,14 @@ export default function DataStation() {
                 </button>
                 <button type="button" onClick={() => setSelected(null)} className="btn-secondary px-6">ยกเลิก</button>
               </div>
+              {selected.Status !== 'WaitPick' && (
+                <button type="button" onClick={markWaitPick} disabled={waitLoading}
+                  className="w-full py-2.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-600 text-sm font-medium hover:bg-rose-100 transition-colors flex items-center justify-center gap-2">
+                  {waitLoading
+                    ? <span className="w-4 h-4 border-2 border-rose-300 border-t-rose-600 rounded-full animate-spin" />
+                    : <><HourglassIcon size={14} />มาร์กรอเอกสาร Pick</>}
+                </button>
+              )}
             </form>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">

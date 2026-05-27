@@ -84,7 +84,7 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-        WHERE t.Status = 'Data'
+        WHERE t.Status IN ('Data', 'WaitPick')
         AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
@@ -108,6 +108,19 @@ router.get('/trip/:tripId', authenticate, async (req, res) => {
         WHERE ds.TripID = @TripID
       `);
     res.json({ success: true, data: result.recordset[0] || null });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/data-station/:tripId/wait-pick — mark trip as waiting for Pick document
+router.put('/:tripId/wait-pick', authenticate, async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('TripID', sql.Int, req.params.tripId)
+      .query(`UPDATE WMS_Trips SET Status = 'WaitPick' WHERE TripID = @TripID AND Status IN ('Data', 'WaitPick')`);
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
