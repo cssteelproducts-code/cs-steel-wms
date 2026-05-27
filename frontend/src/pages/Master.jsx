@@ -1,7 +1,8 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, CheckCircle } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import DraggableMap from '../components/DraggableMap';
 
 const tabs = [
   { key: 'warehouses', label: 'คลังสินค้า', icon: Warehouse },
@@ -18,6 +19,9 @@ export default function Master() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
+  const [pinConfirm, setPinConfirm] = useState(false);
+  const [pinLat, setPinLat] = useState('');
+  const [pinLng, setPinLng] = useState('');
   // Location search state
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState([]);
@@ -132,6 +136,18 @@ export default function Master() {
     setModal(tab);
   };
 
+  const openPinConfirm = () => {
+    const lat = form.GpsLat || form.gpsLat;
+    const lng = form.GpsLng || form.gpsLng;
+    if (tab === 'warehouses' && lat && lng) {
+      setPinLat(String(lat));
+      setPinLng(String(lng));
+      setPinConfirm(true);
+    } else {
+      handleSave();
+    }
+  };
+
   const handleSave = async () => {
     setSaving(true);
     try {
@@ -160,6 +176,7 @@ export default function Master() {
       if (res.data.success) {
         toast.success(res.data.message);
         setModal(null);
+        setPinConfirm(false);
         fetchData(tab);
         if (tab === 'warehouses') fetchWarehouses();
       }
@@ -168,6 +185,12 @@ export default function Master() {
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleConfirmPin = () => {
+    setForm(p => ({ ...p, GpsLat: pinLat, GpsLng: pinLng }));
+    setPinConfirm(false);
+    setTimeout(() => handleSave(), 50);
   };
 
   const handleDelete = async (item) => {
@@ -400,10 +423,44 @@ export default function Master() {
             </div>
             {renderForm()}
             <div className="flex gap-3 mt-5">
-              <button onClick={handleSave} disabled={saving} className="btn-primary flex-1">
+              <button onClick={openPinConfirm} disabled={saving} className="btn-primary flex-1">
                 {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึก</>}
               </button>
               <button onClick={() => setModal(null)} className="btn-secondary px-6">ยกเลิก</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Pin Confirmation Overlay */}
+      {pinConfirm && (
+        <div className="fixed inset-0 flex items-center justify-center z-[60] p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
+            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+              <div>
+                <h3 className="font-bold text-slate-900 text-base">ยืนยันตำแหน่งคลังสินค้า</h3>
+                <p className="text-xs text-slate-400 mt-0.5">ลากหมุดหรือแตะแผนที่เพื่อปรับตำแหน่ง</p>
+              </div>
+              <button onClick={() => setPinConfirm(false)} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
+            </div>
+            <div className="rounded-none overflow-hidden" style={{ height: 320 }}>
+              <DraggableMap
+                lat={pinLat}
+                lng={pinLng}
+                height={320}
+                onMove={(la, ln) => { setPinLat(la); setPinLng(ln); }}
+              />
+            </div>
+            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100">
+              <p className="text-xs text-slate-500 font-mono">
+                {pinLat}, {pinLng}
+              </p>
+            </div>
+            <div className="px-5 py-4 flex gap-3">
+              <button onClick={handleConfirmPin} disabled={saving} className="btn-primary flex-1">
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle size={14} />ยืนยันตำแหน่งและบันทึก</>}
+              </button>
+              <button onClick={() => setPinConfirm(false)} className="btn-secondary px-5">ย้อนกลับ</button>
             </div>
           </div>
         </div>
