@@ -112,6 +112,18 @@ export default function Master() {
     } catch (err) { toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ'); }
   };
 
+  const handleDownloadTemplate = async () => {
+    try {
+      const res = await api.get('/master/customers/template', { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'customer_template.xlsx';
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
+  };
+
   const searchLocation = async (q) => {
     if (!q.trim()) { setLocResults([]); return; }
     setLocSearching(true);
@@ -492,7 +504,7 @@ export default function Master() {
             {tab === 'customers' && (<>
               <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
               <button onClick={() => importRef.current?.click()} className="btn-secondary text-sm"><Upload size={14} />Import Excel</button>
-              <a href="/api/master/customers/template" download className="btn-secondary text-sm flex items-center gap-1.5"><Download size={14} />Template</a>
+              <button onClick={handleDownloadTemplate} className="btn-secondary text-sm"><Download size={14} />Template</button>
             </>)}
             <button onClick={openCreate} className="btn-primary text-sm">
               <Plus size={14} />เพิ่ม
