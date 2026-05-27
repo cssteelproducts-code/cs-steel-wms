@@ -158,14 +158,14 @@ const runMigrations = async () => {
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Trips') AND name='DeliveryType')
         ALTER TABLE WMS_Trips ADD DeliveryType NVARCHAR(20) NULL;
     `);
-    // Set on-time windows per vehicle type (06:00 start, cutoff varies by type)
+    // Set on-time windows per vehicle type — only if still at default (8), so UI changes are preserved
     await pool.request().query(`
-      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=16,CutoffMinute=0 WHERE TypeName LIKE N'%4 ล้อ%';
-      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=15,CutoffMinute=30 WHERE TypeName LIKE N'%6 ล้อ%';
-      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=15,CutoffMinute=0 WHERE TypeName LIKE N'%10 ล้อ%';
-      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%12 ล้อ%';
-      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%พ่วง%';
-      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%เทรลเลอร์%';
+      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=16,CutoffMinute=0 WHERE TypeName LIKE N'%4 ล้อ%'   AND StartHour=8 AND CutoffHour=16;
+      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=15,CutoffMinute=30 WHERE TypeName LIKE N'%6 ล้อ%'   AND StartHour=8;
+      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=15,CutoffMinute=0 WHERE TypeName LIKE N'%10 ล้อ%'  AND StartHour=8;
+      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%12 ล้อ%'  AND StartHour=8;
+      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%พ่วง%'    AND StartHour=8;
+      UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%เทรลเลอร์%' AND StartHour=8;
     `);
     // Ensure TRANSFER permission exists for Admin role
     await pool.request().query(`
