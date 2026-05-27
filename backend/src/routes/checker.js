@@ -6,7 +6,7 @@ const { authenticate } = require('../middleware/auth');
 // POST /api/checker - Record checker verification
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { tripId, isApproved, remarks } = req.body;
+    const { tripId, isApproved, remarks, checkDurationMinutes, checkStartTime } = req.body;
 
     if (!tripId) {
       return res.status(400).json({ success: false, message: 'กรุณาระบุ Trip' });
@@ -18,22 +18,30 @@ router.post('/', authenticate, async (req, res) => {
       .input('TripID', sql.Int, tripId)
       .query('SELECT CheckerID FROM WMS_CheckerRecord WHERE TripID = @TripID');
 
+    const startTime = checkStartTime ? new Date(checkStartTime) : null;
+
     if (existing.recordset.length > 0) {
       await pool.request()
         .input('TripID', sql.Int, tripId)
         .input('IsApproved', sql.Bit, isApproved ? 1 : 0)
         .input('Remarks', sql.NVarChar, remarks || '')
         .input('OperatorID', sql.Int, req.user.UserID)
+        .input('CheckDurationMinutes', sql.Int, checkDurationMinutes != null ? checkDurationMinutes : null)
+        .input('CheckStartTime', sql.DateTime, startTime)
         .query(`UPDATE WMS_CheckerRecord SET CheckTime=GETDATE(), IsApproved=@IsApproved,
-                Remarks=@Remarks, OperatorID=@OperatorID WHERE TripID=@TripID`);
+                Remarks=@Remarks, OperatorID=@OperatorID,
+                CheckDurationMinutes=@CheckDurationMinutes, CheckStartTime=@CheckStartTime
+                WHERE TripID=@TripID`);
     } else {
       await pool.request()
         .input('TripID', sql.Int, tripId)
         .input('IsApproved', sql.Bit, isApproved ? 1 : 0)
         .input('Remarks', sql.NVarChar, remarks || '')
         .input('OperatorID', sql.Int, req.user.UserID)
-        .query(`INSERT INTO WMS_CheckerRecord (TripID, IsApproved, Remarks, OperatorID)
-                VALUES (@TripID, @IsApproved, @Remarks, @OperatorID)`);
+        .input('CheckDurationMinutes', sql.Int, checkDurationMinutes != null ? checkDurationMinutes : null)
+        .input('CheckStartTime', sql.DateTime, startTime)
+        .query(`INSERT INTO WMS_CheckerRecord (TripID, IsApproved, Remarks, OperatorID, CheckDurationMinutes, CheckStartTime)
+                VALUES (@TripID, @IsApproved, @Remarks, @OperatorID, @CheckDurationMinutes, @CheckStartTime)`);
     }
 
     if (isApproved) {

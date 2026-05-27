@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { CheckSquare, XCircle, CheckCircle, Clock } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -12,6 +12,9 @@ export default function Checker() {
   const [submitting, setSubmitting] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState([]);
   const [pageLoading, setPageLoading] = useState(true);
+  const [elapsedMinutes, setElapsedMinutes] = useState(0);
+  const checkerStartRef = useRef(null);
+  const timerRef = useRef(null);
 
   useEffect(() => {
     fetchPending();
@@ -29,25 +32,46 @@ export default function Checker() {
   const selectTrip = async (trip) => {
     setSelected(trip);
     setForm({ isApproved: true, remarks: '' });
+    checkerStartRef.current = new Date();
+    setElapsedMinutes(0);
+    if (timerRef.current) clearInterval(timerRef.current);
+    timerRef.current = setInterval(() => {
+      setElapsedMinutes(Math.floor((new Date() - checkerStartRef.current) / 60000));
+    }, 10000);
     try {
       const res = await api.get(`/loading-station/trip/${trip.TripID}`);
       setLoadingRecords(res.data.data || []);
     } catch {}
   };
 
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+
   const handleSubmit = async (approved) => {
     if (!selected) return;
     setSubmitting(true);
+    const durationMinutes = checkerStartRef.current
+      ? Math.round((new Date() - checkerStartRef.current) / 60000)
+      : null;
     try {
       const res = await api.post('/checker', {
         tripId: selected.TripID,
         isApproved: approved,
-        remarks: form.remarks
+        remarks: form.remarks,
+        checkDurationMinutes: durationMinutes,
+        checkStartTime: checkerStartRef.current?.toISOString() || null
       });
       if (res.data.success) {
-        toast.success(res.data.message);
+        if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+        const durText = durationMinutes != null
+          ? durationMinutes < 60
+            ? `ใช้เวลาตรวจ ${durationMinutes} นาที`
+            : `ใช้เวลาตรวจ ${Math.floor(durationMinutes / 60)} ชั่วโมง ${durationMinutes % 60} นาที`
+          : '';
+        toast.success(`${res.data.message}${durText ? ` | ${durText}` : ''}`);
         setSelected(null);
         setLoadingRecords([]);
+        setElapsedMinutes(0);
+        checkerStartRef.current = null;
         fetchPending();
       }
     } catch (err) {
@@ -137,6 +161,18 @@ export default function Checker() {
                 </div>
               </div>
 
+              {/* Inspection timer */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg px-4 py-3 flex items-center justify-between">
+                <div className="text-blue-600 text-sm font-medium flex items-center gap-2">
+                  <Clock size={15} />เวลาที่ใช้ตรวจ
+                </div>
+                <div className="text-blue-700 font-bold text-sm">
+                  {elapsedMinutes < 1 ? 'น้อยกว่า 1 นาที'
+                    : elapsedMinutes < 60 ? `${elapsedMinutes} นาที`
+                    : `${Math.floor(elapsedMinutes / 60)} ชั่วโมง ${elapsedMinutes % 60} นาที`}
+                </div>
+              </div>
+
               {/* Loading history */}
               {loadingRecords.length > 0 && (
                 <div>
@@ -178,7 +214,7 @@ export default function Checker() {
                 </button>
               </div>
 
-              <button onClick={() => { setSelected(null); setLoadingRecords([]); }}
+              <button onClick={() => { setSelected(null); setLoadingRecords([]); setElapsedMinutes(0); checkerStartRef.current = null; if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; } }}
                 className="btn-secondary w-full">
                 ยกเลิก
               </button>

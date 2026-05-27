@@ -171,6 +171,14 @@ const runMigrations = async () => {
       UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%พ่วง%'    AND StartHour=8;
       UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=14,CutoffMinute=0 WHERE TypeName LIKE N'%เทรลเลอร์%' AND StartHour=8;
     `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_CheckerRecord') AND name='CheckDurationMinutes')
+        ALTER TABLE WMS_CheckerRecord ADD CheckDurationMinutes INT NULL;
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_CheckerRecord') AND name='CheckStartTime')
+        ALTER TABLE WMS_CheckerRecord ADD CheckStartTime DATETIME NULL;
+    `);
     // Ensure TRANSFER permission exists for Admin role
     await pool.request().query(`
       IF NOT EXISTS (
