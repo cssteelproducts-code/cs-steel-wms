@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, CheckCircle } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import DraggableMap from '../components/DraggableMap';
@@ -19,9 +19,6 @@ export default function Master() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
-  const [pinConfirm, setPinConfirm] = useState(false);
-  const [pinLat, setPinLat] = useState('');
-  const [pinLng, setPinLng] = useState('');
   // Location search state
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState([]);
@@ -58,8 +55,8 @@ export default function Master() {
     setLocSearching(true);
     try {
       const res = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=5&addressdetails=1`,
-        { headers: { 'Accept-Language': 'th,en' } }
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=8&addressdetails=1&countrycodes=th&accept-language=th,en`,
+        { headers: { 'Accept-Language': 'th,en', 'User-Agent': 'CS.Smart WMS/1.0' } }
       );
       const data = await res.json();
       setLocResults(data);
@@ -137,15 +134,7 @@ export default function Master() {
   };
 
   const openPinConfirm = () => {
-    const lat = form.GpsLat || form.gpsLat;
-    const lng = form.GpsLng || form.gpsLng;
-    if (tab === 'warehouses' && lat && lng) {
-      setPinLat(String(lat));
-      setPinLng(String(lng));
-      setPinConfirm(true);
-    } else {
-      handleSave();
-    }
+    handleSave();
   };
 
   const handleSave = async () => {
@@ -185,12 +174,6 @@ export default function Master() {
     } finally {
       setSaving(false);
     }
-  };
-
-  const handleConfirmPin = () => {
-    setForm(p => ({ ...p, GpsLat: pinLat, GpsLng: pinLng }));
-    setPinConfirm(false);
-    setTimeout(() => handleSave(), 50);
   };
 
   const handleDelete = async (item) => {
@@ -306,23 +289,34 @@ export default function Master() {
 
           {/* Location search */}
           <div className="col-span-2">
-            <label className="label">ค้นหาสถานที่</label>
+            <label className="label">ค้นหาสถานที่ในไทย</label>
             <div className="relative">
               <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={locQuery} onChange={e => handleLocInput(e.target.value)}
-                className="input-field pl-9 pr-10" placeholder="พิมพ์ชื่อสถานที่ เช่น นิคมอุตสาหกรรมบางปู..." />
+                className="input-field pl-9 pr-10"
+                placeholder="เช่น นิคมอุตสาหกรรมบางปู, ถนนสุขุมวิท สมุทรปราการ..." />
               {locSearching && <span className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 border-2 border-red-500/30 border-t-red-500 rounded-full animate-spin" />}
             </div>
             {locResults.length > 0 && (
-              <div className="mt-1 rounded-xl overflow-hidden shadow-xl max-h-40 overflow-y-auto z-[9999] relative bg-white border border-slate-200">
-                {locResults.map((item, i) => (
-                  <button key={i} type="button" onClick={() => pickLocation(item)}
-                    className="w-full text-left px-3 py-2.5 text-sm flex items-start gap-2 transition-colors hover:bg-slate-50 border-b border-slate-100 last:border-0 text-slate-700">
-                    <MapPin size={13} className="text-red-500 mt-0.5 flex-shrink-0" />
-                    <span className="line-clamp-2">{item.display_name}</span>
-                  </button>
-                ))}
+              <div className="mt-1 rounded-xl overflow-hidden shadow-xl max-h-48 overflow-y-auto z-[9999] relative bg-white border border-slate-200">
+                {locResults.map((item, i) => {
+                  const addr = item.address || {};
+                  const short = [addr.road, addr.suburb, addr.city || addr.town || addr.county, addr.state].filter(Boolean).join(', ');
+                  return (
+                    <button key={i} type="button" onClick={() => pickLocation(item)}
+                      className="w-full text-left px-3 py-2.5 flex items-start gap-2 transition-colors hover:bg-red-50 border-b border-slate-100 last:border-0">
+                      <MapPin size={13} className="text-red-500 mt-0.5 flex-shrink-0" />
+                      <div>
+                        <p className="text-sm text-slate-800 font-medium line-clamp-1">{short || item.display_name}</p>
+                        <p className="text-xs text-slate-400 line-clamp-1 mt-0.5">{item.display_name}</p>
+                      </div>
+                    </button>
+                  );
+                })}
               </div>
+            )}
+            {locResults.length === 0 && !locSearching && locQuery.trim() && (
+              <p className="text-xs text-slate-400 mt-1">ไม่พบผลลัพธ์ — ลองพิมพ์ชื่ออำเภอ/จังหวัด</p>
             )}
             <button type="button" onClick={useCurrentLocation}
               className="mt-1.5 flex items-center gap-1.5 text-xs text-red-500 hover:text-red-600 transition-colors">
@@ -335,6 +329,35 @@ export default function Master() {
             <input value={form.Location || form.location || ''} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} className="input-field" placeholder="จะกรอกอัตโนมัติเมื่อเลือกจากผลค้นหา" />
           </div>
 
+          {/* Map — shows as soon as GPS coords exist, draggable to fine-tune */}
+          {(form.GpsLat || form.gpsLat) && (form.GpsLng || form.gpsLng) ? (<>
+            <div className="col-span-2">
+              <div className="flex items-center justify-between mb-1">
+                <label className="label mb-0">ยืนยันตำแหน่ง <span className="text-slate-400 font-normal">(ลากหมุดเพื่อปรับตำแหน่ง)</span></label>
+                <a href={`https://www.google.com/maps?q=${form.GpsLat||form.gpsLat},${form.GpsLng||form.gpsLng}`} target="_blank" rel="noreferrer"
+                  className="inline-flex items-center gap-1 text-xs text-blue-500 hover:text-blue-600 transition-colors">
+                  <MapPin size={11} />Google Maps
+                </a>
+              </div>
+              <div className="rounded-xl overflow-hidden border-2 border-red-100" style={{ height: 260 }}>
+                <DraggableMap
+                  lat={form.GpsLat || form.gpsLat}
+                  lng={form.GpsLng || form.gpsLng}
+                  height={260}
+                  onMove={(la, ln) => setForm(p => ({ ...p, GpsLat: la, GpsLng: ln }))}
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1 font-mono text-right">
+                {form.GpsLat || form.gpsLat}, {form.GpsLng || form.gpsLng}
+              </p>
+            </div>
+          </>) : (
+            <div className="col-span-2 rounded-xl border-2 border-dashed border-slate-200 flex flex-col items-center justify-center gap-2 py-6 text-slate-400">
+              <MapPin size={24} className="text-slate-300" />
+              <p className="text-sm">ค้นหาสถานที่หรือใส่ GPS เพื่อแสดงแผนที่</p>
+            </div>
+          )}
+
           <div>
             <label className="label">GPS Latitude</label>
             <input type="number" step="0.000001" value={form.GpsLat || form.gpsLat || ''} onChange={e => setForm(p => ({ ...p, GpsLat: e.target.value }))} className="input-field" placeholder="13.579319" />
@@ -343,22 +366,6 @@ export default function Master() {
             <label className="label">GPS Longitude</label>
             <input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => setForm(p => ({ ...p, GpsLng: e.target.value }))} className="input-field" placeholder="100.353664" />
           </div>
-
-          {(form.GpsLat || form.gpsLat) && (form.GpsLng || form.gpsLng) && (<>
-            <div className="col-span-2 rounded-xl overflow-hidden border border-slate-200" style={{ height: 200 }}>
-              <iframe
-                title="map"
-                src={`https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(form.GpsLng||form.gpsLng)-0.008).toFixed(6)},${(parseFloat(form.GpsLat||form.gpsLat)-0.005).toFixed(6)},${(parseFloat(form.GpsLng||form.gpsLng)+0.008).toFixed(6)},${(parseFloat(form.GpsLat||form.gpsLat)+0.005).toFixed(6)}&layer=mapnik&marker=${form.GpsLat||form.gpsLat},${form.GpsLng||form.gpsLng}`}
-                style={{ width: '100%', height: '100%', border: 'none' }}
-              />
-            </div>
-            <div className="col-span-2">
-              <a href={`https://www.google.com/maps?q=${form.GpsLat||form.gpsLat},${form.GpsLng||form.gpsLng}`} target="_blank" rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 transition-colors">
-                <MapPin size={12} />ดูตำแหน่งบน Google Maps
-              </a>
-            </div>
-          </>)}
         </div>
       </>);
       case 'customers': return (<>
@@ -432,39 +439,6 @@ export default function Master() {
         </div>
       )}
 
-      {/* Pin Confirmation Overlay */}
-      {pinConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-[60] p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
-          <div className="bg-white rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-              <div>
-                <h3 className="font-bold text-slate-900 text-base">ยืนยันตำแหน่งคลังสินค้า</h3>
-                <p className="text-xs text-slate-400 mt-0.5">ลากหมุดหรือแตะแผนที่เพื่อปรับตำแหน่ง</p>
-              </div>
-              <button onClick={() => setPinConfirm(false)} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
-            </div>
-            <div className="rounded-none overflow-hidden" style={{ height: 320 }}>
-              <DraggableMap
-                lat={pinLat}
-                lng={pinLng}
-                height={320}
-                onMove={(la, ln) => { setPinLat(la); setPinLng(ln); }}
-              />
-            </div>
-            <div className="px-5 py-3 bg-slate-50 border-t border-slate-100">
-              <p className="text-xs text-slate-500 font-mono">
-                {pinLat}, {pinLng}
-              </p>
-            </div>
-            <div className="px-5 py-4 flex gap-3">
-              <button onClick={handleConfirmPin} disabled={saving} className="btn-primary flex-1">
-                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><CheckCircle size={14} />ยืนยันตำแหน่งและบันทึก</>}
-              </button>
-              <button onClick={() => setPinConfirm(false)} className="btn-secondary px-5">ย้อนกลับ</button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

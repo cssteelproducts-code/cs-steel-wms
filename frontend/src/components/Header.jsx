@@ -43,8 +43,8 @@ export default function Header({ onMenuClick, title }) {
     navigate('/login');
   };
 
+  const { t } = useLang();
   const ActiveFlag = FLAGS[lang];
-  const activeLang = LANGS.find(l => l.code === lang);
 
   return (
     <header className="h-16 flex items-center justify-between px-4 flex-shrink-0 sticky top-0 z-30"
@@ -152,7 +152,7 @@ export default function Header({ onMenuClick, title }) {
                 onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#475569'; }}
               >
                 <User size={15} />
-                โปรไฟล์ / เปลี่ยนรหัสผ่าน
+                {t('header.profile')}
               </button>
               <button
                 onClick={handleLogout}
@@ -161,7 +161,7 @@ export default function Header({ onMenuClick, title }) {
                 onMouseLeave={e => { e.currentTarget.style.background = ''; }}
               >
                 <LogOut size={15} />
-                ออกจากระบบ
+                {t('header.logout')}
               </button>
             </div>
           )}

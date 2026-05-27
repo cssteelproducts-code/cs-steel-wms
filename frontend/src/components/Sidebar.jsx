@@ -1,5 +1,6 @@
 import { NavLink } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
@@ -8,26 +9,27 @@ import {
 import logoImg from '../assets/Logo.png';
 
 const menuItems = [
-  { path: '/', icon: LayoutDashboard, label: 'Dashboard', code: 'DASHBOARD' },
-  { path: '/monitor', icon: Activity, label: 'Monitor รถ', code: 'TRIP_MONITOR' },
-  { label: 'สถานี', divider: true },
-  { path: '/weigh-in', icon: Scale, label: 'สถานีชั่งเข้า', code: 'WEIGH_IN' },
-  { path: '/data-station', icon: FileText, label: 'สถานี Data', code: 'DATA_STATION' },
-  { path: '/loading-station', icon: Package, label: 'สถานีขึ้นสินค้า', code: 'LOADING_STATION' },
-  { path: '/checker', icon: CheckSquare, label: 'เช็คเกอร์', code: 'CHECKER' },
-  { path: '/weigh-out', icon: TruckIcon, label: 'สถานีชั่งออก', code: 'WEIGH_OUT' },
-  { label: 'คลัง & จัดส่ง', divider: true },
-  { path: '/stock', icon: Boxes, label: 'สต็อกสินค้า', code: 'STOCK' },
-  { path: '/delivery', icon: Route, label: 'แผนจัดส่ง', code: 'DELIVERY_PLAN' },
-  { label: 'ระบบ', divider: true },
-  { path: '/alerts', icon: Bell, label: 'การแจ้งเตือน', code: 'ALERTS' },
-  { path: '/eta', icon: MapPin, label: 'ETA / GPS รถ', code: 'ETA' },
-  { path: '/users', icon: Users, label: 'จัดการผู้ใช้', code: 'USERS' },
-  { path: '/master', icon: Settings, label: 'ข้อมูลหลัก', code: 'MASTER' }
+  { path: '/', icon: LayoutDashboard, key: 'nav.dashboard', code: 'DASHBOARD' },
+  { path: '/monitor', icon: Activity, key: 'nav.monitor', code: 'TRIP_MONITOR' },
+  { key: 'section.station', divider: true },
+  { path: '/weigh-in', icon: Scale, key: 'nav.weighIn', code: 'WEIGH_IN' },
+  { path: '/data-station', icon: FileText, key: 'nav.dataStation', code: 'DATA_STATION' },
+  { path: '/loading-station', icon: Package, key: 'nav.loadingStation', code: 'LOADING_STATION' },
+  { path: '/checker', icon: CheckSquare, key: 'nav.checker', code: 'CHECKER' },
+  { path: '/weigh-out', icon: TruckIcon, key: 'nav.weighOut', code: 'WEIGH_OUT' },
+  { key: 'section.warehouse', divider: true },
+  { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
+  { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
+  { key: 'section.system', divider: true },
+  { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
+  { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
+  { path: '/users', icon: Users, key: 'nav.users', code: 'USERS' },
+  { path: '/master', icon: Settings, key: 'nav.master', code: 'MASTER' }
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
   const { user, hasPermission } = useAuth();
+  const { t } = useLang();
 
   const visibleItems = menuItems.filter(item => {
     if (item.divider) return true;
@@ -85,7 +87,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 <div key={idx} className="px-2 pt-4 pb-1.5 flex items-center gap-2">
                   <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.2)' }} />
                   <span className="text-[10px] font-semibold uppercase tracking-widest text-red-200">
-                    {item.label}
+                    {t(item.key)}
                   </span>
                   <div className="h-px flex-1" style={{ background: 'rgba(255,255,255,0.2)' }} />
                 </div>
@@ -106,7 +108,7 @@ export default function Sidebar({ isOpen, onClose }) {
                 {({ isActive }) => (
                   <>
                     <item.icon size={14} className="flex-shrink-0" />
-                    <span className="flex-1 text-[12px]">{item.label}</span>
+                    <span className="flex-1 text-[12px]">{t(item.key)}</span>
                     {isActive && <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: '#b91c1c' }} />}
                   </>
                 )}
