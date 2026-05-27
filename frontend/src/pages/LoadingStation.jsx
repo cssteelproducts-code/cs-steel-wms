@@ -141,7 +141,6 @@ export default function LoadingStation() {
                 {loadingTrips.map(t => (
                   <option key={t.TripID} value={t.TripID}>
                     #{t.TripID} - {t.LicensePlate} ({t.CustomerName || '-'})
-                    {t.TargetStation ? ` → ${t.TargetStation}` : ''}
                   </option>
                 ))}
               </select>
