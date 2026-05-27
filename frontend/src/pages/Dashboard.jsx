@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   TruckIcon, CheckCircle, Clock, Scale, Activity, RefreshCw, ArrowRight,
-  Calendar, Package, AlertTriangle, Search, ChevronDown, ChevronUp
+  Calendar, Package, AlertTriangle, Search, ChevronDown, ChevronUp, X
 } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
@@ -129,6 +129,21 @@ export default function Dashboard() {
   const [reportData, setReportData] = useState(null);
   const [reportLoading, setReportLoading] = useState(false);
 
+  // Station popup state
+  const [stationPopup, setStationPopup] = useState(null); // { stationName, vehicles, loading }
+
+  const openStationPopup = async (stationName) => {
+    setStationPopup({ stationName, vehicles: [], loading: true });
+    try {
+      const res = await api.get(`/dashboard/station-vehicles?stationName=${encodeURIComponent(stationName)}`);
+      if (res.data.success) {
+        setStationPopup({ stationName, vehicles: res.data.data, loading: false });
+      }
+    } catch {
+      setStationPopup(prev => prev ? { ...prev, loading: false } : null);
+    }
+  };
+
   const fetchData = useCallback(async () => {
     try {
       const res = await api.get('/dashboard/summary');
@@ -189,6 +204,7 @@ export default function Dashboard() {
   const fmtKg = (v) => v ? `${parseFloat(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} กก.` : '-';
 
   return (
+    <>
     <div className="space-y-5 animate-fade-in">
 
       {/* Hero section */}
@@ -349,7 +365,10 @@ export default function Dashboard() {
               {[...data.stationLoad].sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(st => {
                 const pct = Math.min(st.ActiveTrucks * 20, 100);
                 return (
-                  <div key={st.StationName}>
+                  <div key={st.StationName}
+                    className={st.ActiveTrucks > 0 ? 'cursor-pointer hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors' : ''}
+                    onClick={() => st.ActiveTrucks > 0 && openStationPopup(st.StationName)}
+                  >
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="text-sm text-slate-700">{st.StationName}</span>
                       <span className={`text-sm font-semibold ${st.ActiveTrucks > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
@@ -690,5 +709,68 @@ export default function Dashboard() {
         </div>}
       </div>
     </div>
+
+    {/* Station vehicles popup */}
+    {stationPopup && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
+            <div>
+              <h3 className="text-base font-semibold text-slate-800">{stationPopup.stationName}</h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {stationPopup.loading ? 'กำลังโหลด...' : `${stationPopup.vehicles.length} คัน`}
+              </p>
+            </div>
+            <button onClick={() => setStationPopup(null)}
+              className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400 hover:text-slate-600 transition-colors">
+              <X size={18} />
+            </button>
+          </div>
+          <div className="overflow-y-auto flex-1 p-4">
+            {stationPopup.loading ? (
+              <div className="flex justify-center py-8">
+                <LoadingSpinner size="md" text="กำลังโหลด..." />
+              </div>
+            ) : stationPopup.vehicles.length === 0 ? (
+              <p className="text-center text-slate-400 py-8">ไม่มีรถในสถานีขณะนี้</p>
+            ) : (
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-slate-200">
+                    <th className="table-header text-left py-2 px-2">ทะเบียน</th>
+                    <th className="table-header text-left py-2 px-2">ชื่อลูกค้า</th>
+                    <th className="table-header text-left py-2 px-2">ประเภทรถ</th>
+                    <th className="table-header text-left py-2 px-2">เวลาเข้า</th>
+                    <th className="table-header text-right py-2 px-2">อยู่มา</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {stationPopup.vehicles.map(v => (
+                    <tr key={v.TripID} className="border-b border-slate-100 hover:bg-slate-50">
+                      <td className="py-2 px-2 font-medium text-slate-800">{v.LicensePlate}</td>
+                      <td className="py-2 px-2 text-slate-600">{v.CustomerName || '-'}</td>
+                      <td className="py-2 px-2 text-slate-500 text-xs">{v.VehicleTypeName || '-'}</td>
+                      <td className="py-2 px-2 text-slate-500 text-xs">
+                        {v.EntryTime ? dayjs(v.EntryTime).format('HH:mm') : '-'}
+                      </td>
+                      <td className="py-2 px-2 text-right">
+                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
+                          v.MinutesIn > 60 ? 'bg-red-50 text-red-600' :
+                          v.MinutesIn > 30 ? 'bg-amber-50 text-amber-600' :
+                          'bg-emerald-50 text-emerald-600'
+                        }`}>
+                          {v.MinutesIn != null ? `${v.MinutesIn} นาที` : '-'}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

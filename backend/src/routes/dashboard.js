@@ -337,4 +337,35 @@ router.get('/report', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/dashboard/station-vehicles?stationName=...
+router.get('/station-vehicles', authenticate, async (req, res) => {
+  try {
+    const { stationName } = req.query;
+    if (!stationName) return res.status(400).json({ success: false, message: 'stationName required' });
+    const pool = getPool();
+    const result = await pool.request()
+      .input('stationName', sql.NVarChar, stationName)
+      .query(`
+        SELECT
+          t.TripID, t.LicensePlate, t.VehicleTypeID,
+          c.CustomerName,
+          vt.TypeName AS VehicleTypeName,
+          lr.EntryTime,
+          DATEDIFF(MINUTE, lr.EntryTime, GETDATE()) AS MinutesIn
+        FROM WMS_LoadingRecord lr
+        JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+        JOIN WMS_Trips t ON lr.TripID = t.TripID
+        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
+        WHERE ls.StationName = @stationName
+          AND lr.ExitTime IS NULL
+          AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
+        ORDER BY lr.EntryTime
+      `);
+    res.json({ success: true, data: result.recordset, stationName });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;
