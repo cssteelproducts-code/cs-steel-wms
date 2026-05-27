@@ -1,10 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
-import { Scale, Clock, Search, AlertCircle, CheckCircle, RotateCcw, Truck, Hash, Pencil, X } from 'lucide-react';
+import { Scale, Clock, Search, AlertCircle, CheckCircle, RotateCcw } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { formatDateTime, formatWeight } from '../utils/helpers';
-import StatusBadge from '../components/StatusBadge';
 
 const DELIVERY_TYPES = [
   { id: 'CSS', label: 'CSS.' },
@@ -22,7 +20,6 @@ export default function WeighIn() {
     entryTime: timeNow(), notes: ''
   });
   const [masters, setMasters] = useState({ vehicleTypes: [], warehouses: [], customers: [] });
-  const [todayList, setTodayList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [checking, setChecking] = useState(false);
@@ -33,19 +30,9 @@ export default function WeighIn() {
   const [showCustDrop, setShowCustDrop] = useState(false);
   const custTimer = useRef(null);
   const plateTimer = useRef(null);
-  const [editTrip, setEditTrip] = useState(null); // trip being edited
-  const [editForm, setEditForm] = useState({});
-  const [editCustQuery, setEditCustQuery] = useState('');
-  const [editCustName, setEditCustName] = useState('');
-  const [editCustResults, setEditCustResults] = useState([]);
-  const [editCustDrop, setEditCustDrop] = useState(false);
-  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     fetchMasters();
-    fetchTodayList();
-    const interval = setInterval(fetchTodayList, 30000);
-    return () => clearInterval(interval);
   }, []);
 
   const fetchMasters = async () => {
@@ -61,13 +48,6 @@ export default function WeighIn() {
         customers: cu.data.data || []
       });
     } catch {} finally { setPageLoading(false); }
-  };
-
-  const fetchTodayList = async () => {
-    try {
-      const res = await api.get('/weigh-in/today');
-      setTodayList(res.data.data || []);
-    } catch {}
   };
 
   const checkPlate = async (plate) => {
@@ -126,62 +106,10 @@ export default function WeighIn() {
         setPlateCheck(null);
         setCustQuery('');
         setCustName('');
-        fetchTodayList();
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
     } finally { setLoading(false); }
-  };
-
-  const openEdit = (t) => {
-    setEditTrip(t);
-    setEditForm({
-      vehicleTypeId: t.VehicleTypeID || '',
-      warehouseId: t.WarehouseID || '',
-      customerId: t.CustomerID || '',
-      deliveryType: t.DeliveryType || '',
-      tareWeight: t.TareWeight || '',
-      notes: t.Notes || ''
-    });
-    setEditCustQuery(t.CustomerARCode || '');
-    setEditCustName(t.CustomerName || '');
-    setEditCustResults([]);
-    setEditCustDrop(false);
-  };
-
-  const handleEditCustInput = (val) => {
-    setEditCustQuery(val);
-    setEditCustName('');
-    setEditForm(p => ({ ...p, customerId: '' }));
-    if (!val.trim()) { setEditCustResults([]); setEditCustDrop(false); return; }
-    const q = val.toLowerCase();
-    const filtered = masters.customers.filter(c =>
-      c.ARCode?.toLowerCase().includes(q) || c.CustomerName?.toLowerCase().includes(q)
-    ).slice(0, 8);
-    setEditCustResults(filtered);
-    setEditCustDrop(filtered.length > 0);
-  };
-
-  const pickEditCustomer = (c) => {
-    setEditCustQuery(c.ARCode || '');
-    setEditCustName(c.CustomerName);
-    setEditForm(p => ({ ...p, customerId: c.CustomerID }));
-    setEditCustDrop(false);
-  };
-
-  const saveEdit = async () => {
-    if (!editTrip) return;
-    setEditLoading(true);
-    try {
-      const res = await api.put(`/weigh-in/${editTrip.TripID}`, editForm);
-      if (res.data.success) {
-        toast.success('แก้ไขข้อมูลสำเร็จ');
-        setEditTrip(null);
-        fetchTodayList();
-      }
-    } catch (err) {
-      toast.error(err.response?.data?.message || 'แก้ไขไม่สำเร็จ');
-    } finally { setEditLoading(false); }
   };
 
   const resetForm = () => {
@@ -209,12 +137,8 @@ export default function WeighIn() {
   );
 
   return (
-    <div className="h-full flex flex-col gap-4">
-      {/* ── Main 2-column layout ── */}
-      <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-4 min-h-0">
-
-        {/* ── LEFT: Form ── */}
-        <div className="card overflow-hidden flex flex-col p-0">
+    <div className="h-full flex justify-center">
+      <div className="w-full max-w-lg card overflow-hidden flex flex-col p-0">
           {/* Header */}
           <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2 flex-shrink-0">
             <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
@@ -308,7 +232,7 @@ export default function WeighIn() {
                 <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">น้ำหนักเบา (กก.)</div>
                 <input type="number" step="0.01" value={form.tareWeight}
                   onChange={e => setForm(p => ({ ...p, tareWeight: e.target.value }))}
-                  className="input-field w-full py-1.5 text-sm"
+                  className="input-field w-full py-2 text-sm"
                   placeholder="0.00" />
               </div>
             </div>
@@ -364,179 +288,7 @@ export default function WeighIn() {
               </button>
             </div>
           </form>
-        </div>
-
-        {/* ── RIGHT: Today list ── */}
-        <div className="card flex flex-col min-h-0 overflow-hidden">
-          <div className="flex items-center justify-between mb-3 flex-shrink-0">
-            <div className="flex items-center gap-2">
-              <Truck size={17} className="text-red-500" />
-              <span className="font-semibold text-slate-900">รายการวันนี้</span>
-              <span className="text-xs text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full">{todayList.length}</span>
-            </div>
-            <button onClick={fetchTodayList} className="text-xs text-slate-500 hover:text-slate-700 transition-colors flex items-center gap-1">
-              <RotateCcw size={11} />รีเฟรช
-            </button>
-          </div>
-
-          <div className="flex-1 overflow-y-auto -mx-4 px-4">
-            {todayList.length === 0 ? (
-              <div className="flex flex-col items-center justify-center h-40 text-slate-400">
-                <Scale size={32} className="mb-2 opacity-30" />
-                <span className="text-sm">ยังไม่มีรายการวันนี้</span>
-              </div>
-            ) : (
-              <div className="space-y-1.5">
-                {todayList.map((t, i) => (
-                  <div key={t.TripID} className="flex items-center gap-3 px-3 py-2.5 rounded-xl bg-slate-50 border border-slate-200 hover:border-slate-300 transition-colors">
-                    {/* Index */}
-                    <div className="w-7 h-7 rounded-lg bg-red-50 flex items-center justify-center flex-shrink-0">
-                      <span className="text-red-500 text-xs font-bold">{i + 1}</span>
-                    </div>
-
-                    {/* Plate + details */}
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
-                        <span className="text-slate-900 font-bold text-sm tracking-wide">{t.LicensePlate}</span>
-                        <span className="text-slate-400 text-xs">#{t.TripID}</span>
-                      </div>
-                      <div className="text-xs text-slate-500 truncate mt-0.5">
-                        {t.VehicleType}
-                        {t.WarehouseName && ` · ${t.WarehouseName}`}
-                        {t.CustomerName && ` · ${t.CustomerName}`}
-                      </div>
-                    </div>
-
-                    {/* Weight */}
-                    <div className="text-right flex-shrink-0">
-                      <div className="text-sm font-semibold text-slate-700">
-                        {t.TareWeight ? `${Number(t.TareWeight).toLocaleString()} กก.` : '—'}
-                      </div>
-                      <div className="text-xs text-slate-400">
-                        {t.WeighDateTime ? new Date(t.WeighDateTime).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) : ''}
-                      </div>
-                    </div>
-
-                    {/* Status + Edit */}
-                    <div className="flex items-center gap-2 flex-shrink-0">
-                      <StatusBadge status={t.Status} />
-                      <button onClick={() => openEdit(t)}
-                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        title="แก้ไข">
-                        <Pencil size={13} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
-
       </div>
-
-      {/* Edit Modal */}
-      {editTrip && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-              <div>
-                <div className="font-bold text-slate-900">แก้ไขข้อมูลชั่งเข้า</div>
-                <div className="text-xs text-slate-500 mt-0.5">{editTrip.LicensePlate} · #{editTrip.TripID}</div>
-              </div>
-              <button onClick={() => setEditTrip(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X size={16} /></button>
-            </div>
-
-            <div className="p-5 space-y-4">
-              {/* คลังสินค้า */}
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">คลังสินค้า</div>
-                <div className="flex flex-wrap gap-1.5">
-                  {masters.warehouses.map(w => (
-                    <Pill key={w.WarehouseID} item={w}
-                      active={String(editForm.warehouseId) === String(w.WarehouseID)}
-                      onClick={() => setEditForm(p => ({ ...p, warehouseId: w.WarehouseID }))} />
-                  ))}
-                </div>
-              </div>
-
-              {/* ประเภทรถ */}
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ประเภทรถ</div>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {masters.vehicleTypes.map(vt => (
-                    <Pill key={vt.TypeID} item={vt} stretch
-                      active={String(editForm.vehicleTypeId) === String(vt.TypeID)}
-                      onClick={() => setEditForm(p => ({ ...p, vehicleTypeId: vt.TypeID }))} />
-                  ))}
-                </div>
-              </div>
-
-              {/* ประเภทขนส่ง */}
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ขนส่ง</div>
-                <div className="grid grid-cols-3 gap-1.5">
-                  {DELIVERY_TYPES.map(dt => (
-                    <Pill key={dt.id} item={dt} stretch
-                      active={editForm.deliveryType === dt.id}
-                      onClick={() => setEditForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
-                  ))}
-                </div>
-              </div>
-
-              {/* ลูกค้า */}
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ลูกค้า</div>
-                <div className="relative">
-                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input type="text" value={editCustQuery} onChange={e => handleEditCustInput(e.target.value)}
-                    onBlur={() => setTimeout(() => setEditCustDrop(false), 150)}
-                    className="input-field w-full pl-9 pr-3 py-2 text-sm"
-                    placeholder="พิมพ์ ARCODE หรือชื่อลูกค้า" />
-                  {editCustDrop && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-40 overflow-y-auto">
-                      {editCustResults.map(c => (
-                        <button key={c.CustomerID} type="button" onMouseDown={() => pickEditCustomer(c)}
-                          className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">
-                          <div className="text-sm font-semibold text-slate-900">{c.ARCode}</div>
-                          <div className="text-xs text-slate-500">{c.CustomerName}</div>
-                        </button>
-                      ))}
-                    </div>
-                  )}
-                </div>
-                {editCustName && (
-                  <div className="mt-1 text-xs text-red-600 px-2.5 py-1 rounded-lg bg-red-50 border border-red-200">{editCustName}</div>
-                )}
-              </div>
-
-              {/* น้ำหนักเบา */}
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">น้ำหนักเบา (กก.)</div>
-                <input type="number" step="0.01" value={editForm.tareWeight}
-                  onChange={e => setEditForm(p => ({ ...p, tareWeight: e.target.value }))}
-                  className="input-field w-full py-2 text-sm" placeholder="0.00" />
-              </div>
-
-              {/* หมายเหตุ */}
-              <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">หมายเหตุ</div>
-                <textarea value={editForm.notes} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))}
-                  className="input-field w-full py-2 text-sm resize-none" rows={2} />
-              </div>
-            </div>
-
-            <div className="px-5 pb-5 flex gap-2">
-              <button onClick={() => setEditTrip(null)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">ยกเลิก</button>
-              <button onClick={saveEdit} disabled={editLoading}
-                className="flex-1 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50"
-                style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
-                {editLoading ? 'กำลังบันทึก...' : 'บันทึกแก้ไข'}
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }

@@ -35,7 +35,7 @@ export default function LoadingStation() {
         api.get('/loading-station/active'),
         api.get('/trips/active')
       ]);
-      if (stRes.status === 'fulfilled') setStations(stRes.value.data.data || []);
+      if (stRes.status === 'fulfilled') setStations((stRes.value.data.data || []).sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })));
       if (statusRes.status === 'fulfilled') setStationStatus(statusRes.value.data.data || []);
       if (activeRes.status === 'fulfilled') setActiveRecords(activeRes.value.data.data || []);
       if (tripsRes.status === 'fulfilled') {

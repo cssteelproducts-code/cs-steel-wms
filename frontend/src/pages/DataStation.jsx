@@ -49,7 +49,7 @@ export default function DataStation() {
     try {
       const res = await api.put(`/data-station/${selected.TripID}/wait-pick`);
       if (res.data.success) {
-        toast.success(`${selected.LicensePlate} — มาร์กรอเอกสาร SO แล้ว`);
+        toast.success(`${selected.LicensePlate} — รอเอกสาร SO แล้ว`);
         setSelected(null);
         fetchPending();
       }
@@ -209,7 +209,7 @@ export default function DataStation() {
                   className="w-full py-2.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-600 text-sm font-medium hover:bg-rose-100 transition-colors flex items-center justify-center gap-2">
                   {waitLoading
                     ? <span className="w-4 h-4 border-2 border-rose-300 border-t-rose-600 rounded-full animate-spin" />
-                    : <><HourglassIcon size={14} />มาร์กรอเอกสาร SO</>}
+                    : <><HourglassIcon size={14} />รอเอกสาร SO</>}
                 </button>
               )}
             </form>
