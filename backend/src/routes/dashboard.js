@@ -89,14 +89,20 @@ router.get('/summary', authenticate, async (req, res) => {
       FROM WMS_Trips
     `);
 
-    // Weight today and yesterday
+    // Weight today and previous working day (Mon→Sat, others→yesterday)
+    // ISO weekday: (DATEPART(WEEKDAY,d)+@@DATEFIRST-2)%7+1 where 1=Mon ... 7=Sun
     const weightHistory = await pool.request().query(`
+      DECLARE @PrevWorkDay DATE =
+        CASE WHEN ((DATEPART(WEEKDAY,GETDATE())+@@DATEFIRST-2)%7+1) = 1
+          THEN CAST(DATEADD(DAY,-2,GETDATE()) AS DATE)
+          ELSE CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
+        END;
       SELECT
         SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(GETDATE() AS DATE) THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as TodayWeight,
-        SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(DATEADD(DAY,-1,GETDATE()) AS DATE) THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as YesterdayWeight
+        SUM(CASE WHEN CAST(t.TripDate AS DATE)=@PrevWorkDay THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as YesterdayWeight
       FROM WMS_Trips t
       LEFT JOIN WMS_WeighOut wo ON wo.TripID = t.TripID
-      WHERE CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
+      WHERE CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-2,GETDATE()) AS DATE)
     `);
 
     // Vehicle type breakdown today
