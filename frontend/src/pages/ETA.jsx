@@ -15,7 +15,6 @@ export default function ETA() {
   const [source, setSource] = useState('');
   const [whitelistConfigured, setWhitelistConfigured] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
   const [selectedId, setSelectedId] = useState(null);
   const [savingAssign, setSavingAssign] = useState({});
 
@@ -87,12 +86,10 @@ export default function ETA() {
 
   const filtered = vehicles.filter(v => {
     const q = search.toLowerCase();
-    const matchSearch = !q ||
+    return !q ||
       v.licensePlate?.toLowerCase().includes(q) ||
       v.warehouseName?.toLowerCase().includes(q) ||
       v.address?.toLowerCase().includes(q);
-    const matchStatus = statusFilter === 'all' || v.status === statusFilter;
-    return matchSearch && matchStatus;
   });
 
   const arriving = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 0 && v.etaMinutes <= 30).length;
@@ -182,21 +179,15 @@ export default function ETA() {
 
       {/* Map */}
       <div className="card p-0 overflow-hidden">
-        <div className="px-5 py-3 border-b border-gray-100 flex flex-wrap gap-2 items-center">
-          <div className="relative flex-1 min-w-[180px]">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              className="input-field pl-8 py-1.5 text-sm w-full"
-              placeholder="ค้นหาทะเบียน / คลัง..." />
-          </div>
-          <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
-            className="input-field py-1.5 text-sm min-w-[130px]">
-            <option value="all">ทุกสถานะ</option>
-            <option value="Moving">กำลังเดินทาง</option>
-            <option value="Stopped">จอดอยู่</option>
-          </select>
-        </div>
         <VehicleMap vehicles={filtered} warehouses={warehouses} selectedId={selectedId} onSelect={setSelectedId} height={420} />
+      </div>
+
+      {/* Search below map */}
+      <div className="relative">
+        <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+        <input type="text" value={search} onChange={e => setSearch(e.target.value)}
+          className="input-field pl-8 py-2 text-sm w-full"
+          placeholder="ค้นหาทะเบียน / คลัง..." />
       </div>
 
       {/* Table */}
