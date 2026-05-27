@@ -1,81 +1,7 @@
-import { useState, useEffect, useRef, useCallback, Component } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
-
-class MapErrorBoundary extends Component {
-  constructor(props) { super(props); this.state = { error: false }; }
-  static getDerivedStateFromError() { return { error: true }; }
-  render() {
-    if (this.state.error) return (
-      <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl border border-slate-200 text-slate-400 text-sm">
-        ไม่สามารถโหลดแผนที่ได้ — กรอก GPS ด้วยตนเอง
-      </div>
-    );
-    return this.props.children;
-  }
-}
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import L from 'leaflet';
-import 'leaflet/dist/leaflet.css';
-import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
-
-// Fix Leaflet default marker icons for Vite
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconUrl: new URL('leaflet/dist/images/marker-icon.png', import.meta.url).href,
-  iconRetinaUrl: new URL('leaflet/dist/images/marker-icon-2x.png', import.meta.url).href,
-  shadowUrl: new URL('leaflet/dist/images/marker-shadow.png', import.meta.url).href,
-});
-
-// Custom red pin icon
-const redPinIcon = L.divIcon({
-  className: '',
-  html: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 28 42" width="28" height="42">
-    <filter id="s"><feDropShadow dx="0" dy="2" stdDeviation="2" flood-opacity="0.35"/></filter>
-    <path filter="url(#s)" d="M14 1C7.37 1 2 6.37 2 13c0 10.5 12 28 12 28s12-17.5 12-28C26 6.37 20.63 1 14 1z" fill="#dc2626" stroke="white" stroke-width="1.5"/>
-    <circle cx="14" cy="13" r="5" fill="white"/>
-  </svg>`,
-  iconSize: [28, 42],
-  iconAnchor: [14, 42],
-  popupAnchor: [0, -42],
-});
-
-function RecenterMap({ lat, lng, trigger }) {
-  const map = useMap();
-  useEffect(() => {
-    const la = parseFloat(lat), ln = parseFloat(lng);
-    if (la && ln) map.setView([la, ln], Math.max(map.getZoom(), 15), { animate: true });
-  }, [trigger]);
-  return null;
-}
-
-function DraggableMarker({ lat, lng, onMove }) {
-  const markerRef = useRef(null);
-  const la = parseFloat(lat) || 13.7563;
-  const ln = parseFloat(lng) || 100.5018;
-  return (
-    <Marker
-      position={[la, ln]}
-      icon={redPinIcon}
-      draggable
-      ref={markerRef}
-      eventHandlers={{
-        dragend: () => {
-          const m = markerRef.current;
-          if (m) {
-            const p = m.getLatLng();
-            onMove(p.lat.toFixed(6), p.lng.toFixed(6));
-          }
-        }
-      }}
-    />
-  );
-}
-
-function MapClickHandler({ onClick }) {
-  useMapEvents({ click: e => onClick(e.latlng.lat.toFixed(6), e.latlng.lng.toFixed(6)) });
-  return null;
-}
 
 const tabs = [
   { key: 'warehouses', label: 'คลังสินค้า', icon: Warehouse },
@@ -96,7 +22,6 @@ export default function Master() {
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState([]);
   const [locSearching, setLocSearching] = useState(false);
-  const [recenterTrigger, setRecenterTrigger] = useState(0);
   const locTimer = useRef(null);
   const importRef = useRef(null);
 
@@ -144,25 +69,6 @@ export default function Master() {
     locTimer.current = setTimeout(() => searchLocation(v), 600);
   };
 
-  const reverseGeocode = async (lat, lng) => {
-    try {
-      const res = await fetch(
-        `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=th,en`,
-        { headers: { 'Accept-Language': 'th,en' } }
-      );
-      const data = await res.json();
-      if (data?.display_name) {
-        setForm(p => ({ ...p, Location: data.display_name }));
-        setLocQuery(data.display_name);
-      }
-    } catch {}
-  };
-
-  const handleMapMove = useCallback((lat, lng) => {
-    setForm(p => ({ ...p, GpsLat: lat, GpsLng: lng }));
-    reverseGeocode(lat, lng);
-  }, []);
-
   const pickLocation = (item) => {
     setForm(p => ({
       ...p,
@@ -172,7 +78,6 @@ export default function Master() {
     }));
     setLocQuery(item.display_name);
     setLocResults([]);
-    setRecenterTrigger(t => t + 1);
   };
 
   const useCurrentLocation = () => {
@@ -182,8 +87,6 @@ export default function Master() {
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
         setForm(p => ({ ...p, GpsLat: lat, GpsLng: lng }));
-        setRecenterTrigger(t => t + 1);
-        reverseGeocode(lat, lng);
         toast.success('ดึงตำแหน่งปัจจุบันสำเร็จ');
       },
       () => toast.error('ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาต Location')
@@ -218,7 +121,6 @@ export default function Master() {
     setEditing(null);
     setLocQuery('');
     setLocResults([]);
-    setRecenterTrigger(0);
     setModal(tab);
   };
 
@@ -227,7 +129,6 @@ export default function Master() {
     setEditing(item);
     setLocQuery(item.Location || item.location || '');
     setLocResults([]);
-    setRecenterTrigger(t => t + 1);
     setModal(tab);
   };
 
@@ -406,61 +307,35 @@ export default function Master() {
             </button>
           </div>
 
-          {/* Interactive Draggable Map */}
-          <div className="col-span-2">
-            <label className="label flex items-center gap-1.5">
-              <MapPin size={13} className="text-red-500" />
-              แผนที่ — ลากหมุดแดงหรือคลิกบนแผนที่เพื่อตั้งตำแหน่ง
-            </label>
-            <MapErrorBoundary>
-            <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: 240 }}>
-              <MapContainer
-                center={[parseFloat(form.GpsLat || form.gpsLat) || 13.5792, parseFloat(form.GpsLng || form.gpsLng) || 100.3534]}
-                zoom={parseFloat(form.GpsLat || form.gpsLat) ? 15 : 11}
-                style={{ height: '240px', width: '100%' }}
-                scrollWheelZoom
-              >
-                <TileLayer
-                  url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                  attribution='&copy; <a href="https://openstreetmap.org">OpenStreetMap</a>'
-                />
-                <RecenterMap lat={form.GpsLat || form.gpsLat} lng={form.GpsLng || form.gpsLng} trigger={recenterTrigger} />
-                <DraggableMarker
-                  lat={form.GpsLat || form.gpsLat || 13.5792}
-                  lng={form.GpsLng || form.gpsLng || 100.3534}
-                  onMove={handleMapMove}
-                />
-                <MapClickHandler onClick={handleMapMove} />
-              </MapContainer>
-            </div>
-            </MapErrorBoundary>
-            <p className="text-[11px] mt-1 text-slate-400">
-              ลากหมุดสีแดง หรือคลิกบนแผนที่ เพื่อเลือกตำแหน่ง · ที่อยู่จะดึงอัตโนมัติ
-            </p>
-          </div>
-
           <div className="col-span-2">
             <label className="label">ที่ตั้ง / ที่อยู่</label>
-            <input value={form.Location || form.location || ''} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} className="input-field" placeholder="จะกรอกอัตโนมัติเมื่อย้ายหมุด" />
+            <input value={form.Location || form.location || ''} onChange={e => setForm(p => ({ ...p, Location: e.target.value }))} className="input-field" placeholder="จะกรอกอัตโนมัติเมื่อเลือกจากผลค้นหา" />
           </div>
 
           <div>
             <label className="label">GPS Latitude</label>
-            <input type="number" step="0.000001" value={form.GpsLat || form.gpsLat || ''} onChange={e => { setForm(p => ({ ...p, GpsLat: e.target.value })); setRecenterTrigger(t => t + 1); }} className="input-field" placeholder="13.579319" />
+            <input type="number" step="0.000001" value={form.GpsLat || form.gpsLat || ''} onChange={e => setForm(p => ({ ...p, GpsLat: e.target.value }))} className="input-field" placeholder="13.579319" />
           </div>
           <div>
             <label className="label">GPS Longitude</label>
-            <input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => { setForm(p => ({ ...p, GpsLng: e.target.value })); setRecenterTrigger(t => t + 1); }} className="input-field" placeholder="100.353664" />
+            <input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => setForm(p => ({ ...p, GpsLng: e.target.value }))} className="input-field" placeholder="100.353664" />
           </div>
 
-          {(form.GpsLat || form.gpsLat) && (form.GpsLng || form.gpsLng) && (
+          {(form.GpsLat || form.gpsLat) && (form.GpsLng || form.gpsLng) && (<>
+            <div className="col-span-2 rounded-xl overflow-hidden border border-slate-200" style={{ height: 200 }}>
+              <iframe
+                title="map"
+                src={`https://www.openstreetmap.org/export/embed.html?bbox=${(parseFloat(form.GpsLng||form.gpsLng)-0.008).toFixed(6)},${(parseFloat(form.GpsLat||form.gpsLat)-0.005).toFixed(6)},${(parseFloat(form.GpsLng||form.gpsLng)+0.008).toFixed(6)},${(parseFloat(form.GpsLat||form.gpsLat)+0.005).toFixed(6)}&layer=mapnik&marker=${form.GpsLat||form.gpsLat},${form.GpsLng||form.gpsLng}`}
+                style={{ width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
             <div className="col-span-2">
-              <a href={`https://www.google.com/maps?q=${form.GpsLat || form.gpsLat},${form.GpsLng || form.gpsLng}`} target="_blank" rel="noreferrer"
+              <a href={`https://www.google.com/maps?q=${form.GpsLat||form.gpsLat},${form.GpsLng||form.gpsLng}`} target="_blank" rel="noreferrer"
                 className="inline-flex items-center gap-1.5 text-xs text-emerald-600 hover:text-emerald-700 transition-colors">
                 <MapPin size={12} />ดูตำแหน่งบน Google Maps
               </a>
             </div>
-          )}
+          </>)}
         </div>
       </>);
       case 'customers': return (<>
