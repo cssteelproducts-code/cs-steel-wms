@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Scale, Clock, Search, AlertCircle, CheckCircle, RotateCcw, Truck, Hash } from 'lucide-react';
+import { Scale, Clock, Search, AlertCircle, CheckCircle, RotateCcw, Truck, Hash, Pencil, X } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -33,6 +33,13 @@ export default function WeighIn() {
   const [showCustDrop, setShowCustDrop] = useState(false);
   const custTimer = useRef(null);
   const plateTimer = useRef(null);
+  const [editTrip, setEditTrip] = useState(null); // trip being edited
+  const [editForm, setEditForm] = useState({});
+  const [editCustQuery, setEditCustQuery] = useState('');
+  const [editCustName, setEditCustName] = useState('');
+  const [editCustResults, setEditCustResults] = useState([]);
+  const [editCustDrop, setEditCustDrop] = useState(false);
+  const [editLoading, setEditLoading] = useState(false);
 
   useEffect(() => {
     fetchMasters();
@@ -124,6 +131,57 @@ export default function WeighIn() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
     } finally { setLoading(false); }
+  };
+
+  const openEdit = (t) => {
+    setEditTrip(t);
+    setEditForm({
+      vehicleTypeId: t.VehicleTypeID || '',
+      warehouseId: t.WarehouseID || '',
+      customerId: t.CustomerID || '',
+      deliveryType: t.DeliveryType || '',
+      tareWeight: t.TareWeight || '',
+      notes: t.Notes || ''
+    });
+    setEditCustQuery(t.CustomerARCode || '');
+    setEditCustName(t.CustomerName || '');
+    setEditCustResults([]);
+    setEditCustDrop(false);
+  };
+
+  const handleEditCustInput = (val) => {
+    setEditCustQuery(val);
+    setEditCustName('');
+    setEditForm(p => ({ ...p, customerId: '' }));
+    if (!val.trim()) { setEditCustResults([]); setEditCustDrop(false); return; }
+    const q = val.toLowerCase();
+    const filtered = masters.customers.filter(c =>
+      c.ARCode?.toLowerCase().includes(q) || c.CustomerName?.toLowerCase().includes(q)
+    ).slice(0, 8);
+    setEditCustResults(filtered);
+    setEditCustDrop(filtered.length > 0);
+  };
+
+  const pickEditCustomer = (c) => {
+    setEditCustQuery(c.ARCode || '');
+    setEditCustName(c.CustomerName);
+    setEditForm(p => ({ ...p, customerId: c.CustomerID }));
+    setEditCustDrop(false);
+  };
+
+  const saveEdit = async () => {
+    if (!editTrip) return;
+    setEditLoading(true);
+    try {
+      const res = await api.put(`/weigh-in/${editTrip.TripID}`, editForm);
+      if (res.data.success) {
+        toast.success('แก้ไขข้อมูลสำเร็จ');
+        setEditTrip(null);
+        fetchTodayList();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'แก้ไขไม่สำเร็จ');
+    } finally { setEditLoading(false); }
   };
 
   const resetForm = () => {
@@ -387,9 +445,14 @@ export default function WeighIn() {
                       </div>
                     </div>
 
-                    {/* Status */}
-                    <div className="flex-shrink-0">
+                    {/* Status + Edit */}
+                    <div className="flex items-center gap-2 flex-shrink-0">
                       <StatusBadge status={t.Status} />
+                      <button onClick={() => openEdit(t)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="แก้ไข">
+                        <Pencil size={13} />
+                      </button>
                     </div>
                   </div>
                 ))}
@@ -399,6 +462,109 @@ export default function WeighIn() {
         </div>
 
       </div>
+
+      {/* Edit Modal */}
+      {editTrip && (
+        <div className="fixed inset-0 bg-black/40 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
+              <div>
+                <div className="font-bold text-slate-900">แก้ไขข้อมูลชั่งเข้า</div>
+                <div className="text-xs text-slate-500 mt-0.5">{editTrip.LicensePlate} · #{editTrip.TripID}</div>
+              </div>
+              <button onClick={() => setEditTrip(null)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400"><X size={16} /></button>
+            </div>
+
+            <div className="p-5 space-y-4">
+              {/* คลังสินค้า */}
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">คลังสินค้า</div>
+                <div className="flex flex-wrap gap-1.5">
+                  {masters.warehouses.map(w => (
+                    <Pill key={w.WarehouseID} item={w}
+                      active={String(editForm.warehouseId) === String(w.WarehouseID)}
+                      onClick={() => setEditForm(p => ({ ...p, warehouseId: w.WarehouseID }))} />
+                  ))}
+                </div>
+              </div>
+
+              {/* ประเภทรถ */}
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ประเภทรถ</div>
+                <div className="grid grid-cols-4 gap-1.5">
+                  {masters.vehicleTypes.map(vt => (
+                    <Pill key={vt.TypeID} item={vt} stretch
+                      active={String(editForm.vehicleTypeId) === String(vt.TypeID)}
+                      onClick={() => setEditForm(p => ({ ...p, vehicleTypeId: vt.TypeID }))} />
+                  ))}
+                </div>
+              </div>
+
+              {/* ประเภทขนส่ง */}
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ขนส่ง</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {DELIVERY_TYPES.map(dt => (
+                    <Pill key={dt.id} item={dt} stretch
+                      active={editForm.deliveryType === dt.id}
+                      onClick={() => setEditForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
+                  ))}
+                </div>
+              </div>
+
+              {/* ลูกค้า */}
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ลูกค้า</div>
+                <div className="relative">
+                  <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input type="text" value={editCustQuery} onChange={e => handleEditCustInput(e.target.value)}
+                    onBlur={() => setTimeout(() => setEditCustDrop(false), 150)}
+                    className="input-field w-full pl-9 pr-3 py-2 text-sm"
+                    placeholder="พิมพ์ ARCODE หรือชื่อลูกค้า" />
+                  {editCustDrop && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-40 overflow-y-auto">
+                      {editCustResults.map(c => (
+                        <button key={c.CustomerID} type="button" onMouseDown={() => pickEditCustomer(c)}
+                          className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                          <div className="text-sm font-semibold text-slate-900">{c.ARCode}</div>
+                          <div className="text-xs text-slate-500">{c.CustomerName}</div>
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {editCustName && (
+                  <div className="mt-1 text-xs text-red-600 px-2.5 py-1 rounded-lg bg-red-50 border border-red-200">{editCustName}</div>
+                )}
+              </div>
+
+              {/* น้ำหนักเบา */}
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">น้ำหนักเบา (กก.)</div>
+                <input type="number" step="0.01" value={editForm.tareWeight}
+                  onChange={e => setEditForm(p => ({ ...p, tareWeight: e.target.value }))}
+                  className="input-field w-full py-2 text-sm" placeholder="0.00" />
+              </div>
+
+              {/* หมายเหตุ */}
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">หมายเหตุ</div>
+                <textarea value={editForm.notes} onChange={e => setEditForm(p => ({ ...p, notes: e.target.value }))}
+                  className="input-field w-full py-2 text-sm resize-none" rows={2} />
+              </div>
+            </div>
+
+            <div className="px-5 pb-5 flex gap-2">
+              <button onClick={() => setEditTrip(null)} className="flex-1 py-2.5 rounded-xl border border-slate-200 text-slate-600 text-sm font-medium hover:bg-slate-50 transition-colors">ยกเลิก</button>
+              <button onClick={saveEdit} disabled={editLoading}
+                className="flex-1 py-2.5 rounded-xl text-white font-bold text-sm transition-all disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
+                {editLoading ? 'กำลังบันทึก...' : 'บันทึกแก้ไข'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

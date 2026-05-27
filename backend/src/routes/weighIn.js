@@ -65,9 +65,10 @@ router.get('/today', authenticate, async (req, res) => {
     const result = await pool.request()
       .query(`
         SELECT t.TripID, t.LicensePlate, t.TripDate, t.Status,
+               t.VehicleTypeID, t.WarehouseID, t.CustomerID, t.DeliveryType,
                vt.TypeName as VehicleType,
                w.WarehouseName,
-               c.CustomerName,
+               c.CustomerName, c.ARCode as CustomerARCode,
                wi.TareWeight, wi.WeighDateTime, wi.Notes,
                u.FullName as OperatorName
         FROM WMS_WeighIn wi
@@ -80,6 +81,39 @@ router.get('/today', authenticate, async (req, res) => {
         ORDER BY wi.WeighDateTime DESC
       `);
     res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// PUT /api/weigh-in/:tripId - Edit existing trip + weigh-in record
+router.put('/:tripId', authenticate, async (req, res) => {
+  try {
+    const { tripId } = req.params;
+    const { vehicleTypeId, warehouseId, customerId, deliveryType, tareWeight, notes } = req.body;
+    const pool = getPool();
+    const transaction = new sql.Transaction(pool);
+    await transaction.begin();
+    try {
+      await transaction.request()
+        .input('TripID', sql.Int, tripId)
+        .input('VehicleTypeID', sql.Int, vehicleTypeId || null)
+        .input('WarehouseID', sql.Int, warehouseId || null)
+        .input('CustomerID', sql.Int, customerId || null)
+        .input('DeliveryType', sql.NVarChar, deliveryType || null)
+        .query(`UPDATE WMS_Trips SET VehicleTypeID=@VehicleTypeID, WarehouseID=@WarehouseID,
+                CustomerID=@CustomerID, DeliveryType=@DeliveryType WHERE TripID=@TripID`);
+      await transaction.request()
+        .input('TripID', sql.Int, tripId)
+        .input('TareWeight', sql.Decimal(10, 2), tareWeight || null)
+        .input('Notes', sql.NVarChar, notes || '')
+        .query(`UPDATE WMS_WeighIn SET TareWeight=@TareWeight, Notes=@Notes WHERE TripID=@TripID`);
+      await transaction.commit();
+      res.json({ success: true, message: 'แก้ไขข้อมูลสำเร็จ' });
+    } catch (err) {
+      await transaction.rollback();
+      throw err;
+    }
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

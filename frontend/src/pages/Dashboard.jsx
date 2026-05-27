@@ -611,7 +611,7 @@ export default function Dashboard() {
           {!collapsed.flow && <>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
-              { status: 'Data', label: 'รับเอกสาร' },
+              { status: 'Data', label: 'รอเอกสาร Pick' },
               { status: 'Loading', label: 'ขึ้นสินค้า' },
               { status: 'WeighOut', label: 'รอชั่งออก' }
             ].map(item => {

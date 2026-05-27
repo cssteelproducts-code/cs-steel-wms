@@ -7,7 +7,7 @@ import toast from 'react-hot-toast';
 
 const FLOW_STEPS = [
   { key: 'WeighIn',  label: 'ชั่งเข้า',       shortLabel: '1.ชั่งเข้า' },
-  { key: 'Data',     label: 'รับเอกสาร',       shortLabel: '2.Data' },
+  { key: 'Data',     label: 'รอเอกสาร Pick',    shortLabel: '2.Pick' },
   { key: 'WaitPick', label: 'รอเอกสาร Pick',   shortLabel: '3.Pick' },
   { key: 'Loading',  label: 'ขึ้นสินค้า',      shortLabel: '4.ขึ้นสินค้า' },
   { key: 'Checker',  label: 'เช็คเกอร์',       shortLabel: '5.เช็คเกอร์' },

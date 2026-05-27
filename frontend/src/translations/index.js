@@ -25,7 +25,7 @@ const translations = {
     'page.dashboard': 'Dashboard',
     'page.monitor': 'Monitor รถในคลัง',
     'page.weighIn': 'สถานีชั่งเข้า (ชั่งเบา)',
-    'page.dataStation': 'สถานี Data (รับเอกสาร)',
+    'page.dataStation': 'สถานี Data (รอเอกสาร Pick)',
     'page.loadingStation': 'สถานีขึ้นสินค้า',
     'page.checker': 'สถานีเช็คเกอร์',
     'page.weighOut': 'สถานีชั่งออก (ชั่งหนัก)',
