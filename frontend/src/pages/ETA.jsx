@@ -95,9 +95,9 @@ export default function ETA() {
     return matchSearch && matchStatus;
   });
 
-  const moving = vehicles.filter(v => v.status === 'Moving').length;
-  const arriving = vehicles.filter(v => v.etaMinutes !== null && v.etaMinutes > 0 && v.etaMinutes <= 30).length;
+  const arriving = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 0 && v.etaMinutes <= 30).length;
   const inRadius = vehicles.filter(v => v.withinRadius).length;
+  const farAway = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 120).length;
 
   const shortAddress = (addr) => {
     if (!addr) return '';
@@ -168,10 +168,10 @@ export default function ETA() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'รถทั้งหมด', value: vehicles.length, color: 'text-gray-900' },
-          { label: 'กำลังเดินทาง', value: moving, color: 'text-emerald-600' },
-          { label: 'ใกล้ถึง 30 นาที', value: arriving, color: 'text-amber-500' },
-          { label: 'อยู่ภายในคลัง', value: inRadius, color: 'text-red-600' },
+          { label: 'รถทั้งหมด',          value: vehicles.length, color: 'text-gray-900' },
+          { label: 'อยู่ภายในคลัง',      value: inRadius,        color: 'text-red-600' },
+          { label: 'ใกล้ถึง 30 นาที',    value: arriving,        color: 'text-amber-500' },
+          { label: 'ห่างจากคลัง 2 ชม.+', value: farAway,         color: 'text-blue-600' },
         ].map(s => (
           <div key={s.label} className="card text-center py-3">
             <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
