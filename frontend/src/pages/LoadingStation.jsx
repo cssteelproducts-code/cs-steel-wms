@@ -28,15 +28,15 @@ export default function LoadingStation() {
 
   const fetchAll = async () => {
     try {
-      const [stRes, statusRes, activeRes] = await Promise.all([
+      const [stRes, statusRes, activeRes] = await Promise.allSettled([
         api.get('/master/loading-stations'),
         api.get('/loading-station/stations-status'),
         api.get('/loading-station/active')
       ]);
-      setStations(stRes.data.data || []);
-      setStationStatus(statusRes.data.data || []);
-      setActiveRecords(activeRes.data.data || []);
-    } catch {} finally { setPageLoading(false); }
+      if (stRes.status === 'fulfilled') setStations(stRes.value.data.data || []);
+      if (statusRes.status === 'fulfilled') setStationStatus(statusRes.value.data.data || []);
+      if (activeRes.status === 'fulfilled') setActiveRecords(activeRes.value.data.data || []);
+    } finally { setPageLoading(false); }
   };
 
   const fetchActiveForStation = async (stationId) => {

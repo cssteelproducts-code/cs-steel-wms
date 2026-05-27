@@ -144,6 +144,15 @@ const runMigrations = async () => {
           CreatedAt DATETIME DEFAULT GETDATE()
         );
     `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_DataStationTargets' AND xtype='U')
+        CREATE TABLE WMS_DataStationTargets (
+          ID INT IDENTITY(1,1) PRIMARY KEY,
+          TripID INT NOT NULL,
+          StationID INT NOT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE()
+        );
+    `);
     // Ensure TRANSFER permission exists for Admin role
     await pool.request().query(`
       IF NOT EXISTS (

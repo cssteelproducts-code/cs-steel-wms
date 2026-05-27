@@ -86,7 +86,7 @@ router.get('/pending', authenticate, async (req, res) => {
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
                ds.PickDocumentNo,
-               DATEDIFF(MINUTE, t.CreatedAt, GETDATE()) as MinutesInWarehouse
+               DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID

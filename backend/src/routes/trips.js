@@ -57,7 +57,7 @@ router.get('/', authenticate, async (req, res) => {
              c.CustomerName,
              wi.TareWeight, wi.WeighDateTime as WeighInTime,
              wo.NetWeight, wo.WeighDateTime as WeighOutTime,
-             DATEDIFF(MINUTE, t.CreatedAt, ISNULL(t.CompletedAt, GETDATE())) as DurationMinutes
+             DATEDIFF(MINUTE, t.CreatedAt, ISNULL(t.CompletedAt, GETUTCDATE())) as DurationMinutes
       FROM WMS_Trips t
       LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
       LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
@@ -98,7 +98,7 @@ router.get('/active', authenticate, async (req, res) => {
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
                ds.PickDocumentNo, ds.TargetStationID,
                ls_target.StationName as TargetStation,
-               DATEDIFF(MINUTE, t.CreatedAt, GETDATE()) as MinutesInWarehouse,
+               DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse,
                (SELECT TOP 1 StationName FROM WMS_LoadingStations ls
                 JOIN WMS_LoadingRecord lr ON ls.StationID = lr.StationID
                 WHERE lr.TripID = t.TripID AND lr.ExitTime IS NULL) as CurrentStation

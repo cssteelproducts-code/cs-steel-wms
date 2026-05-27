@@ -122,7 +122,7 @@ router.get('/active', authenticate, async (req, res) => {
              vt.TypeName as VehicleType,
              c.CustomerName,
              w.WarehouseName,
-             DATEDIFF(MINUTE, lr.EntryTime, GETDATE()) as MinutesAtStation,
+             DATEDIFF(MINUTE, lr.EntryTime, GETUTCDATE()) as MinutesAtStation,
              u.FullName as OperatorName
       FROM WMS_LoadingRecord lr
       JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID

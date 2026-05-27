@@ -9,7 +9,7 @@ export default function DataStation() {
   const [pending, setPending] = useState([]);
   const [stations, setStations] = useState([]);
   const [selected, setSelected] = useState(null);
-  const [form, setForm] = useState({ targetStationId: '', pickDocumentNo: '', notes: '' });
+  const [form, setForm] = useState({ stationIds: [], notes: '' });
   const [loading, setLoading] = useState(false);
   const [waitLoading, setWaitLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
@@ -38,7 +38,7 @@ export default function DataStation() {
 
   const selectTrip = (trip) => {
     setSelected(trip);
-    setForm({ targetStationId: '', pickDocumentNo: '', notes: '' });
+    setForm({ stationIds: [], notes: '' });
   };
 
   const markWaitPick = async () => {
@@ -63,7 +63,7 @@ export default function DataStation() {
     if (!selected) return;
     setLoading(true);
     try {
-      const res = await api.post('/data-station', { tripId: selected.TripID, ...form });
+      const res = await api.post('/data-station', { tripId: selected.TripID, stationIds: form.stationIds, notes: form.notes });
       if (res.data.success) {
         toast.success(res.data.message);
         setSelected(null);
@@ -148,7 +148,7 @@ export default function DataStation() {
         <div className="card">
           <h3 className="card-header flex items-center gap-2">
             <FileText size={18} className="text-purple-500" />
-            บันทึกรับเอกสาร Pick
+            บันทึกจ่ายงานสถานีขึ้นสินค้า
           </h3>
 
           {selected ? (
@@ -166,25 +166,34 @@ export default function DataStation() {
               </div>
 
               <div>
-                <label className="label">เลขที่เอกสาร Pick *</label>
-                <input type="text" value={form.pickDocumentNo}
-                  onChange={e => setForm(p => ({ ...p, pickDocumentNo: e.target.value }))}
-                  className="input-field font-mono" placeholder="เลขที่เอกสาร Pick"
-                  required autoFocus />
-              </div>
-
-              <div>
-                <label className="label">สถานีที่ต้องไป</label>
-                <select value={form.targetStationId}
-                  onChange={e => setForm(p => ({ ...p, targetStationId: e.target.value }))}
-                  className="input-field">
-                  <option value="">-- เลือกสถานีขึ้นสินค้า --</option>
-                  {stations.map(s => (
-                    <option key={s.StationID} value={s.StationID}>
-                      {s.StationName} {s.WarehouseName ? `(${s.WarehouseName})` : ''}
-                    </option>
-                  ))}
-                </select>
+                <label className="label">สถานีที่ต้องไป <span className="text-slate-400 font-normal">(เลือกได้หลายสถานี)</span></label>
+                <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-48 overflow-y-auto">
+                  {stations.length === 0 ? (
+                    <p className="text-slate-400 text-xs p-3">ยังไม่มีสถานี — เพิ่มในเมนูข้อมูลหลัก</p>
+                  ) : stations.map(s => {
+                    const checked = form.stationIds.includes(s.StationID);
+                    return (
+                      <label key={s.StationID}
+                        className={`flex items-center gap-3 px-3 py-2.5 cursor-pointer transition-colors ${checked ? 'bg-purple-50' : 'hover:bg-slate-50'}`}>
+                        <input type="checkbox" checked={checked}
+                          onChange={() => setForm(p => ({
+                            ...p,
+                            stationIds: checked
+                              ? p.stationIds.filter(id => id !== s.StationID)
+                              : [...p.stationIds, s.StationID]
+                          }))}
+                          className="w-4 h-4 rounded accent-purple-600" />
+                        <span className={`text-sm ${checked ? 'text-purple-700 font-medium' : 'text-slate-700'}`}>
+                          {s.StationName}
+                          {s.WarehouseName && <span className="text-slate-400 text-xs ml-1">({s.WarehouseName})</span>}
+                        </span>
+                      </label>
+                    );
+                  })}
+                </div>
+                {form.stationIds.length > 0 && (
+                  <p className="text-purple-600 text-xs mt-1">เลือก {form.stationIds.length} สถานี</p>
+                )}
               </div>
 
               <div>

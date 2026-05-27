@@ -95,10 +95,10 @@ router.post('/check', async (req, res) => {
 
         const trips = await r.query(`
           SELECT t.TripID, t.LicensePlate, t.WarehouseID,
-            DATEDIFF(MINUTE, t.CreatedAt, GETDATE()) AS MinutesInWarehouse
+            DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) AS MinutesInWarehouse
           FROM WMS_Trips t
           WHERE t.Status NOT IN ('Complete', 'Cancelled')
-            AND DATEDIFF(MINUTE, t.CreatedAt, GETDATE()) > @threshold
+            AND DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) > @threshold
             ${cfg.WarehouseID ? 'AND t.WarehouseID = @warehouseId' : ''}
             AND NOT EXISTS (
               SELECT 1 FROM WMS_Alerts a

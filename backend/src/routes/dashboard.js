@@ -151,7 +151,7 @@ router.get('/summary', authenticate, async (req, res) => {
       pool.request().query(`
         SELECT t.TripID, t.LicensePlate, ISNULL(vt.TypeName, '-') as TypeName,
                lr.EntryTime,
-               DATEDIFF(HOUR, lr.EntryTime, GETDATE()) as HoursIn,
+               DATEDIFF(HOUR, lr.EntryTime, GETUTCDATE()) as HoursIn,
                CASE WHEN
                  DATEPART(HOUR,lr.EntryTime)*60+DATEPART(MINUTE,lr.EntryTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
                  OR DATEPART(HOUR,lr.EntryTime)*60+DATEPART(MINUTE,lr.EntryTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
@@ -271,7 +271,7 @@ router.get('/live', authenticate, async (req, res) => {
              wi.TareWeight, wi.WeighDateTime as WeighInTime,
              ds.PickDocumentNo,
              ls_target.StationName as TargetStation,
-             DATEDIFF(MINUTE, t.CreatedAt, GETDATE()) as MinutesInWarehouse,
+             DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse,
              (SELECT TOP 1 ls2.StationName
               FROM WMS_LoadingRecord lr2
               JOIN WMS_LoadingStations ls2 ON lr2.StationID = ls2.StationID
@@ -351,7 +351,7 @@ router.get('/station-vehicles', authenticate, async (req, res) => {
           c.CustomerName,
           vt.TypeName AS VehicleTypeName,
           lr.EntryTime,
-          DATEDIFF(MINUTE, lr.EntryTime, GETDATE()) AS MinutesIn
+          DATEDIFF(MINUTE, lr.EntryTime, GETUTCDATE()) AS MinutesIn
         FROM WMS_LoadingRecord lr
         JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
         JOIN WMS_Trips t ON lr.TripID = t.TripID
