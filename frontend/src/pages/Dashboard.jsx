@@ -268,21 +268,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ประเภทรถ วันนี้ */}
-      <div className="card">
-        <SectionHeader title="ประเภทรถ (วันนี้)" sectionKey="vtype" collapsed={collapsed.vtype} onToggle={toggleSection} />
-        {!collapsed.vtype && (
-          data?.vehicleTypesToday?.length ? (
-            <div className="flex flex-wrap gap-2">
-              {data.vehicleTypesToday.map(vt => (
-                <TypeTag key={vt.TypeName} name={vt.TypeName} count={vt.Count} color="bg-blue-50 text-blue-700" />
-              ))}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">ยังไม่มีวันนี้</p>
-          )
-        )}
-      </div>
 
       {/* ประเภทขนส่ง */}
       <div className="card">
