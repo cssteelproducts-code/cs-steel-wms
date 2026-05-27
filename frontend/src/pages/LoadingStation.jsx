@@ -120,7 +120,7 @@ export default function LoadingStation() {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex items-center gap-2">
         <button onClick={() => setTab('entry')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'entry' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <LogIn size={14} className="inline mr-1" />บันทึกเข้าสถานี
@@ -128,6 +128,9 @@ export default function LoadingStation() {
         <button onClick={() => setTab('exit')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'exit' ? 'bg-amber-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <LogOut size={14} className="inline mr-1" />บันทึกออกสถานี ({activeRecords.length})
+        </button>
+        <button onClick={fetchAll} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors">
+          <RefreshCw size={15} />
         </button>
       </div>
 

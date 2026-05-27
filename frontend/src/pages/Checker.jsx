@@ -311,7 +311,7 @@ export default function Checker() {
               {showRework && (
                 <div className="bg-red-50 border border-red-200 rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-3 text-red-700 font-medium text-sm">
-                    <AlertTriangle size={15} />กำหนดสถานีที่ต้องแก้ไขงาน (รอบ 2)
+                    <AlertTriangle size={15} />กำหนดสถานีที่ต้องแก้ไขงาน
                   </div>
                   <div className="border border-red-200 rounded-lg divide-y divide-red-100 max-h-48 overflow-y-auto bg-white">
                     {loadingStations.filter(s => reworkStations.includes(s.StationID)).map(s => {
