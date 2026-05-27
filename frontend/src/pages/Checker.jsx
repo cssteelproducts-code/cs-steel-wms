@@ -97,7 +97,9 @@ export default function Checker() {
                   </div>
                   <div className="text-right">
                     <div className="text-orange-500 text-sm font-medium">
-                      {trip.MinutesInWarehouse} นาที
+                      {trip.MinutesInWarehouse <= 0 ? 'เพิ่งเข้า'
+                        : trip.MinutesInWarehouse < 60 ? `${trip.MinutesInWarehouse} นาที`
+                        : `${Math.floor(trip.MinutesInWarehouse / 60)} ชั่วโมง ${trip.MinutesInWarehouse % 60} นาที`}
                     </div>
                     <div className="text-slate-400 text-xs">ในคลัง</div>
                   </div>
