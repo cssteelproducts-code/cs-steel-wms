@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Scale, CheckCircle } from 'lucide-react';
+import { Scale, CheckCircle, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatWeight } from '../utils/helpers';
@@ -68,7 +68,7 @@ export default function WeighOut() {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <button onClick={() => setTab('weigh')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'weigh' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <Scale size={14} className="inline mr-1" />บันทึกชั่งออก ({pending.length} รอ)
@@ -76,6 +76,10 @@ export default function WeighOut() {
         <button onClick={() => { setTab('done'); fetchCompleted(); }}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'done' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <CheckCircle size={14} className="inline mr-1" />เสร็จสิ้นวันนี้ ({completed.length})
+        </button>
+        <button onClick={() => { fetchPending(); fetchCompleted(); }}
+          className="ml-auto btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
+          <RefreshCw size={13} />รีเฟรช
         </button>
       </div>
 

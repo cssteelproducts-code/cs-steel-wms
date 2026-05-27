@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Route, Plus, Truck, MapPin, Zap, CheckCircle, X, ChevronDown, ChevronRight, Search, Printer } from 'lucide-react';
+import { Route, Plus, Truck, MapPin, Zap, CheckCircle, X, ChevronDown, ChevronRight, Search, Printer, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -249,7 +249,7 @@ export default function DeliveryPlan() {
   return (
     <div className="space-y-4">
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <button onClick={() => setTab('orders')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'orders' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <MapPin size={14} />คำสั่งจัดส่ง
@@ -257,6 +257,10 @@ export default function DeliveryPlan() {
         <button onClick={() => setTab('plans')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'plans' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <Route size={14} />แผนจัดส่ง (VRP)
+        </button>
+        <button onClick={() => { fetchOrders(); fetchPlans(); }}
+          className="ml-auto btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
+          <RefreshCw size={13} />รีเฟรช
         </button>
       </div>
 

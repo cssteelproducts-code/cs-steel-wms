@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil } from 'lucide-react';
+import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
@@ -164,7 +164,7 @@ export default function Users() {
   return (
     <div className="space-y-6">
       {/* Tabs */}
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         <button onClick={() => setTab('users')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'users' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <UsersIcon size={14} className="inline mr-1" />ผู้ใช้งาน ({users.length})
@@ -172,6 +172,10 @@ export default function Users() {
         <button onClick={() => setTab('roles')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'roles' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <Shield size={14} className="inline mr-1" />บทบาท / สิทธิ์
+        </button>
+        <button onClick={fetchAll}
+          className="ml-auto btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
+          <RefreshCw size={13} />รีเฟรช
         </button>
       </div>
 

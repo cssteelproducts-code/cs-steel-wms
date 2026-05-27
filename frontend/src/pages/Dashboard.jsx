@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   TruckIcon, CheckCircle, Clock, Scale, Activity, ArrowRight,
-  Calendar, Package, AlertTriangle, Search, ChevronDown, ChevronUp, X
+  Calendar, Package, AlertTriangle, Search, ChevronDown, ChevronUp, X, RefreshCw
 } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
@@ -206,6 +206,13 @@ export default function Dashboard() {
   return (
     <>
     <div className="space-y-5 animate-fade-in">
+
+      {/* Refresh */}
+      <div className="flex justify-end">
+        <button onClick={fetchData} className="btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
+          <RefreshCw size={13} />รีเฟรช
+        </button>
+      </div>
 
       {/* Stat cards: today / month / year (flip to show type breakdown) */}
       <div className="grid grid-cols-3 gap-4">
