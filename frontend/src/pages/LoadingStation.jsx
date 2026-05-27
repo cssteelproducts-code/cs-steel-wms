@@ -16,6 +16,7 @@ export default function LoadingStation() {
   const [tab, setTab] = useState('entry');
   const [submitting, setSubmitting] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [tripTargetStations, setTripTargetStations] = useState([]);
 
   useEffect(() => {
     fetchAll();
@@ -26,6 +27,11 @@ export default function LoadingStation() {
   useEffect(() => {
     if (selectedStation) fetchActiveForStation();
   }, [selectedStation]);
+
+  useEffect(() => {
+    if (activeTripId) fetchTargetStations(activeTripId);
+    else setTripTargetStations([]);
+  }, [activeTripId]);
 
   const fetchAll = async () => {
     try {
@@ -53,6 +59,13 @@ export default function LoadingStation() {
       setLoadingTrips(all.filter(t => t.Status === 'WaitPick' && t.DataStationID));
       setLoadingDoneTrips(all.filter(t => t.Status === 'Loading'));
     } catch {}
+  };
+
+  const fetchTargetStations = async (tripId) => {
+    try {
+      const res = await api.get(`/loading-station/trip/${tripId}/target-stations`);
+      setTripTargetStations(res.data.data || []);
+    } catch { setTripTargetStations([]); }
   };
 
   const handleEntry = async (tripId) => {
@@ -87,7 +100,11 @@ export default function LoadingStation() {
     setSubmitting(true);
     try {
       const res = await api.put(`/loading-station/exit/${recordId}`);
-      if (res.data.success) { toast.success(res.data.message); fetchAll(); }
+      if (res.data.success) {
+        toast.success(res.data.message);
+        fetchAll();
+        if (activeTripId) fetchTargetStations(activeTripId);
+      }
     } catch (err) {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
     } finally { setSubmitting(false); }
@@ -157,7 +174,19 @@ export default function LoadingStation() {
                     <div><span className="text-slate-500">ลูกค้า:</span> <span className="text-slate-900">{trip.CustomerName || '-'}</span></div>
                     <div><span className="text-slate-500">คลัง:</span> <span className="text-slate-900">{trip.WarehouseName}</span></div>
                     {trip.PickDocumentNo && <div className="col-span-2"><span className="text-slate-500">เอกสาร Pick:</span> <span className="text-slate-900 font-mono">{trip.PickDocumentNo}</span></div>}
-                    {trip.TargetStation && <div className="col-span-2"><span className="text-slate-500">สถานีเป้าหมาย:</span> <span className="text-amber-500 font-medium">{trip.TargetStation}</span></div>}
+                    {tripTargetStations.length > 0 && (
+                      <div className="col-span-2 flex items-center gap-2 flex-wrap">
+                        <span className="text-slate-500">สถานีที่ต้องขึ้นสินค้า:</span>
+                        {tripTargetStations.map(s => (
+                          <span key={s.StationID}
+                            className={`px-2 py-0.5 rounded-full text-xs font-semibold border ${s.IsDone
+                              ? 'bg-slate-100 text-slate-400 border-slate-200 line-through'
+                              : 'bg-amber-50 text-amber-600 border-amber-300'}`}>
+                            {s.StationName}
+                          </span>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}

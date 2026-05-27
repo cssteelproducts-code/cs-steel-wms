@@ -163,6 +163,29 @@ router.get('/active', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/loading-station/trip/:tripId/target-stations - Get all target stations with done status
+router.get('/trip/:tripId/target-stations', authenticate, async (req, res) => {
+  try {
+    const pool = getPool();
+    const result = await pool.request()
+      .input('TripID', sql.Int, req.params.tripId)
+      .query(`
+        SELECT dst.StationID, ls.StationName, ls.StationCode,
+               CASE WHEN lr.RecordID IS NOT NULL THEN 1 ELSE 0 END as IsDone
+        FROM WMS_DataStationTargets dst
+        JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
+        LEFT JOIN WMS_LoadingRecord lr ON lr.TripID = dst.TripID
+          AND lr.StationID = dst.StationID
+          AND lr.ExitTime IS NOT NULL
+        WHERE dst.TripID = @TripID
+        ORDER BY ls.StationName
+      `);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // GET /api/loading-station/trip/:tripId - Get loading records for a trip
 router.get('/trip/:tripId', authenticate, async (req, res) => {
   try {
