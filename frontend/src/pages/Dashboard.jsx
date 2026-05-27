@@ -4,7 +4,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
-  TruckIcon, CheckCircle, Clock, Scale, Activity, RefreshCw, ArrowRight,
+  TruckIcon, CheckCircle, Clock, Scale, Activity, ArrowRight,
   Calendar, Package, AlertTriangle, Search, ChevronDown, ChevronUp, X
 } from 'lucide-react';
 import api from '../services/api';
@@ -207,34 +207,6 @@ export default function Dashboard() {
     <>
     <div className="space-y-5 animate-fade-in">
 
-      {/* Hero section */}
-      <div className="rounded-3xl overflow-hidden relative"
-        style={{ background: 'linear-gradient(135deg,#dc2626 0%,#b91c1c 50%,#7f1d1d 100%)', minHeight: 160 }}>
-        <div className="absolute inset-0 opacity-10"
-          style={{ backgroundImage: 'radial-gradient(circle at 80% 50%, #fff 0%, transparent 60%)' }} />
-        <div className="relative px-7 py-6 flex items-center justify-between">
-          <div>
-            <p className="text-red-200 text-sm font-semibold mb-1">{dayjs().format('dddd, DD MMMM YYYY')}</p>
-            <h2 className="text-2xl font-black text-white leading-tight tracking-tight">
-              ภาพรวมการดำเนินงาน
-            </h2>
-            <p className="text-red-200 text-xs mt-1">CS Steel Products — อัพเดตอัตโนมัติทุก 30 วินาที</p>
-            <button onClick={fetchData}
-              className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold transition-all"
-              style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}
-              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.25)'}
-              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.15)'}>
-              <RefreshCw size={13} /> รีเฟรชข้อมูล
-            </button>
-          </div>
-          <div className="hidden md:flex flex-col items-end gap-2">
-            <div className="text-right">
-              <div className="text-4xl font-black text-white tabular-nums">{counts.TodayTotal ?? 0}</div>
-              <div className="text-red-200 text-xs font-semibold mt-0.5">คันวันนี้</div>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Stat cards: today / month / year (flip to show type breakdown) */}
       <div className="grid grid-cols-3 gap-4">
