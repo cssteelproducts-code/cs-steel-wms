@@ -202,8 +202,6 @@ export default function WeighIn() {
     </button>
   );
 
-  const totalToday = todayList.length;
-
   if (pageLoading) return (
     <div className="flex items-center justify-center h-64">
       <LoadingSpinner size="lg" text="กำลังโหลดข้อมูล..." />
@@ -212,68 +210,42 @@ export default function WeighIn() {
 
   return (
     <div className="h-full flex flex-col gap-4">
-      {/* ── Top stat bar ── */}
-      <div className="grid grid-cols-3 gap-3 flex-shrink-0">
-        <div className="card py-3 flex items-center gap-3">
-          <div className="w-9 h-9 bg-red-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Truck size={18} className="text-red-500" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-slate-900 leading-none">{totalToday}</div>
-            <div className="text-xs text-slate-500 mt-0.5">รถเข้าวันนี้</div>
-          </div>
-        </div>
-        <div className="card py-3 flex items-center gap-3">
-          <div className="w-9 h-9 bg-amber-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Scale size={18} className="text-amber-500" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-slate-900 leading-none">
-              {todayList.filter(t => t.Status === 'Data' || t.Status === 'WeighIn').length}
-            </div>
-            <div className="text-xs text-slate-500 mt-0.5">อยู่ในคลัง</div>
-          </div>
-        </div>
-        <div className="card py-3 flex items-center gap-3">
-          <div className="w-9 h-9 bg-emerald-50 rounded-xl flex items-center justify-center flex-shrink-0">
-            <CheckCircle size={18} className="text-emerald-600" />
-          </div>
-          <div>
-            <div className="text-2xl font-bold text-slate-900 leading-none">
-              {todayList.filter(t => t.Status === 'Complete').length}
-            </div>
-            <div className="text-xs text-slate-500 mt-0.5">เสร็จสิ้น</div>
-          </div>
-        </div>
-      </div>
-
       {/* ── Main 2-column layout ── */}
       <div className="flex-1 grid grid-cols-1 lg:grid-cols-[420px_1fr] gap-4 min-h-0">
 
         {/* ── LEFT: Form ── */}
         <div className="card overflow-hidden flex flex-col p-0">
+          {/* Header */}
+          <div className="px-4 py-3 border-b border-slate-100 flex items-center gap-2 flex-shrink-0">
+            <div className="w-7 h-7 rounded-lg flex items-center justify-center" style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
+              <Scale size={14} className="text-white" />
+            </div>
+            <span className="font-bold text-slate-900 text-sm">บันทึกรับรถเข้า</span>
+          </div>
+
           {/* Form body */}
-          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3.5">
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4 space-y-3">
+
             {/* Date / Time */}
             <div className="grid grid-cols-2 gap-2.5">
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1 text-slate-500">วันที่</div>
-                <div className="rounded-lg px-3 h-10 flex items-center text-sm font-medium text-slate-700 bg-slate-100">{todayStr}</div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1 text-slate-400">วันที่</div>
+                <div className="rounded-lg px-3 h-9 flex items-center text-sm font-medium text-slate-700 bg-slate-100">{todayStr}</div>
               </div>
               <div>
-                <div className="text-xs font-semibold uppercase tracking-wide mb-1 flex items-center gap-1 text-slate-500">
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1 flex items-center gap-1 text-slate-400">
                   <Clock size={10} />เวลาเข้า
                 </div>
                 <input type="time" value={form.entryTime}
                   onChange={e => setForm(p => ({ ...p, entryTime: e.target.value }))}
-                  className="input-field w-full h-10 text-sm" />
-                <div className="text-red-500 text-[10px] mt-0.5">แก้ไขเวลาได้ก่อนบันทึก</div>
+                  className="input-field w-full h-9 text-sm" />
+                <div className="text-red-400 text-[10px] mt-0.5">แก้ไขได้ก่อนบันทึก</div>
               </div>
             </div>
 
             {/* Warehouse pills */}
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">คลังสินค้า *</div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">คลังสินค้า *</div>
               <div className="flex flex-wrap gap-1.5">
                 {masters.warehouses.map(w => (
                   <Pill key={w.WarehouseID} item={w}
@@ -285,7 +257,7 @@ export default function WeighIn() {
 
             {/* License plate */}
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ทะเบียนรถ *</div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">ทะเบียนรถ *</div>
               <div className="relative">
                 <input type="text" value={form.licensePlate} onChange={handlePlateChange}
                   className="input-field w-full py-2.5 text-slate-900 text-xl font-bold tracking-widest uppercase placeholder:text-slate-400 placeholder:font-normal placeholder:text-sm placeholder:tracking-normal"
@@ -310,7 +282,7 @@ export default function WeighIn() {
 
             {/* Vehicle type pills */}
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ประเภทรถ *</div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">ประเภทรถ *</div>
               <div className="grid grid-cols-4 gap-1.5">
                 {masters.vehicleTypes.map(vt => (
                   <Pill key={vt.TypeID} item={vt} stretch
@@ -320,21 +292,30 @@ export default function WeighIn() {
               </div>
             </div>
 
-            {/* Delivery type pills */}
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ขนส่ง</div>
-              <div className="grid grid-cols-3 gap-1.5">
-                {DELIVERY_TYPES.map(dt => (
-                  <Pill key={dt.id} item={dt} stretch
-                    active={form.deliveryType === dt.id}
-                    onClick={() => setForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
-                ))}
+            {/* Delivery type + Tare weight (same row) */}
+            <div className="grid grid-cols-[1fr_110px] gap-2.5 items-start">
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">ขนส่ง</div>
+                <div className="grid grid-cols-3 gap-1.5">
+                  {DELIVERY_TYPES.map(dt => (
+                    <Pill key={dt.id} item={dt} stretch
+                      active={form.deliveryType === dt.id}
+                      onClick={() => setForm(p => ({ ...p, deliveryType: p.deliveryType === dt.id ? '' : dt.id }))} />
+                  ))}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">น้ำหนักเบา (กก.)</div>
+                <input type="number" step="0.01" value={form.tareWeight}
+                  onChange={e => setForm(p => ({ ...p, tareWeight: e.target.value }))}
+                  className="input-field w-full py-1.5 text-sm"
+                  placeholder="0.00" />
               </div>
             </div>
 
             {/* Customer */}
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">ลูกค้า (ARCODE / ชื่อ)</div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">ลูกค้า (ARCODE / ชื่อ)</div>
               <div className="relative">
                 <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input type="text" value={custQuery} onChange={e => handleCustInput(e.target.value)}
@@ -360,21 +341,12 @@ export default function WeighIn() {
               )}
             </div>
 
-            {/* Tare weight */}
-            <div>
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">น้ำหนักเบา (กก.)</div>
-              <input type="number" step="0.01" value={form.tareWeight}
-                onChange={e => setForm(p => ({ ...p, tareWeight: e.target.value }))}
-                className="input-field w-full py-2 text-sm"
-                placeholder="0.00" />
-            </div>
-
             {/* Notes */}
             <div>
-              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-500">หมายเหตุ</div>
+              <div className="text-xs font-semibold uppercase tracking-wide mb-1.5 text-slate-400">หมายเหตุ</div>
               <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                 className="input-field w-full py-2 text-sm resize-none"
-                rows={2} placeholder="หมายเหตุ (ถ้ามี)" />
+                rows={1} placeholder="หมายเหตุ (ถ้ามี)" />
             </div>
 
             {/* Buttons */}

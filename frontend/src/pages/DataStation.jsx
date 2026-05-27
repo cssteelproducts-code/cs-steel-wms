@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Search, Check, Clock, HourglassIcon } from 'lucide-react';
+import { FileText, Check, Clock, HourglassIcon } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatDuration } from '../utils/helpers';
@@ -13,7 +13,6 @@ export default function DataStation() {
   const [loading, setLoading] = useState(false);
   const [waitLoading, setWaitLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [search, setSearch] = useState('');
 
   useEffect(() => {
     fetchPending();
@@ -50,7 +49,7 @@ export default function DataStation() {
     try {
       const res = await api.put(`/data-station/${selected.TripID}/wait-pick`);
       if (res.data.success) {
-        toast.success(`${selected.LicensePlate} — มาร์กรอเอกสาร Pick แล้ว`);
+        toast.success(`${selected.LicensePlate} — มาร์กรอเอกสาร SO แล้ว`);
         setSelected(null);
         fetchPending();
       }
@@ -79,10 +78,6 @@ export default function DataStation() {
     }
   };
 
-  const filtered = pending.filter(t =>
-    t.LicensePlate?.includes(search.toUpperCase()) ||
-    t.CustomerName?.includes(search)
-  );
 
   if (pageLoading) return (
     <div className="flex items-center justify-center h-64">
@@ -98,19 +93,13 @@ export default function DataStation() {
           <div className="flex items-center justify-between mb-4">
             <h3 className="card-header mb-0 flex items-center gap-2">
               <Clock size={18} className="text-purple-500" />
-              รออยู่ที่สถานี Data ({filtered.length})
+              รออยู่ที่สถานี Data ({pending.length})
             </h3>
             <button onClick={fetchPending} className="text-blue-500 text-sm hover:text-blue-600">รีเฟรช</button>
           </div>
 
-          <div className="relative mb-3">
-            <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-            <input type="text" value={search} onChange={e => setSearch(e.target.value)}
-              className="input-field pl-8 py-2 text-sm" placeholder="ค้นหาทะเบียน / ลูกค้า..." />
-          </div>
-
           <div className="space-y-2 max-h-96 overflow-y-auto">
-            {filtered.map(trip => (
+            {pending.map(trip => (
               <div key={trip.TripID}
                 onClick={() => selectTrip(trip)}
                 className={`p-3 rounded-lg border cursor-pointer transition-all ${selected?.TripID === trip.TripID
@@ -122,7 +111,7 @@ export default function DataStation() {
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs">#{trip.TripID}</span>
                       {trip.Status === 'WaitPick' && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร Pick</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
                       )}
                     </div>
                     <div className="text-slate-500 text-xs mt-1">
@@ -134,14 +123,18 @@ export default function DataStation() {
                   </div>
                   <div className="text-right">
                     <div className="text-amber-500 text-sm font-medium">
-                      {trip.WaitMinutes > 0 ? `รอ ${trip.WaitMinutes} นาที` : 'เพิ่งเข้า'}
+                      {trip.WaitMinutes > 0
+                        ? trip.WaitMinutes < 60
+                          ? `รอ ${trip.WaitMinutes} นาที`
+                          : `รอ ${Math.floor(trip.WaitMinutes / 60)} ชั่วโมง ${trip.WaitMinutes % 60} นาที`
+                        : 'เพิ่งเข้า'}
                     </div>
                     <div className="text-slate-400 text-xs">{formatDateTime(trip.WeighDateTime)}</div>
                   </div>
                 </div>
               </div>
             ))}
-            {!filtered.length && (
+            {!pending.length && (
               <p className="text-center text-slate-400 py-8">ไม่มีรถรอที่สถานี Data</p>
             )}
           </div>
@@ -216,7 +209,7 @@ export default function DataStation() {
                   className="w-full py-2.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-600 text-sm font-medium hover:bg-rose-100 transition-colors flex items-center justify-center gap-2">
                   {waitLoading
                     ? <span className="w-4 h-4 border-2 border-rose-300 border-t-rose-600 rounded-full animate-spin" />
-                    : <><HourglassIcon size={14} />มาร์กรอเอกสาร Pick</>}
+                    : <><HourglassIcon size={14} />มาร์กรอเอกสาร SO</>}
                 </button>
               )}
             </form>

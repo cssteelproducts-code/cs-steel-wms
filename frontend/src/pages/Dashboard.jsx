@@ -248,6 +248,83 @@ export default function Dashboard() {
         />
       </div>
 
+      {/* ปริมาณรถสะสมที่สถานี — row 3 */}
+      <div className="card">
+        <SectionHeader title="ปริมาณรถสะสมที่สถานี" sectionKey="station" collapsed={collapsed.station} onToggle={toggleSection}
+          extra={<span className="text-xs text-slate-500">{data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length || 0} สถานี</span>} />
+        {!collapsed.station && (
+          data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length ? (
+            <div className="space-y-2">
+              {[...data.stationLoad].filter(s => s.ActiveTrucks > 0).sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(st => {
+                const pct = Math.min(st.ActiveTrucks * 20, 100);
+                return (
+                  <div key={st.StationName}
+                    className={st.ActiveTrucks > 0 ? 'cursor-pointer hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors' : ''}
+                    onClick={() => st.ActiveTrucks > 0 && openStationPopup(st.StationName)}
+                  >
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-sm text-slate-700">{st.StationName}</span>
+                      <span className={`text-sm font-semibold ${st.ActiveTrucks > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {st.ActiveTrucks > 0 ? `${st.ActiveTrucks} คัน` : '✓ ว่าง'}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-100">
+                      <div
+                        className={`h-2 rounded-full transition-all ${st.ActiveTrucks > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                        style={{ width: `${st.ActiveTrucks > 0 ? Math.max(pct, 8) : 100}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">ยังไม่มีรถที่ถูก assign สถานีจากเมนู Pick</p>
+          )
+        )}
+      </div>
+
+      {/* รถที่กำลังดำเนินการ — row 4 */}
+      <div className="card">
+        <SectionHeader title="รถที่กำลังดำเนินการ" sectionKey="inprog" collapsed={collapsed.inprog} onToggle={toggleSection}
+          icon={AlertTriangle} iconColor="text-amber-500"
+          extra={incomplete.length > 0 ? (
+            <button onClick={() => navigate('/monitor')} className="text-blue-500 text-xs flex items-center gap-1 hover:underline">
+              ดูรายละเอียด <ArrowRight size={12} />
+            </button>
+          ) : null} />
+        {!collapsed.inprog && incomplete.length ? (
+          <>
+            <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
+              <span className="text-slate-600">
+                รับสินค้าค้างอยู่ทั้งหมด <span className="font-bold text-amber-600">{incomplete.length} คัน</span>
+              </span>
+              {incomplete.filter(r => r.IsOvertime).length > 0 && (
+                <span className="text-red-600 font-medium">
+                  นอกเวลา {incomplete.filter(r => r.IsOvertime).length} คัน
+                </span>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {Object.entries(incomplete.reduce((acc, r) => {
+                const key = `${r.TypeName}|${r.HoursIn}`;
+                acc[key] = (acc[key] || 0) + 1;
+                return acc;
+              }, {})).map(([key, cnt]) => {
+                const [type, hrs] = key.split('|');
+                return (
+                  <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
+                    {type} · {hrs} ชม. · {cnt} คัน
+                  </span>
+                );
+              })}
+            </div>
+          </>
+        ) : (
+          !collapsed.inprog && <p className="text-sm text-slate-400">ไม่มีรถกำลังดำเนินการ</p>
+        )}
+      </div>
+
       {/* น้ำหนักสินค้าที่ขึ้น */}
       <div className="card">
         <SectionHeader title="น้ำหนักสินค้าที่ขึ้น" sectionKey="weight" collapsed={collapsed.weight} onToggle={toggleSection} />
