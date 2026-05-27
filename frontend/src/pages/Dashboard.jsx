@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   TruckIcon, CheckCircle, Clock, Scale, Activity, RefreshCw, ArrowRight,
-  Calendar, Package, AlertTriangle, Search
+  Calendar, Package, AlertTriangle, Search, ChevronDown, ChevronUp
 } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
@@ -16,17 +16,84 @@ import dayjs from 'dayjs';
 import 'dayjs/locale/th';
 dayjs.locale('th');
 
+const colorBg = { 'text-blue-500': 'bg-blue-50', 'text-emerald-500': 'bg-emerald-50', 'text-amber-500': 'bg-amber-50', 'text-cyan-500': 'bg-cyan-50', 'text-red-500': 'bg-red-50', 'text-violet-500': 'bg-violet-50' };
+
 const StatCard = ({ title, value, sub, icon: Icon, color, onClick }) => (
   <div onClick={onClick} className={`stat-card ${onClick ? 'cursor-pointer hover:scale-[1.02] transition-transform' : ''}`}>
     <div className="flex items-center justify-between">
       <div>
-        <p className="text-slate-500 text-sm">{title}</p>
-        <p className={`text-3xl font-bold mt-1 ${color}`}>{value ?? '-'}</p>
-        {sub && <p className="text-slate-400 text-xs mt-1">{sub}</p>}
+        <p className="text-slate-500 text-xs">{title}</p>
+        <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value ?? '-'}</p>
+        {sub && <p className="text-slate-400 text-xs mt-0.5">{sub}</p>}
       </div>
-      <div className={`p-3 rounded-xl ${color === 'text-blue-500' ? 'bg-blue-50' : color === 'text-emerald-500' ? 'bg-emerald-50' : color === 'text-amber-500' ? 'bg-amber-50' : color === 'text-cyan-500' ? 'bg-cyan-50' : color === 'text-red-500' ? 'bg-red-50' : color === 'text-violet-500' ? 'bg-violet-50' : 'bg-slate-100'}`}>
-        <Icon size={24} className={color} />
+      <div className={`p-2.5 rounded-xl ${colorBg[color] || 'bg-slate-100'}`}>
+        <Icon size={20} className={color} />
       </div>
+    </div>
+  </div>
+);
+
+const cardFace = {
+  background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)',
+  boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04)',
+  borderRadius: '1.5rem', padding: '1.25rem',
+  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+  position: 'absolute', inset: 0
+};
+
+const FlipStatCard = ({ title, value, icon: Icon, color, breakdown }) => {
+  const [flipped, setFlipped] = useState(false);
+  return (
+    <div style={{ perspective: '1000px', minHeight: 90, cursor: 'pointer' }} onClick={() => setFlipped(f => !f)}>
+      <div style={{
+        position: 'relative', minHeight: 90,
+        transformStyle: 'preserve-3d',
+        transition: 'transform 0.4s ease',
+        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)'
+      }}>
+        <div style={cardFace}>
+          <div className="flex items-center justify-between h-full">
+            <div>
+              <p className="text-slate-500 text-xs">{title}</p>
+              <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value ?? 0}</p>
+              <p className="text-slate-400 text-xs mt-1">คัน · กดดูรายละเอียด</p>
+            </div>
+            <div className={`p-2.5 rounded-xl ${colorBg[color] || 'bg-slate-100'}`}>
+              <Icon size={20} className={color} />
+            </div>
+          </div>
+        </div>
+        <div style={{ ...cardFace, transform: 'rotateY(180deg)' }}>
+          <p className="text-xs font-semibold text-slate-500 mb-2">{title} — รายประเภท</p>
+          {breakdown?.length > 0 ? (
+            <div className="space-y-1">
+              {breakdown.slice(0, 4).map(b => (
+                <div key={b.TypeName} className="flex justify-between items-center">
+                  <span className="text-xs text-slate-600 truncate mr-2">{b.TypeName}</span>
+                  <span className={`text-xs font-bold ${color}`}>{b.Count} คัน</span>
+                </div>
+              ))}
+            </div>
+          ) : <p className="text-xs text-slate-400">ยังไม่มีข้อมูล</p>}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const SectionHeader = ({ title, sectionKey, collapsed, onToggle, icon: Icon, iconColor, extra }) => (
+  <div className="flex items-center justify-between mb-3">
+    <h3 className="card-header mb-0 flex items-center gap-2">
+      {Icon && <Icon size={16} className={iconColor || 'text-slate-400'} />}
+      {title}
+    </h3>
+    <div className="flex items-center gap-2">
+      {extra}
+      <button onClick={() => onToggle(sectionKey)}
+        className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
+        title={collapsed ? 'ขยาย' : 'ย่อ'}>
+        {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+      </button>
     </div>
   </div>
 );
@@ -41,6 +108,14 @@ export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('dash_collapsed') || '{}'); } catch { return {}; }
+  });
+  const toggleSection = (key) => setCollapsed(prev => {
+    const next = { ...prev, [key]: !prev[key] };
+    localStorage.setItem('dash_collapsed', JSON.stringify(next));
+    return next;
+  });
 
   // Historical search state
   const today = dayjs().format('YYYY-MM-DD');
@@ -124,10 +199,10 @@ export default function Dashboard() {
         <div className="relative px-7 py-6 flex items-center justify-between">
           <div>
             <p className="text-red-200 text-sm font-semibold mb-1">{dayjs().format('dddd, DD MMMM YYYY')}</p>
-            <h2 className="text-3xl font-black text-white leading-tight tracking-tight">
+            <h2 className="text-2xl font-black text-white leading-tight tracking-tight">
               ภาพรวมการดำเนินงาน
             </h2>
-            <p className="text-red-200 text-sm mt-1.5">CS Steel Products — อัพเดตอัตโนมัติทุก 30 วินาที</p>
+            <p className="text-red-200 text-xs mt-1">CS Steel Products — อัพเดตอัตโนมัติทุก 30 วินาที</p>
             <button onClick={fetchData}
               className="mt-4 inline-flex items-center gap-2 px-4 py-2 rounded-2xl text-sm font-semibold transition-all"
               style={{ background: 'rgba(255,255,255,0.15)', color: '#fff', border: '1px solid rgba(255,255,255,0.25)' }}
@@ -138,80 +213,65 @@ export default function Dashboard() {
           </div>
           <div className="hidden md:flex flex-col items-end gap-2">
             <div className="text-right">
-              <div className="text-5xl font-black text-white tabular-nums">{counts.TodayTotal ?? 0}</div>
-              <div className="text-red-200 text-sm font-semibold mt-0.5">คันวันนี้</div>
+              <div className="text-4xl font-black text-white tabular-nums">{counts.TodayTotal ?? 0}</div>
+              <div className="text-red-200 text-xs font-semibold mt-0.5">คันวันนี้</div>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Stat cards: today / month / year */}
+      {/* Stat cards: today / month / year (flip to show type breakdown) */}
       <div className="grid grid-cols-3 gap-4">
-        <StatCard
-          title="วันนี้"
-          value={counts.TodayTotal ?? 0}
-          sub="คัน"
-          icon={Calendar}
-          color="text-blue-500"
-          onClick={() => navigate('/monitor')}
-        />
-        <StatCard
-          title="เดือนนี้"
-          value={counts.MonthTotal ?? 0}
-          sub="คัน"
-          icon={TruckIcon}
-          color="text-emerald-500"
-        />
-        <StatCard
-          title="ปีนี้"
-          value={counts.YearTotal ?? 0}
-          sub="คัน"
-          icon={Package}
-          color="text-violet-500"
-        />
+        <FlipStatCard title="วันนี้" value={counts.TodayTotal ?? 0} icon={Calendar} color="text-blue-500" breakdown={data?.vehicleTypesToday} />
+        <FlipStatCard title="เดือนนี้" value={counts.MonthTotal ?? 0} icon={TruckIcon} color="text-emerald-500" breakdown={data?.vtBreakdownMonth} />
+        <FlipStatCard title="ปีนี้" value={counts.YearTotal ?? 0} icon={Package} color="text-violet-500" breakdown={data?.vtBreakdownYear} />
       </div>
 
       {/* น้ำหนักสินค้าที่ขึ้น */}
       <div className="card">
-        <h3 className="card-header">น้ำหนักสินค้าที่ขึ้น</h3>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-            <p className="text-xs text-slate-500 mb-1">วันนี้</p>
-            {wh.TodayWeight ? (
-              <p className="text-xl font-bold text-blue-600">{fmtKg(wh.TodayWeight)}</p>
-            ) : (
-              <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
-            )}
+        <SectionHeader title="น้ำหนักสินค้าที่ขึ้น" sectionKey="weight" collapsed={collapsed.weight} onToggle={toggleSection} />
+        {!collapsed.weight && (
+          <div className="grid grid-cols-2 gap-4">
+            <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <p className="text-xs text-slate-500 mb-1">วันนี้</p>
+              {wh.TodayWeight ? (
+                <p className="text-base font-bold text-blue-600">{fmtKg(wh.TodayWeight)}</p>
+              ) : (
+                <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
+              )}
+            </div>
+            <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+              <p className="text-xs text-slate-500 mb-1">เมื่อวาน</p>
+              {wh.YesterdayWeight ? (
+                <p className="text-base font-bold text-slate-600">{fmtKg(wh.YesterdayWeight)}</p>
+              ) : (
+                <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
+              )}
+            </div>
           </div>
-          <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-            <p className="text-xs text-slate-500 mb-1">เมื่อวาน</p>
-            {wh.YesterdayWeight ? (
-              <p className="text-xl font-bold text-slate-600">{fmtKg(wh.YesterdayWeight)}</p>
-            ) : (
-              <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
-            )}
-          </div>
-        </div>
+        )}
       </div>
 
       {/* ประเภทรถ วันนี้ */}
       <div className="card">
-        <h3 className="card-header">ประเภทรถ (วันนี้)</h3>
-        {data?.vehicleTypesToday?.length ? (
-          <div className="flex flex-wrap gap-2">
-            {data.vehicleTypesToday.map(vt => (
-              <TypeTag key={vt.TypeName} name={vt.TypeName} count={vt.Count} color="bg-blue-50 text-blue-700" />
-            ))}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-400">ยังไม่มีวันนี้</p>
+        <SectionHeader title="ประเภทรถ (วันนี้)" sectionKey="vtype" collapsed={collapsed.vtype} onToggle={toggleSection} />
+        {!collapsed.vtype && (
+          data?.vehicleTypesToday?.length ? (
+            <div className="flex flex-wrap gap-2">
+              {data.vehicleTypesToday.map(vt => (
+                <TypeTag key={vt.TypeName} name={vt.TypeName} count={vt.Count} color="bg-blue-50 text-blue-700" />
+              ))}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">ยังไม่มีวันนี้</p>
+          )
         )}
       </div>
 
       {/* ในเวลา / นอกเวลา */}
       <div className="card">
-        <h3 className="card-header">ในเวลา / นอกเวลา</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <SectionHeader title="ในเวลา / นอกเวลา" sectionKey="ontime" collapsed={collapsed.ontime} onToggle={toggleSection} />
+        {!collapsed.ontime && <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {/* วันนี้ */}
           <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">วันนี้</p>
@@ -219,12 +279,12 @@ export default function Dashboard() {
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
                 <span className="text-sm text-slate-600">ในเวลา</span>
-                <span className="text-lg font-bold text-emerald-600 ml-1">{ot.TodayOnTime ?? 0}</span>
+                <span className="text-base font-bold text-emerald-600 ml-1">{ot.TodayOnTime ?? 0}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
                 <span className="text-sm text-slate-600">นอกเวลา</span>
-                <span className="text-lg font-bold text-amber-600 ml-1">{ot.TodayOvertime ?? 0}</span>
+                <span className="text-base font-bold text-amber-600 ml-1">{ot.TodayOvertime ?? 0}</span>
               </div>
             </div>
           </div>
@@ -236,12 +296,12 @@ export default function Dashboard() {
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
                 <span className="text-sm text-slate-600">ในเวลา</span>
-                <span className="text-lg font-bold text-emerald-600 ml-1">{ot.MonthOnTime ?? 0}</span>
+                <span className="text-base font-bold text-emerald-600 ml-1">{ot.MonthOnTime ?? 0}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
                 <span className="text-sm text-slate-600">นอกเวลา</span>
-                <span className="text-lg font-bold text-amber-600 ml-1">{ot.MonthOvertime ?? 0}</span>
+                <span className="text-base font-bold text-amber-600 ml-1">{ot.MonthOvertime ?? 0}</span>
               </div>
             </div>
             {data?.vtBreakdownMonth?.length > 0 && (
@@ -260,12 +320,12 @@ export default function Dashboard() {
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
                 <span className="text-sm text-slate-600">ในเวลา</span>
-                <span className="text-lg font-bold text-emerald-600 ml-1">{ot.YearOnTime ?? 0}</span>
+                <span className="text-base font-bold text-emerald-600 ml-1">{ot.YearOnTime ?? 0}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
                 <span className="text-sm text-slate-600">นอกเวลา</span>
-                <span className="text-lg font-bold text-amber-600 ml-1">{ot.YearOvertime ?? 0}</span>
+                <span className="text-base font-bold text-amber-600 ml-1">{ot.YearOvertime ?? 0}</span>
               </div>
             </div>
             {data?.vtBreakdownYear?.length > 0 && (
@@ -276,56 +336,52 @@ export default function Dashboard() {
               </div>
             )}
           </div>
-        </div>
+        </div>}
       </div>
 
       {/* ปริมาณรถสะสมที่สถานี */}
       <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="card-header mb-0">ปริมาณรถสะสมที่สถานี</h3>
-          <span className="text-xs text-slate-500">{data?.stationLoad?.length || 0} สถานี</span>
-        </div>
-        {data?.stationLoad?.length ? (
-          <div className="space-y-2">
-            {data.stationLoad.map(st => {
-              const pct = Math.min(st.ActiveTrucks * 20, 100);
-              return (
-                <div key={st.StationName}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className="text-sm text-slate-700">{st.StationName}</span>
-                    <span className={`text-sm font-semibold ${st.ActiveTrucks > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                      {st.ActiveTrucks > 0 ? `${st.ActiveTrucks} คัน` : '✓ ว่าง'}
-                    </span>
+        <SectionHeader title="ปริมาณรถสะสมที่สถานี" sectionKey="station" collapsed={collapsed.station} onToggle={toggleSection}
+          extra={<span className="text-xs text-slate-500">{data?.stationLoad?.length || 0} สถานี</span>} />
+        {!collapsed.station && (
+          data?.stationLoad?.length ? (
+            <div className="space-y-2">
+              {[...data.stationLoad].sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(st => {
+                const pct = Math.min(st.ActiveTrucks * 20, 100);
+                return (
+                  <div key={st.StationName}>
+                    <div className="flex items-center justify-between mb-0.5">
+                      <span className="text-sm text-slate-700">{st.StationName}</span>
+                      <span className={`text-sm font-semibold ${st.ActiveTrucks > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                        {st.ActiveTrucks > 0 ? `${st.ActiveTrucks} คัน` : '✓ ว่าง'}
+                      </span>
+                    </div>
+                    <div className="w-full h-2 rounded-full bg-slate-100">
+                      <div
+                        className={`h-2 rounded-full transition-all ${st.ActiveTrucks > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                        style={{ width: `${st.ActiveTrucks > 0 ? Math.max(pct, 8) : 100}%` }}
+                      />
+                    </div>
                   </div>
-                  <div className="w-full h-2 rounded-full bg-slate-100">
-                    <div
-                      className={`h-2 rounded-full transition-all ${st.ActiveTrucks > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                      style={{ width: `${st.ActiveTrucks > 0 ? Math.max(pct, 8) : 100}%` }}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <p className="text-sm text-slate-400">ยังไม่มีสถานีที่กำหนด</p>
+                );
+              })}
+            </div>
+          ) : (
+            <p className="text-sm text-slate-400">ยังไม่มีสถานีที่กำหนด</p>
+          )
         )}
       </div>
 
-      {/* รถที่ขึ้นสินค้าไม่แล้วเสร็จ */}
+      {/* รถที่กำลังดำเนินการ */}
       <div className="card">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="card-header mb-0 flex items-center gap-2">
-            <AlertTriangle size={16} className="text-amber-500" />
-            รถที่ขึ้นสินค้าไม่แล้วเสร็จ
-          </h3>
-          {incomplete.length > 0 && (
+        <SectionHeader title="รถที่กำลังดำเนินการ" sectionKey="inprog" collapsed={collapsed.inprog} onToggle={toggleSection}
+          icon={AlertTriangle} iconColor="text-amber-500"
+          extra={incomplete.length > 0 ? (
             <button onClick={() => navigate('/monitor')} className="text-blue-500 text-xs flex items-center gap-1 hover:underline">
               ดูรายละเอียด <ArrowRight size={12} />
             </button>
-          )}
-        </div>
-        {incomplete.length ? (
+          ) : null} />
+        {!collapsed.inprog && incomplete.length ? (
           <>
             <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
               <span className="text-slate-600">
@@ -353,17 +409,15 @@ export default function Dashboard() {
             </div>
           </>
         ) : (
-          <p className="text-sm text-slate-400">ไม่มีรถค้างขึ้นสินค้า</p>
+          !collapsed.inprog && <p className="text-sm text-slate-400">ไม่มีรถกำลังดำเนินการ</p>
         )}
       </div>
 
-      {/* รถที่ดำเนินการเสร็จแล้ววันนี้ */}
+      {/* รถที่ดำเนินการเสร็จแล้ว */}
       <div className="card">
-        <h3 className="card-header flex items-center gap-2">
-          <CheckCircle size={16} className="text-emerald-500" />
-          รถที่ดำเนินการเสร็จแล้ววันนี้
-        </h3>
-        {completedTodayList.length ? (
+        <SectionHeader title="รถที่ดำเนินการเสร็จแล้ว" sectionKey="done" collapsed={collapsed.done} onToggle={toggleSection}
+          icon={CheckCircle} iconColor="text-emerald-500" />
+        {!collapsed.done && completedTodayList.length ? (
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
@@ -389,14 +443,14 @@ export default function Dashboard() {
             </table>
           </div>
         ) : (
-          <p className="text-sm text-slate-400">ยังไม่มีการดำเนินการเสร็จสิ้นวันนี้</p>
+          !collapsed.done && <p className="text-sm text-slate-400">ยังไม่มีการดำเนินการเสร็จสิ้นวันนี้</p>
         )}
       </div>
 
       {/* รถที่ดำเนินการเสร็จแล้วย้อนหลัง */}
       <div className="card">
-        <h3 className="card-header">รถที่ดำเนินการเสร็จแล้วย้อนหลัง</h3>
-        <div className="flex flex-wrap items-end gap-3 mb-4">
+        <SectionHeader title="ย้อนหลัง" sectionKey="hist" collapsed={collapsed.hist} onToggle={toggleSection} />
+        {!collapsed.hist && <div className="flex flex-wrap items-end gap-3 mb-4">
           <div>
             <label className="label">จากวันที่</label>
             <input type="date" className="input-field" value={histFrom}
@@ -411,8 +465,8 @@ export default function Dashboard() {
             {histLoading ? <LoadingSpinner size="sm" /> : <Search size={14} />}
             ค้นหาข้อมูลย้อนหลัง
           </button>
-        </div>
-        {histData !== null && (
+        </div>}
+        {!collapsed.hist && histData !== null && (
           histData.length ? (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -447,19 +501,20 @@ export default function Dashboard() {
 
       {/* รายงานผลการจัดส่งรายทะเบียน */}
       <div className="card">
-        <h3 className="card-header">รายงานผลการจัดส่งรายทะเบียน</h3>
-        <div className="flex flex-wrap items-end gap-3 mb-4">
-          <div>
-            <label className="label">เดือน</label>
-            <input type="month" className="input-field" value={reportMonth}
-              onChange={e => setReportMonth(e.target.value)} style={{ width: 160 }} />
+        <SectionHeader title="รายงานผลการจัดส่งรายทะเบียน" sectionKey="report" collapsed={collapsed.report} onToggle={toggleSection} />
+        {!collapsed.report && <>
+          <div className="flex flex-wrap items-end gap-3 mb-4">
+            <div>
+              <label className="label">เดือน</label>
+              <input type="month" className="input-field" value={reportMonth}
+                onChange={e => setReportMonth(e.target.value)} style={{ width: 160 }} />
+            </div>
+            <button onClick={searchReport} disabled={reportLoading} className="btn-primary">
+              {reportLoading ? <LoadingSpinner size="sm" /> : <Search size={14} />}
+              ดูรายงาน
+            </button>
           </div>
-          <button onClick={searchReport} disabled={reportLoading} className="btn-primary">
-            {reportLoading ? <LoadingSpinner size="sm" /> : <Search size={14} />}
-            ดูรายงาน
-          </button>
-        </div>
-        {reportData !== null && (
+          {reportData !== null && (
           reportData.length ? (
             <div className="overflow-x-auto">
               <table className="w-full">
@@ -489,7 +544,8 @@ export default function Dashboard() {
           ) : (
             <p className="text-sm text-slate-400 py-4 text-center">ไม่พบข้อมูลในเดือนที่เลือก</p>
           )
-        )}
+          )}
+        </>}
       </div>
 
       {/* --- เดิม: สถานะรถในคลัง + chart + กิจกรรมล่าสุด --- */}
@@ -497,12 +553,9 @@ export default function Dashboard() {
       {/* Flow status + weekly chart */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="card-header mb-0">สถานะรถในคลัง</h3>
-            <button onClick={() => navigate('/monitor')} className="text-blue-500 hover:text-blue-600 text-sm flex items-center gap-1">
-              ดูทั้งหมด <ArrowRight size={14} />
-            </button>
-          </div>
+          <SectionHeader title="สถานะรถในคลัง" sectionKey="flow" collapsed={collapsed.flow} onToggle={toggleSection}
+            extra={<button onClick={() => navigate('/monitor')} className="text-blue-500 hover:text-blue-600 text-xs flex items-center gap-1">ดูทั้งหมด <ArrowRight size={11} /></button>} />
+          {!collapsed.flow && <>
           <div className="grid grid-cols-3 gap-2 mb-4">
             {[
               { status: 'Data', label: 'รับเอกสาร' },
@@ -524,7 +577,7 @@ export default function Dashboard() {
           <div>
             <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">สถานีขึ้นสินค้า</p>
             <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {data?.stationLoad?.map(station => (
+              {[...(data?.stationLoad || [])].sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(station => (
                 <div key={station.StationName}
                   className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
                   <span className="text-slate-700 text-sm truncate">{station.StationName}</span>
@@ -538,11 +591,12 @@ export default function Dashboard() {
               )}
             </div>
           </div>
+          </>}
         </div>
 
         <div className="card">
-          <h3 className="card-header">จำนวนรถ 7 วันย้อนหลัง</h3>
-          <ResponsiveContainer width="100%" height={220}>
+          <SectionHeader title="จำนวนรถ 7 วันย้อนหลัง" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection} />
+          {!collapsed.chart && <ResponsiveContainer width="100%" height={220}>
             <BarChart data={data?.weeklyTrend || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
               <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
               <XAxis dataKey="TripDate" tick={{ fill: '#64748b', fontSize: 11 }}
@@ -556,7 +610,7 @@ export default function Dashboard() {
               <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} name="TotalTrips" />
               <Bar dataKey="Completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Completed" />
             </BarChart>
-          </ResponsiveContainer>
+          </ResponsiveContainer>}
         </div>
       </div>
 
@@ -596,11 +650,9 @@ export default function Dashboard() {
 
       {/* Recent activity */}
       <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="card-header mb-0">กิจกรรมล่าสุดวันนี้</h3>
-          <Activity size={16} className="text-slate-400" />
-        </div>
-        <div className="overflow-x-auto">
+        <SectionHeader title="กิจกรรมล่าสุดวันนี้" sectionKey="activity" collapsed={collapsed.activity} onToggle={toggleSection}
+          icon={Activity} iconColor="text-slate-400" />
+        {!collapsed.activity && <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-200">
@@ -635,7 +687,7 @@ export default function Dashboard() {
               )}
             </tbody>
           </table>
-        </div>
+        </div>}
       </div>
     </div>
   );

@@ -11,7 +11,7 @@ router.get('/warehouses', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_Warehouses WHERE IsActive = 1 ORDER BY WarehouseID DESC');
+      .query('SELECT * FROM WMS_Warehouses WHERE IsActive = 1 ORDER BY WarehouseName ASC');
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -20,7 +20,7 @@ router.get('/warehouses', authenticate, async (req, res) => {
 
 router.post('/warehouses', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { warehouseCode, warehouseName, location, gpsLat, gpsLng } = req.body;
+    const { warehouseCode, warehouseName, location, gpsLat, gpsLng, radiusKm } = req.body;
     const pool = getPool();
     await pool.request()
       .input('WarehouseCode', sql.NVarChar, warehouseCode)
@@ -28,8 +28,9 @@ router.post('/warehouses', authenticate, requireAdmin, async (req, res) => {
       .input('Location', sql.NVarChar, location || '')
       .input('GpsLat', sql.Float, gpsLat || null)
       .input('GpsLng', sql.Float, gpsLng || null)
-      .query(`INSERT INTO WMS_Warehouses (WarehouseCode, WarehouseName, Location, GpsLat, GpsLng)
-              VALUES (@WarehouseCode, @WarehouseName, @Location, @GpsLat, @GpsLng)`);
+      .input('RadiusKm', sql.Float, parseFloat(radiusKm) || 5)
+      .query(`INSERT INTO WMS_Warehouses (WarehouseCode, WarehouseName, Location, GpsLat, GpsLng, RadiusKm)
+              VALUES (@WarehouseCode, @WarehouseName, @Location, @GpsLat, @GpsLng, @RadiusKm)`);
     res.json({ success: true, message: 'เพิ่มคลังสินค้าสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -38,7 +39,7 @@ router.post('/warehouses', authenticate, requireAdmin, async (req, res) => {
 
 router.put('/warehouses/:id', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { warehouseCode, warehouseName, location, gpsLat, gpsLng, isActive } = req.body;
+    const { warehouseCode, warehouseName, location, gpsLat, gpsLng, isActive, radiusKm } = req.body;
     const pool = getPool();
     await pool.request()
       .input('WarehouseID', sql.Int, req.params.id)
@@ -48,8 +49,9 @@ router.put('/warehouses/:id', authenticate, requireAdmin, async (req, res) => {
       .input('GpsLat', sql.Float, gpsLat || null)
       .input('GpsLng', sql.Float, gpsLng || null)
       .input('IsActive', sql.Bit, isActive !== undefined ? isActive : 1)
+      .input('RadiusKm', sql.Float, parseFloat(radiusKm) || 5)
       .query(`UPDATE WMS_Warehouses SET WarehouseCode=@WarehouseCode, WarehouseName=@WarehouseName,
-              Location=@Location, GpsLat=@GpsLat, GpsLng=@GpsLng, IsActive=@IsActive
+              Location=@Location, GpsLat=@GpsLat, GpsLng=@GpsLng, IsActive=@IsActive, RadiusKm=@RadiusKm
               WHERE WarehouseID=@WarehouseID`);
     res.json({ success: true, message: 'แก้ไขคลังสินค้าสำเร็จ' });
   } catch (err) {
@@ -66,7 +68,7 @@ router.get('/customers', authenticate, async (req, res) => {
       .input('Search', sql.NVarChar, `%${search}%`)
       .query(`SELECT * FROM WMS_Customers
               WHERE IsActive = 1 AND (CustomerName LIKE @Search OR CustomerCode LIKE @Search)
-              ORDER BY CustomerID DESC`);
+              ORDER BY CustomerCode ASC`);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -115,7 +117,7 @@ router.get('/vehicle-types', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_VehicleTypes WHERE IsActive = 1 ORDER BY TypeID DESC');
+      .query('SELECT * FROM WMS_VehicleTypes WHERE IsActive = 1 ORDER BY TypeName ASC');
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -124,13 +126,43 @@ router.get('/vehicle-types', authenticate, async (req, res) => {
 
 router.post('/vehicle-types', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { typeName, description } = req.body;
+    const { typeName, description, startHour, startMinute, cutoffHour, cutoffMinute } = req.body;
     const pool = getPool();
     await pool.request()
       .input('TypeName', sql.NVarChar, typeName)
       .input('Description', sql.NVarChar, description || '')
-      .query('INSERT INTO WMS_VehicleTypes (TypeName, Description) VALUES (@TypeName, @Description)');
+      .input('StartHour', sql.Int, startHour ?? 8)
+      .input('StartMinute', sql.Int, startMinute ?? 0)
+      .input('CutoffHour', sql.Int, cutoffHour ?? 16)
+      .input('CutoffMinute', sql.Int, cutoffMinute ?? 0)
+      .query(`INSERT INTO WMS_VehicleTypes (TypeName, Description, StartHour, StartMinute, CutoffHour, CutoffMinute)
+              VALUES (@TypeName, @Description, @StartHour, @StartMinute, @CutoffHour, @CutoffMinute)`);
     res.json({ success: true, message: 'เพิ่มประเภทรถสำเร็จ' });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/vehicle-types/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { typeName, description, startHour, startMinute, cutoffHour, cutoffMinute, isActive } = req.body;
+    const pool = getPool();
+    await pool.request()
+      .input('TypeID', sql.Int, req.params.id)
+      .input('TypeName', sql.NVarChar, typeName)
+      .input('Description', sql.NVarChar, description || '')
+      .input('StartHour', sql.Int, startHour ?? 8)
+      .input('StartMinute', sql.Int, startMinute ?? 0)
+      .input('CutoffHour', sql.Int, cutoffHour ?? 16)
+      .input('CutoffMinute', sql.Int, cutoffMinute ?? 0)
+      .input('IsActive', sql.Bit, isActive !== undefined ? isActive : 1)
+      .query(`UPDATE WMS_VehicleTypes
+              SET TypeName=@TypeName, Description=@Description,
+                  StartHour=@StartHour, StartMinute=@StartMinute,
+                  CutoffHour=@CutoffHour, CutoffMinute=@CutoffMinute,
+                  IsActive=@IsActive
+              WHERE TypeID=@TypeID`);
+    res.json({ success: true, message: 'แก้ไขประเภทรถสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -270,23 +302,38 @@ router.post('/customers/import', authenticate, requireAdmin, upload.single('file
     const ws = wb.Sheets[wb.SheetNames[0]];
     const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
 
-    let inserted = 0, skipped = 0;
+    // Fetch all existing codes in one query
+    const existingRes = await pool.request().query('SELECT CustomerCode FROM WMS_Customers');
+    const existingCodes = new Set(existingRes.recordset.map(r => r.CustomerCode));
+
+    // Filter to new rows only (in memory, no per-row DB queries)
+    const newRows = [];
+    let skipped = 0;
     for (let i = 1; i < rows.length; i++) {
       const [code, name, phone, address] = rows[i];
       if (!code || !name) { skipped++; continue; }
-      const exists = await pool.request()
-        .input('code', sql.NVarChar, String(code).trim())
-        .query('SELECT CustomerID FROM WMS_Customers WHERE CustomerCode = @code');
-      if (exists.recordset.length > 0) { skipped++; continue; }
-      await pool.request()
-        .input('code', sql.NVarChar, String(code).trim())
-        .input('name', sql.NVarChar, String(name).trim())
-        .input('phone', sql.NVarChar, phone ? String(phone).trim() : null)
-        .input('address', sql.NVarChar, address ? String(address).trim() : null)
-        .query('INSERT INTO WMS_Customers (CustomerCode, CustomerName, Phone, Address) VALUES (@code, @name, @phone, @address)');
-      inserted++;
+      const c = String(code).trim();
+      if (existingCodes.has(c)) { skipped++; continue; }
+      newRows.push([c, String(name).trim(), phone ? String(phone).trim() : '', address ? String(address).trim() : '']);
+      existingCodes.add(c); // prevent duplicates within the file itself
     }
-    res.json({ success: true, message: `นำเข้าสำเร็จ ${inserted} รายการ (ข้ามซ้ำ ${skipped} รายการ)` });
+
+    // Batch insert — 100 rows per batch (stays well under MSSQL 2100-param limit)
+    const BATCH = 100;
+    for (let b = 0; b < newRows.length; b += BATCH) {
+      const batch = newRows.slice(b, b + BATCH);
+      const req2 = pool.request();
+      const vals = batch.map((row, idx) => {
+        req2.input(`c${idx}`, sql.NVarChar, row[0]);
+        req2.input(`n${idx}`, sql.NVarChar, row[1]);
+        req2.input(`p${idx}`, sql.NVarChar, row[2]);
+        req2.input(`a${idx}`, sql.NVarChar, row[3]);
+        return `(@c${idx},@n${idx},@p${idx},@a${idx})`;
+      });
+      await req2.query(`INSERT INTO WMS_Customers (CustomerCode,CustomerName,Phone,Address) VALUES ${vals.join(',')}`);
+    }
+
+    res.json({ success: true, message: `นำเข้าสำเร็จ ${newRows.length} รายการ (ข้ามซ้ำ ${skipped} รายการ)` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

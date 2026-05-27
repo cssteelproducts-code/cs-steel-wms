@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Boxes, Route
+  Bell, Boxes, Route, ArrowLeftRight
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -20,6 +20,7 @@ const menuItems = [
   { key: 'section.warehouse', divider: true },
   { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
+  { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
   { key: 'section.system', divider: true },
   { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
@@ -28,7 +29,7 @@ const menuItems = [
 ];
 
 export default function Sidebar({ isOpen, onClose }) {
-  const { user, hasPermission } = useAuth();
+  const { hasPermission } = useAuth();
   const { t } = useLang();
 
   const visibleItems = menuItems.filter(item => {
@@ -53,10 +54,7 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
           style={{ borderBottom: '1px solid #f3f4f6' }}>
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden"
-              style={{ background: 'linear-gradient(135deg,#dc2626,#7f1d1d)' }}>
-              <img src={logoImg} alt="CS" className="w-6 h-6 object-contain" style={{ filter: 'brightness(0) invert(1)' }} />
-            </div>
+            <img src={logoImg} alt="CS.Smart" className="h-10 w-auto object-contain flex-shrink-0" />
             <div>
               <div className="font-black leading-tight tracking-tight" style={{ fontSize: 15, color: '#111827' }}>CS.Smart</div>
               <div className="font-medium leading-tight" style={{ fontSize: 9, color: '#9ca3af', letterSpacing: '0.12em' }}>WMS PLATFORM</div>
@@ -65,21 +63,6 @@ export default function Sidebar({ isOpen, onClose }) {
           <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors">
             <X size={15} />
           </button>
-        </div>
-
-        {/* User chip */}
-        <div className="mx-3 mt-3 mb-1 px-3 py-2.5 rounded-2xl flex-shrink-0"
-          style={{ background: '#fef2f2', border: '1px solid #fee2e2' }}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0 font-black text-xs text-white"
-              style={{ background: 'linear-gradient(135deg,#dc2626,#991b1b)' }}>
-              {user?.fullName?.charAt(0) || 'U'}
-            </div>
-            <div className="min-w-0">
-              <div className="text-sm font-bold truncate" style={{ color: '#111827' }}>{user?.fullName}</div>
-              <div className="text-xs font-medium truncate" style={{ color: '#ef4444' }}>{user?.roleName}</div>
-            </div>
-          </div>
         </div>
 
         {/* Navigation */}

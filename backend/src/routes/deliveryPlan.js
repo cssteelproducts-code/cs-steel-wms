@@ -228,24 +228,30 @@ router.get('/plans/:id', async (req, res) => {
       FROM WMS_DeliveryPlans p LEFT JOIN WMS_Warehouses w ON p.WarehouseID = w.WarehouseID
       WHERE p.PlanID = @id
     `);
-    const routes = await pool.request().input('id', sql.Int, req.params.id).query(`
-      SELECT r.RouteID, r.LicensePlate, r.DriverName, r.CapacityTon,
-        r.TotalDistKm, r.TotalQty, r.Status,
-        (SELECT COUNT(*) FROM WMS_DeliveryRouteStops s WHERE s.RouteID = r.RouteID) AS StopCount
-      FROM WMS_DeliveryRoutes r WHERE r.PlanID = @id ORDER BY r.RouteID
-    `);
-    for (const route of routes.recordset) {
-      const stops = await pool.request().input('rid', sql.Int, route.RouteID).query(`
-        SELECT s.StopID, s.StopSequence, s.EstimatedArrival, s.ActualArrival, s.Status,
+    const [routes, allStops] = await Promise.all([
+      pool.request().input('id', sql.Int, req.params.id).query(`
+        SELECT r.RouteID, r.LicensePlate, r.DriverName, r.CapacityTon,
+          r.TotalDistKm, r.TotalQty, r.Status,
+          (SELECT COUNT(*) FROM WMS_DeliveryRouteStops s WHERE s.RouteID = r.RouteID) AS StopCount
+        FROM WMS_DeliveryRoutes r WHERE r.PlanID = @id ORDER BY r.RouteID
+      `),
+      pool.request().input('id', sql.Int, req.params.id).query(`
+        SELECT s.StopID, s.RouteID, s.StopSequence, s.EstimatedArrival, s.ActualArrival, s.Status,
           s.DistFromPrevKm, o.OrderCode, o.DeliveryAddress, o.DeliveryLat, o.DeliveryLng,
           o.Quantity, o.Unit, c.CustomerName
         FROM WMS_DeliveryRouteStops s
         JOIN WMS_DeliveryOrders o ON s.OrderID = o.OrderID
         LEFT JOIN WMS_Customers c ON o.CustomerID = c.CustomerID
-        WHERE s.RouteID = @rid ORDER BY s.StopSequence
-      `);
-      route.stops = stops.recordset;
+        JOIN WMS_DeliveryRoutes r ON s.RouteID = r.RouteID
+        WHERE r.PlanID = @id ORDER BY s.RouteID, s.StopSequence
+      `)
+    ]);
+    const stopsByRoute = {};
+    for (const stop of allStops.recordset) {
+      if (!stopsByRoute[stop.RouteID]) stopsByRoute[stop.RouteID] = [];
+      stopsByRoute[stop.RouteID].push(stop);
     }
+    for (const route of routes.recordset) route.stops = stopsByRoute[route.RouteID] || [];
     res.json({ success: true, data: { ...plan.recordset[0], routes: routes.recordset } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -294,13 +300,9 @@ router.post('/plans/:id/vrp', async (req, res) => {
       capacityTon: parseFloat(v.capacityTon) || 20
     })));
 
-    // Delete existing routes for this plan
-    const existingRoutes = await pool.request().input('id', sql.Int, req.params.id)
-      .query('SELECT RouteID FROM WMS_DeliveryRoutes WHERE PlanID = @id');
-    for (const r of existingRoutes.recordset) {
-      await pool.request().input('rid', sql.Int, r.RouteID)
-        .query('DELETE FROM WMS_DeliveryRouteStops WHERE RouteID = @rid');
-    }
+    // Delete existing routes for this plan (batch, no per-route loop)
+    await pool.request().input('id', sql.Int, req.params.id)
+      .query('DELETE FROM WMS_DeliveryRouteStops WHERE RouteID IN (SELECT RouteID FROM WMS_DeliveryRoutes WHERE PlanID = @id)');
     await pool.request().input('id', sql.Int, req.params.id)
       .query('DELETE FROM WMS_DeliveryRoutes WHERE PlanID = @id');
 
@@ -320,19 +322,20 @@ router.post('/plans/:id/vrp', async (req, res) => {
         `);
       const routeId = routeResult.recordset[0].RouteID;
 
-      for (let i = 0; i < route.stops.length; i++) {
-        const stop = route.stops[i];
-        await pool.request()
-          .input('rid', sql.Int, routeId)
-          .input('oid', sql.Int, stop.OrderID)
-          .input('seq', sql.Int, i + 1)
-          .input('dist', sql.Decimal(10, 2), stop.distFromPrevKm)
-          .query(`
-            INSERT INTO WMS_DeliveryRouteStops (RouteID, OrderID, StopSequence, DistFromPrevKm)
-            VALUES (@rid, @oid, @seq, @dist)
-          `);
-        await pool.request().input('oid', sql.Int, stop.OrderID)
-          .query("UPDATE WMS_DeliveryOrders SET Status='PLANNED' WHERE OrderID=@oid");
+      if (route.stops.length > 0) {
+        const stopReq = pool.request();
+        const stopVals = route.stops.map((stop, i) => {
+          stopReq.input(`rid${i}`, sql.Int, routeId);
+          stopReq.input(`oid${i}`, sql.Int, stop.OrderID);
+          stopReq.input(`seq${i}`, sql.Int, i + 1);
+          stopReq.input(`dst${i}`, sql.Decimal(10, 2), stop.distFromPrevKm);
+          return `(@rid${i}, @oid${i}, @seq${i}, @dst${i})`;
+        });
+        await stopReq.query(`INSERT INTO WMS_DeliveryRouteStops (RouteID, OrderID, StopSequence, DistFromPrevKm) VALUES ${stopVals.join(', ')}`);
+
+        const orderReq = pool.request();
+        const orderParams = route.stops.map((stop, i) => { orderReq.input(`ord${i}`, sql.Int, stop.OrderID); return `@ord${i}`; });
+        await orderReq.query(`UPDATE WMS_DeliveryOrders SET Status='PLANNED' WHERE OrderID IN (${orderParams.join(',')})`);
       }
     }
 

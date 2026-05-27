@@ -20,6 +20,8 @@ import Profile from './pages/Profile';
 import Alerts from './pages/Alerts';
 import Stock from './pages/Stock';
 import DeliveryPlan from './pages/DeliveryPlan';
+import Transfer from './pages/Transfer';
+import TransferDriver from './pages/TransferDriver';
 
 const ProtectedRoute = ({ children, menuCode }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -69,17 +71,39 @@ function AppRoutes() {
         <Route path="alerts" element={<ProtectedRoute menuCode="ALERTS"><Alerts /></ProtectedRoute>} />
         <Route path="stock" element={<ProtectedRoute menuCode="STOCK"><Stock /></ProtectedRoute>} />
         <Route path="delivery" element={<ProtectedRoute menuCode="DELIVERY_PLAN"><DeliveryPlan /></ProtectedRoute>} />
+        <Route path="transfer" element={<ProtectedRoute menuCode="TRANSFER"><Transfer /></ProtectedRoute>} />
+        <Route path="transfer/driver" element={<ProtectedRoute menuCode="TRANSFER"><TransferDriver /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );
 }
 
+const loadingBarStyle = `
+#global-loading-bar {
+  position: fixed; top: 0; left: 0; width: 100%; height: 3px;
+  background: linear-gradient(90deg, #dc2626 0%, #ef4444 50%, #dc2626 100%);
+  background-size: 200% 100%;
+  z-index: 99999; opacity: 0; pointer-events: none;
+  transition: opacity 0.15s ease;
+}
+#global-loading-bar.active {
+  opacity: 1;
+  animation: loading-sweep 1.2s linear infinite;
+}
+@keyframes loading-sweep {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+`;
+
 export default function App() {
   return (
     <BrowserRouter>
       <LanguageProvider>
       <AuthProvider>
+        <style>{loadingBarStyle}</style>
+        <div id="global-loading-bar" />
         <AppRoutes />
         <Toaster
           position="top-right"

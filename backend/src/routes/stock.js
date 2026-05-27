@@ -223,12 +223,14 @@ router.post('/count', async (req, res) => {
       `);
 
     const countId = result.recordset[0].CountID;
-    for (const item of stockItems.recordset) {
-      await pool.request()
-        .input('cid', sql.Int, countId)
-        .input('pid', sql.Int, item.ProductID)
-        .input('sysQty', sql.Decimal(12, 3), item.SystemQty)
-        .query('INSERT INTO WMS_StockCountItems (CountID, ProductID, SystemQty) VALUES (@cid, @pid, @sysQty)');
+    if (stockItems.recordset.length > 0) {
+      const batchReq = pool.request().input('cid', sql.Int, countId);
+      const vals = stockItems.recordset.map((item, i) => {
+        batchReq.input(`pid${i}`, sql.Int, item.ProductID);
+        batchReq.input(`sq${i}`, sql.Decimal(12, 3), item.SystemQty);
+        return `(@cid, @pid${i}, @sq${i})`;
+      });
+      await batchReq.query(`INSERT INTO WMS_StockCountItems (CountID, ProductID, SystemQty) VALUES ${vals.join(', ')}`);
     }
 
     res.json({ success: true, countId, countCode });
@@ -268,13 +270,13 @@ router.put('/count/:id/items', async (req, res) => {
   try {
     const pool = getPool();
     const { items } = req.body;
-    for (const item of items) {
-      await pool.request()
+    await Promise.all(items.map(item =>
+      pool.request()
         .input('iid', sql.Int, item.itemId)
         .input('qty', sql.Decimal(12, 3), item.actualQty)
         .input('rem', sql.NVarChar, item.remark || null)
-        .query('UPDATE WMS_StockCountItems SET ActualQty=@qty, Remark=@rem WHERE ItemID=@iid');
-    }
+        .query('UPDATE WMS_StockCountItems SET ActualQty=@qty, Remark=@rem WHERE ItemID=@iid')
+    ));
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -295,37 +297,47 @@ router.put('/count/:id/confirm', async (req, res) => {
     const items = await pool.request().input('id', sql.Int, req.params.id)
       .query('SELECT * FROM WMS_StockCountItems WHERE CountID = @id AND ActualQty IS NOT NULL');
 
+    const varianceItems = items.recordset.filter(item => (item.ActualQty - item.SystemQty) !== 0);
+
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
     try {
-      for (const item of items.recordset) {
-        const variance = item.ActualQty - item.SystemQty;
-        if (variance === 0) continue;
+      if (varianceItems.length > 0) {
+        // Batch INSERT all transaction records at once
+        const txReq = transaction.request()
+          .input('wh', sql.Int, count.WarehouseID)
+          .input('ref', sql.NVarChar, count.CountCode)
+          .input('rem', sql.NVarChar, `ปรับจากนับสต็อก ${count.CountCode}`)
+          .input('op', sql.Int, operatorId);
+        const txVals = varianceItems.map((item, i) => {
+          const variance = item.ActualQty - item.SystemQty;
+          txReq.input(`pid${i}`, sql.Int, item.ProductID);
+          txReq.input(`qty${i}`, sql.Decimal(12, 3), variance);
+          return `(@wh, @pid${i}, 'COUNT', @qty${i}, @ref, @rem, @op)`;
+        });
+        await txReq.query(`
+          INSERT INTO WMS_StockTransactions (WarehouseID, ProductID, TxType, Quantity, RefDocNo, Remark, OperatorID)
+          VALUES ${txVals.join(', ')}
+        `);
 
-        await transaction.request()
-          .input('wh', sql.Int, count.WarehouseID).input('pid', sql.Int, item.ProductID)
-          .input('qty', sql.Decimal(12, 3), variance).input('ref', sql.NVarChar, count.CountCode)
-          .input('rem', sql.NVarChar, `ปรับจากนับสต็อก ${count.CountCode}`).input('op', sql.Int, operatorId)
-          .query(`
-            INSERT INTO WMS_StockTransactions (WarehouseID, ProductID, TxType, Quantity, RefDocNo, Remark, OperatorID)
-            VALUES (@wh, @pid, 'COUNT', @qty, @ref, @rem, @op)
-          `);
-
-        const se = await transaction.request()
-          .input('wh', sql.Int, count.WarehouseID).input('pid', sql.Int, item.ProductID)
-          .query('SELECT StockID FROM WMS_Stock WHERE WarehouseID = @wh AND ProductID = @pid');
-
-        if (se.recordset.length > 0) {
-          await transaction.request()
-            .input('wh', sql.Int, count.WarehouseID).input('pid', sql.Int, item.ProductID)
-            .input('qty', sql.Decimal(12, 3), variance)
-            .query('UPDATE WMS_Stock SET Quantity = Quantity + @qty, LastUpdated = GETDATE() WHERE WarehouseID = @wh AND ProductID = @pid');
-        } else {
-          await transaction.request()
-            .input('wh', sql.Int, count.WarehouseID).input('pid', sql.Int, item.ProductID)
-            .input('qty', sql.Decimal(12, 3), item.ActualQty)
-            .query('INSERT INTO WMS_Stock (WarehouseID, ProductID, Quantity) VALUES (@wh, @pid, @qty)');
-        }
+        // MERGE to update or insert stock in one shot
+        const mergeReq = transaction.request().input('wh', sql.Int, count.WarehouseID);
+        const mergeVals = varianceItems.map((item, i) => {
+          const variance = item.ActualQty - item.SystemQty;
+          mergeReq.input(`mp${i}`, sql.Int, item.ProductID);
+          mergeReq.input(`mq${i}`, sql.Decimal(12, 3), variance);
+          mergeReq.input(`ma${i}`, sql.Decimal(12, 3), item.ActualQty);
+          return `(@mp${i}, @mq${i}, @ma${i})`;
+        });
+        await mergeReq.query(`
+          MERGE WMS_Stock AS target
+          USING (VALUES ${mergeVals.join(', ')}) AS source(ProductID, Variance, ActualQty)
+          ON target.WarehouseID = @wh AND target.ProductID = source.ProductID
+          WHEN MATCHED THEN
+            UPDATE SET Quantity = Quantity + source.Variance, LastUpdated = GETDATE()
+          WHEN NOT MATCHED THEN
+            INSERT (WarehouseID, ProductID, Quantity) VALUES (@wh, source.ProductID, source.ActualQty);
+        `);
       }
 
       await transaction.request().input('id', sql.Int, req.params.id).input('op', sql.Int, operatorId)

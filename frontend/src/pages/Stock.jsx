@@ -19,6 +19,7 @@ export default function Stock() {
   const [countDetail, setCountDetail] = useState(null);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [filterWh, setFilterWh] = useState('');
 
   // Product form
@@ -70,37 +71,40 @@ export default function Stock() {
   };
 
   const saveProduct = async () => {
+    setSaving(true);
     try {
       if (editingProduct) { await api.put(`/stock/products/${editingProduct.ProductID}`, productForm); }
       else { await api.post('/stock/products', productForm); }
       toast.success('บันทึกสำเร็จ');
       setShowProductForm(false); setEditingProduct(null);
       fetchProducts();
-    } catch { toast.error('บันทึกไม่สำเร็จ'); }
+    } catch { toast.error('บันทึกไม่สำเร็จ'); } finally { setSaving(false); }
   };
 
   const saveTx = async () => {
     if (!txForm.warehouseId || !txForm.productId || !txForm.quantity) {
       toast.error('กรุณากรอกข้อมูลให้ครบ'); return;
     }
+    setSaving(true);
     try {
       await api.post('/stock/transaction', txForm);
       toast.success('บันทึกรายการสำเร็จ');
       setShowTxForm(false);
       setTxForm({ warehouseId: '', productId: '', txType: 'IN', quantity: '', refDocNo: '', remark: '' });
       fetchBalance(); fetchTransactions();
-    } catch { toast.error('บันทึกไม่สำเร็จ'); }
+    } catch { toast.error('บันทึกไม่สำเร็จ'); } finally { setSaving(false); }
   };
 
   const createCount = async () => {
     if (!countForm.warehouseId) { toast.error('กรุณาเลือกคลังสินค้า'); return; }
+    setSaving(true);
     try {
       const r = await api.post('/stock/count', countForm);
       toast.success(`สร้างรายการนับสต็อก ${r.data.countCode}`);
       setShowCountForm(false);
       fetchCounts();
       fetchCountDetail(r.data.countId);
-    } catch { toast.error('สร้างไม่สำเร็จ'); }
+    } catch { toast.error('สร้างไม่สำเร็จ'); } finally { setSaving(false); }
   };
 
   const updateActualQty = async (itemId, val) => {
@@ -110,20 +114,22 @@ export default function Stock() {
   };
 
   const saveCountItems = async () => {
+    setSaving(true);
     try {
       const items = countDetail.items.filter(i => i.ActualQty !== null).map(i => ({ itemId: i.ItemID, actualQty: i.ActualQty, remark: i.Remark }));
       await api.put(`/stock/count/${countDetail.CountID}/items`, { items });
       toast.success('บันทึกยอดนับแล้ว');
-    } catch { toast.error('บันทึกไม่สำเร็จ'); }
+    } catch { toast.error('บันทึกไม่สำเร็จ'); } finally { setSaving(false); }
   };
 
   const confirmCount = async () => {
     if (!window.confirm('ยืนยันการนับสต็อก? ระบบจะปรับยอดสต็อกทันที')) return;
+    setSaving(true);
     try {
       await api.put(`/stock/count/${countDetail.CountID}/confirm`);
       toast.success('ยืนยันการนับสต็อกสำเร็จ');
       setCountDetail(null); fetchCounts(); fetchBalance();
-    } catch (err) { toast.error(err.response?.data?.message || 'ยืนยันไม่สำเร็จ'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'ยืนยันไม่สำเร็จ'); } finally { setSaving(false); }
   };
 
   const TX_COLOR = { IN: 'text-emerald-600', OUT: 'text-red-500', ADJUST: 'text-amber-600', COUNT: 'text-blue-500' };
@@ -243,7 +249,10 @@ export default function Stock() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={saveTx} className="btn-primary text-sm px-4 py-2">บันทึก</button>
+                <button onClick={saveTx} disabled={saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                  {saving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
                 <button onClick={() => setShowTxForm(false)} className="btn-secondary text-sm px-4 py-2">ยกเลิก</button>
               </div>
             </div>
@@ -284,7 +293,10 @@ export default function Stock() {
                   <input type="text" value={txForm.remark} onChange={e => setTxForm(p => ({ ...p, remark: e.target.value }))} className="input-field" /></div>
               </div>
               <div className="flex gap-2">
-                <button onClick={saveTx} className="btn-primary text-sm px-4 py-2">บันทึก</button>
+                <button onClick={saveTx} disabled={saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                  {saving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
                 <button onClick={() => setShowTxForm(false)} className="btn-secondary text-sm px-4 py-2">ยกเลิก</button>
               </div>
             </div>
@@ -343,7 +355,10 @@ export default function Stock() {
                       <input type="text" value={countForm.remark} onChange={e => setCountForm(p => ({ ...p, remark: e.target.value }))} className="input-field" /></div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={createCount} className="btn-primary text-sm px-4 py-2">สร้างรายการ</button>
+                    <button onClick={createCount} disabled={saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                      {saving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                      {saving ? 'กำลังสร้าง...' : 'สร้างรายการ'}
+                    </button>
                     <button onClick={() => setShowCountForm(false)} className="btn-secondary text-sm px-4 py-2">ยกเลิก</button>
                   </div>
                 </div>
@@ -380,8 +395,14 @@ export default function Stock() {
                 <div className="flex gap-2">
                   {countDetail.Status === 'DRAFT' && (
                     <>
-                      <button onClick={saveCountItems} className="btn-primary text-sm px-3 py-1.5">บันทึกยอดนับ</button>
-                      <button onClick={confirmCount} className="btn-success text-sm px-3 py-1.5"><CheckCircle size={13} />ยืนยัน</button>
+                      <button onClick={saveCountItems} disabled={saving} className="btn-primary text-sm px-3 py-1.5 flex items-center gap-1.5">
+                        {saving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                        {saving ? 'กำลังบันทึก...' : 'บันทึกยอดนับ'}
+                      </button>
+                      <button onClick={confirmCount} disabled={saving} className="btn-success text-sm px-3 py-1.5 flex items-center gap-1.5">
+                        {saving ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={13} />}
+                        {saving ? 'กำลังยืนยัน...' : 'ยืนยัน'}
+                      </button>
                     </>
                   )}
                   <button onClick={() => setCountDetail(null)} className="btn-secondary text-sm px-3 py-1.5"><X size={13} />ปิด</button>
@@ -460,7 +481,10 @@ export default function Stock() {
                   <input value={productForm.description} onChange={e => setProductForm(p => ({ ...p, description: e.target.value }))} className="input-field" /></div>
               </div>
               <div className="flex gap-2">
-                <button onClick={saveProduct} className="btn-primary text-sm px-4 py-2">บันทึก</button>
+                <button onClick={saveProduct} disabled={saving} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                  {saving && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {saving ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
                 <button onClick={() => setShowProductForm(false)} className="btn-secondary text-sm px-4 py-2">ยกเลิก</button>
               </div>
             </div>

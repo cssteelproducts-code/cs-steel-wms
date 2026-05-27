@@ -1,0 +1,332 @@
+const express = require('express');
+const router = express.Router();
+const { sql, getPool } = require('../config/db');
+const { authenticate } = require('../middleware/auth');
+
+router.use(authenticate);
+
+// --- STATIONS ---
+
+router.get('/stations', async (req, res) => {
+  try {
+    const pool = getPool();
+    const result = await pool.request().query(
+      'SELECT * FROM WMS_TransferStations WHERE IsActive=1 ORDER BY SortOrder, StationName'
+    );
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/stations', async (req, res) => {
+  try {
+    const { stationCode, stationName, stationType, sortOrder } = req.body;
+    const pool = getPool();
+    const result = await pool.request()
+      .input('code', sql.NVarChar, stationCode)
+      .input('name', sql.NVarChar, stationName)
+      .input('type', sql.NVarChar, stationType || 'BOTH')
+      .input('sort', sql.Int, sortOrder || 0)
+      .query(`
+        INSERT INTO WMS_TransferStations (StationCode, StationName, StationType, SortOrder)
+        OUTPUT INSERTED.StationID
+        VALUES (@code, @name, @type, @sort)
+      `);
+    res.json({ success: true, stationId: result.recordset[0].StationID });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/stations/:id', async (req, res) => {
+  try {
+    const { stationCode, stationName, stationType, sortOrder, isActive } = req.body;
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('code', sql.NVarChar, stationCode)
+      .input('name', sql.NVarChar, stationName)
+      .input('type', sql.NVarChar, stationType || 'BOTH')
+      .input('sort', sql.Int, sortOrder || 0)
+      .input('active', sql.Bit, isActive !== false ? 1 : 0)
+      .query('UPDATE WMS_TransferStations SET StationCode=@code, StationName=@name, StationType=@type, SortOrder=@sort, IsActive=@active WHERE StationID=@id');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/stations/:id', async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('UPDATE WMS_TransferStations SET IsActive=0 WHERE StationID=@id');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// --- JOBS ---
+
+router.get('/jobs/available', async (req, res) => {
+  try {
+    const pool = getPool();
+    const result = await pool.request().query(`
+      SELECT j.JobID, j.JobCode, j.ProductDesc, j.Priority,
+        ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
+        j.PlannedBundles, j.PlannedWeightKg, j.ActualBundles, j.ActualWeightKg,
+        (SELECT COUNT(*) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID AND t.Status NOT IN ('COMPLETE','CANCELLED')) AS ActiveTripCount
+      FROM WMS_TransferJobs j
+      LEFT JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
+      LEFT JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID
+      WHERE j.Status IN ('PENDING','IN_PROGRESS')
+      ORDER BY
+        CASE j.Priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 ELSE 2 END,
+        j.CreatedAt ASC
+    `);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/jobs', async (req, res) => {
+  try {
+    const pool = getPool();
+    const { status, date } = req.query;
+    const r = pool.request();
+    const conditions = [];
+    if (status) { r.input('status', sql.NVarChar, status); conditions.push('j.Status=@status'); }
+    if (date) { r.input('date', sql.Date, date); conditions.push('CAST(j.CreatedAt AS DATE)=@date'); }
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
+    const result = await r.query(`
+      SELECT j.*,
+        ss.StationName AS SourceStationName, ss.StationCode AS SourceStationCode,
+        ds.StationName AS DestStationName, ds.StationCode AS DestStationCode,
+        u.FullName AS CreatedByName,
+        (SELECT COUNT(*) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID) AS TripCount,
+        (SELECT COUNT(*) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID AND t.Status='COMPLETE') AS CompletedTripCount
+      FROM WMS_TransferJobs j
+      LEFT JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
+      LEFT JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID
+      LEFT JOIN WMS_Users u ON j.CreatedBy=u.UserID
+      ${where}
+      ORDER BY j.CreatedAt DESC
+    `);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.get('/jobs/:id', async (req, res) => {
+  try {
+    const pool = getPool();
+    const [jobResult, tripsResult] = await Promise.all([
+      pool.request().input('id', sql.Int, req.params.id).query(`
+        SELECT j.*,
+          ss.StationName AS SourceStationName, ss.StationCode AS SourceStationCode,
+          ds.StationName AS DestStationName, ds.StationCode AS DestStationCode,
+          u.FullName AS CreatedByName
+        FROM WMS_TransferJobs j
+        LEFT JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
+        LEFT JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID
+        LEFT JOIN WMS_Users u ON j.CreatedBy=u.UserID
+        WHERE j.JobID=@id
+      `),
+      pool.request().input('id', sql.Int, req.params.id).query(`
+        SELECT t.*, u.FullName AS OperatorName
+        FROM WMS_TransferTrips t
+        LEFT JOIN WMS_Users u ON t.OperatorID=u.UserID
+        WHERE t.JobID=@id
+        ORDER BY t.TripNo
+      `)
+    ]);
+    if (!jobResult.recordset[0]) return res.status(404).json({ success: false, message: 'ไม่พบงาน' });
+    res.json({ success: true, job: jobResult.recordset[0], trips: tripsResult.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/jobs', async (req, res) => {
+  try {
+    const { sourceStationId, destStationId, productDesc, plannedBundles, plannedWeightKg, priority, notes } = req.body;
+    if (!sourceStationId || !destStationId || !productDesc) {
+      return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลที่จำเป็น' });
+    }
+    const pool = getPool();
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const seqResult = await pool.request()
+      .query(`SELECT COUNT(*)+1 AS seq FROM WMS_TransferJobs WHERE CAST(CreatedAt AS DATE)=CAST(GETDATE() AS DATE)`);
+    const seq = seqResult.recordset[0].seq.toString().padStart(3, '0');
+    const jobCode = `TF${today}${seq}`;
+
+    const result = await pool.request()
+      .input('code', sql.NVarChar, jobCode)
+      .input('src', sql.Int, sourceStationId)
+      .input('dst', sql.Int, destStationId)
+      .input('prod', sql.NVarChar, productDesc)
+      .input('bundles', sql.Int, plannedBundles || null)
+      .input('weight', sql.Decimal(12, 3), plannedWeightKg || null)
+      .input('priority', sql.NVarChar, priority || 'NORMAL')
+      .input('notes', sql.NVarChar, notes || null)
+      .input('createdBy', sql.Int, req.user.UserID)
+      .query(`
+        INSERT INTO WMS_TransferJobs (JobCode, SourceStationID, DestStationID, ProductDesc, PlannedBundles, PlannedWeightKg, Priority, Notes, CreatedBy)
+        OUTPUT INSERTED.JobID
+        VALUES (@code, @src, @dst, @prod, @bundles, @weight, @priority, @notes, @createdBy)
+      `);
+    res.json({ success: true, jobId: result.recordset[0].JobID, jobCode });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/jobs/:id/status', async (req, res) => {
+  try {
+    const { status } = req.body;
+    const pool = getPool();
+    const completedAt = status === 'COMPLETE' ? ', CompletedAt=GETDATE()' : '';
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('status', sql.NVarChar, status)
+      .query(`UPDATE WMS_TransferJobs SET Status=@status${completedAt} WHERE JobID=@id`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// --- TRIPS ---
+
+router.get('/trips/active', async (req, res) => {
+  try {
+    const pool = getPool();
+    const result = await pool.request()
+      .input('op', sql.Int, req.user.UserID)
+      .query(`
+        SELECT t.*, j.JobCode, j.ProductDesc, j.SourceStationID, j.DestStationID,
+          ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
+          j.PlannedBundles, j.PlannedWeightKg
+        FROM WMS_TransferTrips t
+        JOIN WMS_TransferJobs j ON t.JobID=j.JobID
+        LEFT JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
+        LEFT JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID
+        WHERE t.OperatorID=@op AND t.Status NOT IN ('COMPLETE','CANCELLED')
+        ORDER BY t.CreatedAt DESC
+      `);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/trips', async (req, res) => {
+  try {
+    const { jobId } = req.body;
+    const pool = getPool();
+    const seqResult = await pool.request()
+      .input('jid', sql.Int, jobId)
+      .query('SELECT ISNULL(MAX(TripNo),0)+1 AS nextNo FROM WMS_TransferTrips WHERE JobID=@jid');
+    const tripNo = seqResult.recordset[0].nextNo;
+
+    const result = await pool.request()
+      .input('jid', sql.Int, jobId)
+      .input('no', sql.Int, tripNo)
+      .input('op', sql.Int, req.user.UserID)
+      .query(`
+        INSERT INTO WMS_TransferTrips (JobID, TripNo, OperatorID, Status)
+        OUTPUT INSERTED.TripID
+        VALUES (@jid, @no, @op, 'PENDING')
+      `);
+
+    await pool.request()
+      .input('jid', sql.Int, jobId)
+      .query("UPDATE WMS_TransferJobs SET Status='IN_PROGRESS' WHERE JobID=@jid AND Status='PENDING'");
+
+    res.json({ success: true, tripId: result.recordset[0].TripID, tripNo });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/trips/:id/source-entry', async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query("UPDATE WMS_TransferTrips SET SourceEntryTime=GETDATE(), Status='SOURCE_ENTRY' WHERE TripID=@id AND Status='PENDING'");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/trips/:id/source-exit', async (req, res) => {
+  try {
+    const { bundleCount, totalWeightKg, notes } = req.body;
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('bundles', sql.Int, bundleCount)
+      .input('weight', sql.Decimal(12, 3), totalWeightKg)
+      .input('notes', sql.NVarChar, notes || null)
+      .query(`
+        UPDATE WMS_TransferTrips
+        SET SourceExitTime=GETDATE(), BundleCount=@bundles, TotalWeightKg=@weight, Notes=@notes, Status='SOURCE_EXIT'
+        WHERE TripID=@id AND Status='SOURCE_ENTRY'
+      `);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/trips/:id/dest-entry', async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query("UPDATE WMS_TransferTrips SET DestEntryTime=GETDATE(), Status='DEST_ENTRY' WHERE TripID=@id AND Status='SOURCE_EXIT'");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/trips/:id/dest-exit', async (req, res) => {
+  try {
+    const pool = getPool();
+    const tripResult = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query(`
+        UPDATE WMS_TransferTrips SET DestExitTime=GETDATE(), Status='COMPLETE'
+        OUTPUT INSERTED.JobID, INSERTED.BundleCount, INSERTED.TotalWeightKg
+        WHERE TripID=@id AND Status='DEST_ENTRY'
+      `);
+
+    if (tripResult.recordset.length > 0) {
+      const { JobID, BundleCount, TotalWeightKg } = tripResult.recordset[0];
+      await pool.request()
+        .input('jid', sql.Int, JobID)
+        .input('bundles', sql.Int, BundleCount || 0)
+        .input('weight', sql.Decimal(12, 3), TotalWeightKg || 0)
+        .query(`
+          UPDATE WMS_TransferJobs
+          SET ActualBundles = ISNULL(ActualBundles,0) + @bundles,
+              ActualWeightKg = ISNULL(ActualWeightKg,0) + @weight
+          WHERE JobID=@jid
+        `);
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+module.exports = router;

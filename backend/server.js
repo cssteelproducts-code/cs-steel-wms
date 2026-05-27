@@ -45,6 +45,7 @@ app.use('/api/users', require('./src/routes/users'));
 app.use('/api/alerts', require('./src/routes/alerts'));
 app.use('/api/stock', require('./src/routes/stock'));
 app.use('/api/delivery', require('./src/routes/deliveryPlan'));
+app.use('/api/transfer', require('./src/routes/transfer'));
 
 // Serve React frontend (production build)
 const publicPath = path.join(__dirname, 'public');
@@ -59,6 +60,107 @@ app.use((err, req, res, next) => {
   res.status(500).json({ success: false, message: 'Internal server error' });
 });
 
+const runMigrations = async () => {
+  const { getPool } = require('./src/config/db');
+  const pool = getPool();
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_VehicleTypes') AND name='CutoffHour')
+        ALTER TABLE WMS_VehicleTypes ADD
+          StartHour INT DEFAULT 8,
+          StartMinute INT DEFAULT 0,
+          CutoffHour INT DEFAULT 16,
+          CutoffMinute INT DEFAULT 0;
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_ETAAssignments' AND xtype='U')
+        CREATE TABLE WMS_ETAAssignments (
+          VehicleID NVARCHAR(100) PRIMARY KEY,
+          WarehouseID INT NOT NULL,
+          UpdatedAt DATETIME DEFAULT GETDATE()
+        );
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_ETAVehicles' AND xtype='U')
+        CREATE TABLE WMS_ETAVehicles (
+          VehicleID NVARCHAR(100) PRIMARY KEY,
+          LicensePlate NVARCHAR(50),
+          Label NVARCHAR(100),
+          IsTransport BIT DEFAULT 0,
+          UpdatedAt DATETIME DEFAULT GETDATE()
+        );
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Warehouses') AND name='RadiusKm')
+        ALTER TABLE WMS_Warehouses ADD RadiusKm FLOAT DEFAULT 5;
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferStations' AND xtype='U')
+        CREATE TABLE WMS_TransferStations (
+          StationID INT IDENTITY(1,1) PRIMARY KEY,
+          StationCode NVARCHAR(20) NOT NULL,
+          StationName NVARCHAR(100) NOT NULL,
+          StationType NVARCHAR(10) DEFAULT 'BOTH',
+          IsActive BIT DEFAULT 1,
+          SortOrder INT DEFAULT 0,
+          CreatedAt DATETIME DEFAULT GETDATE()
+        );
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferJobs' AND xtype='U')
+        CREATE TABLE WMS_TransferJobs (
+          JobID INT IDENTITY(1,1) PRIMARY KEY,
+          JobCode NVARCHAR(30) NOT NULL,
+          SourceStationID INT NOT NULL,
+          DestStationID INT NOT NULL,
+          ProductDesc NVARCHAR(500) NOT NULL,
+          PlannedBundles INT NULL,
+          PlannedWeightKg DECIMAL(12,3) NULL,
+          ActualBundles INT NULL,
+          ActualWeightKg DECIMAL(12,3) NULL,
+          Status NVARCHAR(20) DEFAULT 'PENDING',
+          Priority NVARCHAR(10) DEFAULT 'NORMAL',
+          Notes NVARCHAR(500) NULL,
+          CreatedBy INT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE(),
+          CompletedAt DATETIME NULL
+        );
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferTrips' AND xtype='U')
+        CREATE TABLE WMS_TransferTrips (
+          TripID INT IDENTITY(1,1) PRIMARY KEY,
+          JobID INT NOT NULL,
+          TripNo INT NOT NULL,
+          BundleCount INT NULL,
+          TotalWeightKg DECIMAL(12,3) NULL,
+          SourceEntryTime DATETIME NULL,
+          SourceExitTime DATETIME NULL,
+          DestEntryTime DATETIME NULL,
+          DestExitTime DATETIME NULL,
+          Status NVARCHAR(20) DEFAULT 'PENDING',
+          Notes NVARCHAR(500) NULL,
+          OperatorID INT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE()
+        );
+    `);
+    // Ensure TRANSFER permission exists for Admin role
+    await pool.request().query(`
+      IF NOT EXISTS (
+        SELECT 1 FROM WMS_MenuPermissions mp
+        JOIN WMS_Roles r ON mp.RoleID=r.RoleID
+        WHERE r.RoleName='Admin' AND mp.MenuCode='TRANSFER'
+      )
+      INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
+      SELECT r.RoleID, 'TRANSFER', N'ย้ายสินค้าภายใน', 1, 1, 1, 1
+      FROM WMS_Roles r WHERE r.RoleName='Admin';
+    `);
+    console.log('✅ Migrations applied');
+  } catch (e) {
+    console.warn('⚠ Migration warning:', e.message);
+  }
+};
+
 const startServer = () => {
   app.listen(PORT, '0.0.0.0', () => {
     console.log(`\n🚀 CS Steel WMS Server running on port ${PORT}`);
@@ -67,10 +169,12 @@ const startServer = () => {
   });
 
   // Connect to DB after server is listening so healthcheck doesn't time out
-  connectDB().catch(err => {
-    console.error('❌ Database connection failed:', err.message);
-    process.exit(1);
-  });
+  connectDB()
+    .then(runMigrations)
+    .catch(err => {
+      console.error('❌ Database connection failed:', err.message);
+      process.exit(1);
+    });
 };
 
 startServer();

@@ -11,6 +11,7 @@ export default function DataStation() {
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ targetStationId: '', pickDocumentNo: '', notes: '' });
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [search, setSearch] = useState('');
 
   useEffect(() => {
@@ -24,7 +25,7 @@ export default function DataStation() {
     try {
       const res = await api.get('/data-station/pending');
       setPending(res.data.data || []);
-    } catch {}
+    } catch {} finally { setPageLoading(false); }
   };
 
   const fetchStations = async () => {
@@ -60,6 +61,12 @@ export default function DataStation() {
   const filtered = pending.filter(t =>
     t.LicensePlate?.includes(search.toUpperCase()) ||
     t.CustomerName?.includes(search)
+  );
+
+  if (pageLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <LoadingSpinner size="lg" text="กำลังโหลดรายการรอ Data..." />
+    </div>
   );
 
   return (

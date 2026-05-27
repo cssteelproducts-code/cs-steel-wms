@@ -3,6 +3,7 @@ import { Package, LogIn, LogOut, Clock, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatDuration } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function LoadingStation() {
   const [stations, setStations] = useState([]);
@@ -13,6 +14,7 @@ export default function LoadingStation() {
   const [loadingTrips, setLoadingTrips] = useState([]);
   const [tab, setTab] = useState('entry');
   const [submitting, setSubmitting] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     fetchAll();
@@ -34,7 +36,7 @@ export default function LoadingStation() {
       setStations(stRes.data.data || []);
       setStationStatus(statusRes.data.data || []);
       setActiveRecords(activeRes.data.data || []);
-    } catch {}
+    } catch {} finally { setPageLoading(false); }
   };
 
   const fetchActiveForStation = async (stationId) => {
@@ -72,6 +74,12 @@ export default function LoadingStation() {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
     } finally { setSubmitting(false); }
   };
+
+  if (pageLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <LoadingSpinner size="lg" text="กำลังโหลดสถานะสถานี..." />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

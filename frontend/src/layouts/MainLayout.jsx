@@ -2,29 +2,31 @@ import { useState } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import { useLang } from '../context/LanguageContext';
 
-const pageTitles = {
-  '/': 'Dashboard',
-  '/monitor': 'Monitor รถในคลัง',
-  '/weigh-in': 'สถานีชั่งเข้า (ชั่งเบา)',
-  '/data-station': 'สถานี Data (รับเอกสาร)',
-  '/loading-station': 'สถานีขึ้นสินค้า',
-  '/checker': 'สถานีเช็คเกอร์',
-  '/weigh-out': 'สถานีชั่งออก (ชั่งหนัก)',
-  '/eta': 'ETA / ติดตาม GPS รถ',
-  '/users': 'จัดการผู้ใช้งาน',
-  '/master': 'ข้อมูลหลัก',
-  '/reports': 'รายงาน',
-  '/profile': 'โปรไฟล์ / เปลี่ยนรหัสผ่าน',
-  '/alerts': 'การแจ้งเตือน',
-  '/stock': 'สต็อกสินค้า',
-  '/delivery': 'แผนจัดส่ง (VRP)'
+const pageTitleKeys = {
+  '/': 'page.dashboard',
+  '/monitor': 'page.monitor',
+  '/weigh-in': 'page.weighIn',
+  '/data-station': 'page.dataStation',
+  '/loading-station': 'page.loadingStation',
+  '/checker': 'page.checker',
+  '/weigh-out': 'page.weighOut',
+  '/eta': 'page.eta',
+  '/users': 'page.users',
+  '/master': 'page.master',
+  '/profile': 'page.profile',
+  '/alerts': 'page.alerts',
+  '/stock': 'page.stock',
+  '/delivery': 'page.delivery',
 };
 
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
-  const title = pageTitles[location.pathname] || 'CS.Smart WMS';
+  const { t } = useLang();
+  const titleKey = pageTitleKeys[location.pathname];
+  const title = titleKey ? t(titleKey) : 'CS.Smart WMS';
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: '#f0f4f8' }}>

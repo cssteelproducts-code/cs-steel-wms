@@ -142,40 +142,34 @@ router.get('/:id', authenticate, async (req, res) => {
       return res.status(404).json({ success: false, message: 'ไม่พบข้อมูล Trip' });
     }
 
-    const weighIn = await pool.request()
-      .input('TripID', sql.Int, req.params.id)
-      .query(`SELECT wi.*, u.FullName as OperatorName FROM WMS_WeighIn wi
-              LEFT JOIN WMS_Users u ON wi.OperatorID = u.UserID
-              WHERE wi.TripID = @TripID`);
-
-    const dataStation = await pool.request()
-      .input('TripID', sql.Int, req.params.id)
-      .query(`SELECT ds.*, ls.StationName as TargetStation, u.FullName as OperatorName
-              FROM WMS_DataStation ds
-              LEFT JOIN WMS_LoadingStations ls ON ds.TargetStationID = ls.StationID
-              LEFT JOIN WMS_Users u ON ds.OperatorID = u.UserID
-              WHERE ds.TripID = @TripID`);
-
-    const loadingRecords = await pool.request()
-      .input('TripID', sql.Int, req.params.id)
-      .query(`SELECT lr.*, ls.StationName, ls.StationCode, u.FullName as OperatorName
-              FROM WMS_LoadingRecord lr
-              JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
-              LEFT JOIN WMS_Users u ON lr.OperatorID = u.UserID
-              WHERE lr.TripID = @TripID
-              ORDER BY lr.EntryTime`);
-
-    const checker = await pool.request()
-      .input('TripID', sql.Int, req.params.id)
-      .query(`SELECT cr.*, u.FullName as OperatorName FROM WMS_CheckerRecord cr
-              LEFT JOIN WMS_Users u ON cr.OperatorID = u.UserID
-              WHERE cr.TripID = @TripID`);
-
-    const weighOut = await pool.request()
-      .input('TripID', sql.Int, req.params.id)
-      .query(`SELECT wo.*, u.FullName as OperatorName FROM WMS_WeighOut wo
-              LEFT JOIN WMS_Users u ON wo.OperatorID = u.UserID
-              WHERE wo.TripID = @TripID`);
+    const tid = parseInt(req.params.id);
+    const [weighIn, dataStation, loadingRecords, checker, weighOut] = await Promise.all([
+      pool.request().input('TripID', sql.Int, tid)
+        .query(`SELECT wi.*, u.FullName as OperatorName FROM WMS_WeighIn wi
+                LEFT JOIN WMS_Users u ON wi.OperatorID = u.UserID
+                WHERE wi.TripID = @TripID`),
+      pool.request().input('TripID', sql.Int, tid)
+        .query(`SELECT ds.*, ls.StationName as TargetStation, u.FullName as OperatorName
+                FROM WMS_DataStation ds
+                LEFT JOIN WMS_LoadingStations ls ON ds.TargetStationID = ls.StationID
+                LEFT JOIN WMS_Users u ON ds.OperatorID = u.UserID
+                WHERE ds.TripID = @TripID`),
+      pool.request().input('TripID', sql.Int, tid)
+        .query(`SELECT lr.*, ls.StationName, ls.StationCode, u.FullName as OperatorName
+                FROM WMS_LoadingRecord lr
+                JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+                LEFT JOIN WMS_Users u ON lr.OperatorID = u.UserID
+                WHERE lr.TripID = @TripID
+                ORDER BY lr.EntryTime`),
+      pool.request().input('TripID', sql.Int, tid)
+        .query(`SELECT cr.*, u.FullName as OperatorName FROM WMS_CheckerRecord cr
+                LEFT JOIN WMS_Users u ON cr.OperatorID = u.UserID
+                WHERE cr.TripID = @TripID`),
+      pool.request().input('TripID', sql.Int, tid)
+        .query(`SELECT wo.*, u.FullName as OperatorName FROM WMS_WeighOut wo
+                LEFT JOIN WMS_Users u ON wo.OperatorID = u.UserID
+                WHERE wo.TripID = @TripID`),
+    ]);
 
     res.json({
       success: true,

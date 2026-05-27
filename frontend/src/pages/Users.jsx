@@ -1,8 +1,9 @@
 import { useState, useEffect } from 'react';
-import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save } from 'lucide-react';
+import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 const MENUS = [
   { code: 'DASHBOARD', name: 'Dashboard' },
@@ -29,6 +30,8 @@ export default function Users() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [permissions, setPermissions] = useState({});
   const [saving, setSaving] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
+  const [roleForm, setRoleForm] = useState({ roleName: '', description: '' });
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -42,7 +45,7 @@ export default function Users() {
       setUsers(uRes.data.data || []);
       setRoles(rRes.data.data || []);
       setWarehouses(wRes.data.data || []);
-    } catch {}
+    } catch {} finally { setPageLoading(false); }
   };
 
   const fetchPermissions = async (roleId) => {
@@ -99,6 +102,41 @@ export default function Users() {
     } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
   };
 
+  const [editingRole, setEditingRole] = useState(null);
+
+  const openEditRole = (role) => {
+    setEditingRole(role);
+    setRoleForm({ roleName: role.RoleName, description: role.Description || '' });
+    setModal('role');
+  };
+
+  const handleSaveRole = async () => {
+    if (!roleForm.roleName.trim()) return toast.error('กรุณาระบุชื่อบทบาท');
+    setSaving(true);
+    try {
+      const res = editingRole
+        ? await api.put(`/users/roles/${editingRole.RoleID}`, roleForm)
+        : await api.post('/users/roles', roleForm);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setModal(null);
+        setRoleForm({ roleName: '', description: '' });
+        setEditingRole(null);
+        fetchAll();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+    } finally { setSaving(false); }
+  };
+
+  const handleDeleteRole = async (role) => {
+    if (!confirm(`ลบบทบาท "${role.RoleName}" ?`)) return;
+    try {
+      const res = await api.delete(`/users/roles/${role.RoleID}`);
+      if (res.data.success) { toast.success(res.data.message); fetchAll(); }
+    } catch (err) { toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ'); }
+  };
+
   const handleSavePermissions = async () => {
     setSaving(true);
     try {
@@ -116,6 +154,12 @@ export default function Users() {
       [menuCode]: { ...p[menuCode], [action]: p[menuCode]?.[action] ? 0 : 1 }
     }));
   };
+
+  if (pageLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <LoadingSpinner size="lg" text="กำลังโหลดข้อมูลผู้ใช้..." />
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -188,15 +232,34 @@ export default function Users() {
       )}
 
       {tab === 'roles' && (
+        <>
+        <div className="flex justify-end">
+          <button onClick={() => { setRoleForm({ roleName: '', description: '' }); setEditingRole(null); setModal('role'); }}
+            className="btn-primary text-sm">
+            <Plus size={14} />เพิ่มบทบาท
+          </button>
+        </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {roles.map(role => (
             <div key={role.RoleID} className="card hover:border-red-300 transition-all">
-              <div className="flex items-center justify-between mb-3">
+              <div className="flex items-start justify-between mb-3">
                 <div>
                   <h4 className="text-slate-900 font-semibold">{role.RoleName}</h4>
                   <p className="text-slate-500 text-xs mt-0.5">{role.Description}</p>
                 </div>
-                <Shield size={18} className="text-red-400" />
+                <div className="flex items-center gap-1">
+                  <Shield size={16} className="text-red-400" />
+                  <button onClick={() => openEditRole(role)}
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-600 transition-colors"
+                    title="แก้ไขบทบาท">
+                    <Pencil size={14} />
+                  </button>
+                  <button onClick={() => handleDeleteRole(role)}
+                    className="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
+                    title="ลบบทบาท">
+                    <Trash2 size={14} />
+                  </button>
+                </div>
               </div>
               <div className="text-xs text-slate-400 mb-3">
                 {users.filter(u => u.RoleID === role.RoleID).length} ผู้ใช้
@@ -206,6 +269,37 @@ export default function Users() {
               </button>
             </div>
           ))}
+        </div>
+        </>
+      )}
+
+      {/* Add Role Modal */}
+      {modal === 'role' && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-900">{editingRole ? 'แก้ไขบทบาท' : 'เพิ่มบทบาทใหม่'}</h3>
+              <button onClick={() => { setModal(null); setEditingRole(null); }} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="label">ชื่อบทบาท *</label>
+                <input value={roleForm.roleName} onChange={e => setRoleForm(p => ({ ...p, roleName: e.target.value }))}
+                  className="input-field" placeholder="เช่น Supervisor, Driver" />
+              </div>
+              <div>
+                <label className="label">คำอธิบาย</label>
+                <input value={roleForm.description} onChange={e => setRoleForm(p => ({ ...p, description: e.target.value }))}
+                  className="input-field" placeholder="หน้าที่ความรับผิดชอบ..." />
+              </div>
+            </div>
+            <div className="flex gap-3 mt-5">
+              <button onClick={handleSaveRole} disabled={saving} className="btn-primary flex-1">
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึก</>}
+              </button>
+              <button onClick={() => setModal(null)} className="btn-secondary px-6">ยกเลิก</button>
+            </div>
+          </div>
         </div>
       )}
 

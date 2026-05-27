@@ -108,24 +108,22 @@ router.post('/check', async (req, res) => {
             )
         `);
 
-        for (const trip of trips.recordset) {
-          const hrs = Math.floor(trip.MinutesInWarehouse / 60);
-          const mins = trip.MinutesInWarehouse % 60;
-          const t = hrs > 0 ? `${hrs} ชม. ${mins} นาที` : `${mins} นาที`;
-          const msg = `ทะเบียน ${trip.LicensePlate} อยู่ในคลังนาน ${t} (เกินกำหนด ${cfg.ThresholdValue} นาที)`;
-          const severity = trip.MinutesInWarehouse > cfg.ThresholdValue * 2 ? 'CRITICAL' : 'WARNING';
-
-          await pool.request()
-            .input('alertType', sql.NVarChar, 'OVERSTAY')
-            .input('severity', sql.NVarChar, severity)
-            .input('tripId', sql.Int, trip.TripID)
-            .input('warehouseId', sql.Int, trip.WarehouseID)
-            .input('message', sql.NVarChar, msg)
-            .query(`
-              INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message)
-              VALUES (@alertType, @severity, @tripId, @warehouseId, @message)
-            `);
-          newAlerts.push(msg);
+        if (trips.recordset.length > 0) {
+          const batchReq = pool.request();
+          const vals = trips.recordset.map((trip, i) => {
+            const hrs = Math.floor(trip.MinutesInWarehouse / 60);
+            const mins = trip.MinutesInWarehouse % 60;
+            const t = hrs > 0 ? `${hrs} ชม. ${mins} นาที` : `${mins} นาที`;
+            const msg = `ทะเบียน ${trip.LicensePlate} อยู่ในคลังนาน ${t} (เกินกำหนด ${cfg.ThresholdValue} นาที)`;
+            const severity = trip.MinutesInWarehouse > cfg.ThresholdValue * 2 ? 'CRITICAL' : 'WARNING';
+            batchReq.input(`sv${i}`, sql.NVarChar, severity);
+            batchReq.input(`ti${i}`, sql.Int, trip.TripID);
+            batchReq.input(`wi${i}`, sql.Int, trip.WarehouseID);
+            batchReq.input(`ms${i}`, sql.NVarChar, msg);
+            newAlerts.push(msg);
+            return `('OVERSTAY', @sv${i}, @ti${i}, @wi${i}, @ms${i})`;
+          });
+          await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message) VALUES ${vals.join(', ')}`);
         }
       }
 
@@ -145,19 +143,17 @@ router.post('/check', async (req, res) => {
               )
           `);
 
-        for (const trip of trips.recordset) {
-          const msg = `ทะเบียน ${trip.LicensePlate} น้ำหนักสุทธิ ${trip.NetWeight.toFixed(2)} กก. เกินพิกัด ${cfg.ThresholdValue} กก.`;
-          await pool.request()
-            .input('alertType', sql.NVarChar, 'OVERWEIGHT')
-            .input('severity', sql.NVarChar, 'WARNING')
-            .input('tripId', sql.Int, trip.TripID)
-            .input('warehouseId', sql.Int, trip.WarehouseID)
-            .input('message', sql.NVarChar, msg)
-            .query(`
-              INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message)
-              VALUES (@alertType, @severity, @tripId, @warehouseId, @message)
-            `);
-          newAlerts.push(msg);
+        if (trips.recordset.length > 0) {
+          const batchReq = pool.request();
+          const vals = trips.recordset.map((trip, i) => {
+            const msg = `ทะเบียน ${trip.LicensePlate} น้ำหนักสุทธิ ${trip.NetWeight.toFixed(2)} กก. เกินพิกัด ${cfg.ThresholdValue} กก.`;
+            batchReq.input(`ti${i}`, sql.Int, trip.TripID);
+            batchReq.input(`wi${i}`, sql.Int, trip.WarehouseID);
+            batchReq.input(`ms${i}`, sql.NVarChar, msg);
+            newAlerts.push(msg);
+            return `('OVERWEIGHT', 'WARNING', @ti${i}, @wi${i}, @ms${i})`;
+          });
+          await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message) VALUES ${vals.join(', ')}`);
         }
       }
     }

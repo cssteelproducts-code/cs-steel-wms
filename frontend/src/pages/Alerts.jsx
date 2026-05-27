@@ -21,6 +21,7 @@ export default function Alerts() {
   const [configs, setConfigs] = useState([]);
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
   const [showAddConfig, setShowAddConfig] = useState(false);
   const [editingConfig, setEditingConfig] = useState(null);
@@ -81,6 +82,7 @@ export default function Alerts() {
   };
 
   const saveConfig = async () => {
+    setSavingConfig(true);
     try {
       await api.post('/alerts/config', editingConfig
         ? { ...cfgForm, configId: editingConfig.ConfigID }
@@ -89,7 +91,7 @@ export default function Alerts() {
       setShowAddConfig(false);
       setEditingConfig(null);
       fetchConfigs();
-    } catch { toast.error('บันทึกไม่สำเร็จ'); }
+    } catch { toast.error('บันทึกไม่สำเร็จ'); } finally { setSavingConfig(false); }
   };
 
   const startEdit = (cfg) => {
@@ -249,7 +251,10 @@ export default function Alerts() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={saveConfig} className="btn-primary text-sm px-4 py-2">บันทึก</button>
+                <button onClick={saveConfig} disabled={savingConfig} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                  {savingConfig ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : null}
+                  {savingConfig ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
                 <button onClick={() => { setShowAddConfig(false); setEditingConfig(null); }} className="btn-secondary text-sm px-4 py-2">ยกเลิก</button>
               </div>
             </div>

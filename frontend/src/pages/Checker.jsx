@@ -3,6 +3,7 @@ import { CheckSquare, XCircle, CheckCircle, Clock } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function Checker() {
   const [pending, setPending] = useState([]);
@@ -10,6 +11,7 @@ export default function Checker() {
   const [form, setForm] = useState({ isApproved: true, remarks: '' });
   const [submitting, setSubmitting] = useState(false);
   const [loadingRecords, setLoadingRecords] = useState([]);
+  const [pageLoading, setPageLoading] = useState(true);
 
   useEffect(() => {
     fetchPending();
@@ -21,7 +23,7 @@ export default function Checker() {
     try {
       const res = await api.get('/checker/pending');
       setPending(res.data.data || []);
-    } catch {}
+    } catch {} finally { setPageLoading(false); }
   };
 
   const selectTrip = async (trip) => {
@@ -54,6 +56,12 @@ export default function Checker() {
       setSubmitting(false);
     }
   };
+
+  if (pageLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <LoadingSpinner size="lg" text="กำลังโหลดรายการรอตรวจสอบ..." />
+    </div>
+  );
 
   return (
     <div className="space-y-6">

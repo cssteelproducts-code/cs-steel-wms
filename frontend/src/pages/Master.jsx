@@ -18,7 +18,9 @@ export default function Master() {
   const [form, setForm] = useState({});
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [importing, setImporting] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
+  const [selected, setSelected] = useState(new Set());
   // Location search state
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState([]);
@@ -32,10 +34,15 @@ export default function Master() {
     const formData = new FormData();
     formData.append('file', file);
     e.target.value = '';
+    setImporting(true);
     try {
-      const res = await api.post('/master/customers/import', formData, { headers: { 'Content-Type': 'multipart/form-data' } });
+      const res = await api.post('/master/customers/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
       if (res.data.success) { toast.success(res.data.message); fetchData('customers'); }
-    } catch (err) { toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ'); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+    } finally {
+      setImporting(false);
+    }
   };
 
   const handleDownloadTemplate = async () => {
@@ -94,8 +101,12 @@ export default function Master() {
     );
   };
 
-  useEffect(() => { fetchData(tab); }, [tab]);
-  useEffect(() => { fetchWarehouses(); }, []);
+  useEffect(() => { fetchData(tab); setSelected(new Set()); }, [tab]);
+  useEffect(() => {
+    fetchWarehouses();
+    // Pre-fetch all counts for summary
+    ['warehouses', 'customers', 'vehicleTypes', 'loadingStations'].forEach(t => fetchData(t));
+  }, []);
 
   const fetchWarehouses = async () => {
     try {
@@ -165,7 +176,6 @@ export default function Master() {
       if (res.data.success) {
         toast.success(res.data.message);
         setModal(null);
-        setPinConfirm(false);
         fetchData(tab);
         if (tab === 'warehouses') fetchWarehouses();
       }
@@ -194,88 +204,197 @@ export default function Master() {
     }
   };
 
+  const idField = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID' };
+  const endpointMap = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations' };
+
+  const toggleSelect = (id) => setSelected(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  const toggleSelectAll = () => {
+    const items = data[tab] || [];
+    setSelected(selected.size === items.length ? new Set() : new Set(items.map(i => i[idField[tab]])));
+  };
+
+  const handleBulkDelete = async () => {
+    if (!window.confirm(`ยืนยันลบ ${selected.size} รายการที่เลือก?`)) return;
+    const endpoint = endpointMap[tab];
+    let failed = 0;
+    for (const id of selected) {
+      try { await api.delete(`${endpoint}/${id}`); }
+      catch { failed++; }
+    }
+    if (failed) toast.error(`ลบไม่สำเร็จ ${failed} รายการ`);
+    else toast.success(`ลบสำเร็จ ${selected.size} รายการ`);
+    setSelected(new Set());
+    fetchData(tab);
+    if (tab === 'warehouses') fetchWarehouses();
+  };
+
   const getFormPayload = () => {
     switch (tab) {
-      case 'warehouses': return { warehouseCode: form.WarehouseCode || form.warehouseCode, warehouseName: form.WarehouseName || form.warehouseName, location: form.Location || form.location, gpsLat: form.GpsLat || form.gpsLat, gpsLng: form.GpsLng || form.gpsLng, isActive: form.IsActive ?? 1 };
+      case 'warehouses': return { warehouseCode: form.WarehouseCode || form.warehouseCode, warehouseName: form.WarehouseName || form.warehouseName, location: form.Location || form.location, gpsLat: form.GpsLat || form.gpsLat, gpsLng: form.GpsLng || form.gpsLng, isActive: form.IsActive ?? 1, radiusKm: parseFloat(form.RadiusKm ?? form.radiusKm ?? 5) };
       case 'customers': return { customerCode: form.CustomerCode || form.customerCode, customerName: form.CustomerName || form.customerName, phone: form.Phone || form.phone, address: form.Address || form.address, isActive: form.IsActive ?? 1 };
-      case 'vehicleTypes': return { typeName: form.TypeName || form.typeName, description: form.Description || form.description };
+      case 'vehicleTypes': return {
+        typeName: form.TypeName || form.typeName,
+        description: form.Description || form.description,
+        startHour: parseInt(form.StartHour ?? form.startHour ?? 8),
+        startMinute: parseInt(form.StartMinute ?? form.startMinute ?? 0),
+        cutoffHour: parseInt(form.CutoffHour ?? form.cutoffHour ?? 16),
+        cutoffMinute: parseInt(form.CutoffMinute ?? form.cutoffMinute ?? 0),
+      };
       case 'loadingStations': return { stationCode: form.StationCode || form.stationCode, stationName: form.StationName || form.stationName, warehouseId: form.WarehouseID || form.warehouseId, sortOrder: form.SortOrder || form.sortOrder || 0, isActive: form.IsActive ?? 1 };
       default: return form;
     }
   };
 
+  const Checkbox = ({ id, checked, onChange }) => (
+    <input type="checkbox" checked={checked} onChange={onChange}
+      onClick={e => e.stopPropagation()}
+      className="w-4 h-4 rounded accent-red-600 cursor-pointer flex-shrink-0" />
+  );
+
   const renderTable = () => {
     const items = data[tab] || [];
     if (!items.length) return <p className="text-center text-slate-400 py-8">ยังไม่มีข้อมูล</p>;
+    const idf = idField[tab];
+    const allChecked = items.length > 0 && selected.size === items.length;
+
+    const selectAllRow = (
+      <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-gray-50/60 rounded-t-xl">
+        <Checkbox id="all" checked={allChecked} onChange={toggleSelectAll} />
+        <span className="text-xs text-gray-400">เลือกทั้งหมด ({items.length} รายการ)</span>
+      </div>
+    );
 
     switch (tab) {
       case 'warehouses': return (
-        <table className="w-full"><thead><tr className="border-b border-slate-200">
-          <th className="table-header text-left px-4 py-2">รหัส</th>
-          <th className="table-header text-left px-4 py-2">ชื่อคลัง</th>
-          <th className="table-header text-left px-4 py-2 hide-mobile">ที่ตั้ง</th>
-          <th className="table-header text-left px-4 py-2 hide-mobile">GPS</th>
-          <th className="table-header text-center px-4 py-2">สถานะ</th>
-          <th className="table-header px-4 py-2" />
-        </tr></thead><tbody>
-          {items.map(i => <tr key={i.WarehouseID} className="border-b border-slate-100 hover:bg-slate-50">
-            <td className="table-cell font-mono text-blue-600">{i.WarehouseCode}</td>
-            <td className="table-cell text-slate-900 font-medium">{i.WarehouseName}</td>
-            <td className="table-cell hide-mobile text-slate-600">{i.Location || '-'}</td>
-            <td className="table-cell hide-mobile text-xs text-slate-400">{i.GpsLat && i.GpsLng ? `${i.GpsLat}, ${i.GpsLng}` : '-'}</td>
-            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-          </tr>)}
-        </tbody></table>
+        <div className="rounded-xl overflow-hidden border border-gray-100">
+          {selectAllRow}
+          <div className="space-y-0">
+            {items.map(i => {
+              const sel = selected.has(i[idf]);
+              return (
+                <div key={i.WarehouseID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${sel ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                  <Checkbox id={i[idf]} checked={sel} onChange={() => toggleSelect(i[idf])} />
+                  <div className="flex-shrink-0">
+                    <span className="inline-block px-2.5 py-1 rounded-xl text-xs font-bold font-mono" style={{ background: '#eff6ff', color: '#2563eb' }}>{i.WarehouseCode}</span>
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900">{i.WarehouseName}</p>
+                    {i.Location ? (
+                      <p className="text-xs text-gray-400 truncate mt-0.5 max-w-xs" title={i.Location}>
+                        <MapPin size={10} className="inline mr-1 text-gray-300" />
+                        {i.Location.length > 60 ? i.Location.slice(0, 60) + '…' : i.Location}
+                      </p>
+                    ) : <p className="text-xs text-gray-300 mt-0.5">ยังไม่ระบุที่ตั้ง</p>}
+                  </div>
+                  <div className="hide-mobile flex-shrink-0 flex items-center gap-2">
+                    {i.GpsLat && i.GpsLng ? (
+                      <a href={`https://www.google.com/maps?q=${i.GpsLat},${i.GpsLng}`} target="_blank" rel="noreferrer"
+                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium" style={{ background: '#f0fdf4', color: '#16a34a' }}
+                        onClick={e => e.stopPropagation()}>
+                        <MapPin size={10} />{parseFloat(i.GpsLat).toFixed(4)}, {parseFloat(i.GpsLng).toFixed(4)}
+                      </a>
+                    ) : <span className="text-xs text-gray-300">ไม่มี GPS</span>}
+                    {i.RadiusKm != null && (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium" style={{ background: '#fef3c7', color: '#d97706' }}>⊙ {i.RadiusKm} กม.</span>
+                    )}
+                  </div>
+                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+                  <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
+                    <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       );
       case 'customers': return (
-        <table className="w-full"><thead><tr className="border-b border-slate-200">
-          <th className="table-header text-left px-4 py-2">รหัส</th>
-          <th className="table-header text-left px-4 py-2">ชื่อลูกค้า</th>
-          <th className="table-header text-left px-4 py-2 hide-mobile">โทรศัพท์</th>
-          <th className="table-header text-center px-4 py-2">สถานะ</th>
-          <th className="table-header px-4 py-2" />
-        </tr></thead><tbody>
-          {items.map(i => <tr key={i.CustomerID} className="border-b border-slate-100 hover:bg-slate-50">
-            <td className="table-cell font-mono text-blue-600">{i.CustomerCode}</td>
-            <td className="table-cell text-slate-900">{i.CustomerName}</td>
-            <td className="table-cell hide-mobile text-slate-600">{i.Phone || '-'}</td>
-            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-          </tr>)}
-        </tbody></table>
+        <div className="rounded-xl overflow-hidden border border-gray-100">
+          {selectAllRow}
+          <div className="space-y-0">
+            {items.map(i => {
+              const sel = selected.has(i[idf]);
+              return (
+                <div key={i.CustomerID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${sel ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                  <Checkbox id={i[idf]} checked={sel} onChange={() => toggleSelect(i[idf])} />
+                  <span className="flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-bold font-mono" style={{ background: '#eff6ff', color: '#2563eb' }}>{i.CustomerCode}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900">{i.CustomerName}</p>
+                    {i.Address && <p className="text-xs text-gray-400 truncate mt-0.5">{i.Address}</p>}
+                  </div>
+                  {i.Phone && <span className="hide-mobile flex-shrink-0 text-xs text-gray-500 font-medium">{i.Phone}</span>}
+                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+                  <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
+                    <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       );
       case 'vehicleTypes': return (
-        <table className="w-full"><thead><tr className="border-b border-slate-200">
-          <th className="table-header text-left px-4 py-2">ประเภทรถ</th>
-          <th className="table-header text-left px-4 py-2 hide-mobile">รายละเอียด</th>
-          <th className="table-header px-4 py-2" />
-        </tr></thead><tbody>
-          {items.map(i => <tr key={i.TypeID} className="border-b border-slate-100 hover:bg-slate-50">
-            <td className="table-cell text-slate-900 font-medium">{i.TypeName}</td>
-            <td className="table-cell hide-mobile text-slate-500">{i.Description || '-'}</td>
-            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-          </tr>)}
-        </tbody></table>
+        <div className="rounded-xl overflow-hidden border border-gray-100">
+          {selectAllRow}
+          <div className="space-y-0">
+            {items.map(i => {
+              const sel = selected.has(i[idf]);
+              const sh = String(i.StartHour ?? 8).padStart(2,'0');
+              const sm = String(i.StartMinute ?? 0).padStart(2,'0');
+              const ch = String(i.CutoffHour ?? 16).padStart(2,'0');
+              const cm = String(i.CutoffMinute ?? 0).padStart(2,'0');
+              return (
+                <div key={i.TypeID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${sel ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                  <Checkbox id={i[idf]} checked={sel} onChange={() => toggleSelect(i[idf])} />
+                  <div className="flex-shrink-0 w-8 h-8 rounded-xl flex items-center justify-center text-white" style={{ background: 'linear-gradient(135deg,#dc2626,#991b1b)' }}><Truck size={14} /></div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900">{i.TypeName}</p>
+                    {i.Description && <p className="text-xs text-gray-400 mt-0.5">{i.Description}</p>}
+                  </div>
+                  <div className="hide-mobile flex items-center gap-2 flex-shrink-0">
+                    <span className="text-xs text-gray-400">เปิดรับ</span>
+                    <span className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-emerald-50 text-emerald-700">{sh}:{sm}</span>
+                    <span className="text-gray-300">→</span>
+                    <span className="text-xs text-gray-400">ปิด</span>
+                    <span className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-amber-50 text-amber-700">{ch}:{cm}</span>
+                  </div>
+                  <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
+                    <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       );
       case 'loadingStations': return (
-        <table className="w-full"><thead><tr className="border-b border-slate-200">
-          <th className="table-header text-left px-4 py-2">รหัส</th>
-          <th className="table-header text-left px-4 py-2">ชื่อสถานี</th>
-          <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
-          <th className="table-header text-center px-4 py-2">ลำดับ</th>
-          <th className="table-header text-center px-4 py-2">สถานะ</th>
-          <th className="table-header px-4 py-2" />
-        </tr></thead><tbody>
-          {items.map(i => <tr key={i.StationID} className="border-b border-slate-100 hover:bg-slate-50">
-            <td className="table-cell font-mono text-blue-600">{i.StationCode}</td>
-            <td className="table-cell text-slate-900 font-medium">{i.StationName}</td>
-            <td className="table-cell hide-mobile text-slate-600">{i.WarehouseName || '-'}</td>
-            <td className="table-cell text-center text-slate-600">{i.SortOrder}</td>
-            <td className="table-cell text-center"><span className={`text-xs px-2 py-0.5 rounded-full ${i.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>{i.IsActive ? 'ใช้งาน' : 'ปิด'}</span></td>
-            <td className="px-4 py-3 flex gap-1"><button onClick={() => openEdit(i)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700"><Edit size={14} /></button><button onClick={() => handleDelete(i)} className="p-1.5 rounded hover:bg-red-50 text-slate-300 hover:text-red-500"><Trash2 size={14} /></button></td>
-          </tr>)}
-        </tbody></table>
+        <div className="rounded-xl overflow-hidden border border-gray-100">
+          {selectAllRow}
+          <div className="space-y-0">
+            {items.map(i => {
+              const sel = selected.has(i[idf]);
+              return (
+                <div key={i.StationID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${sel ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                  <Checkbox id={i[idf]} checked={sel} onChange={() => toggleSelect(i[idf])} />
+                  <span className="flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-bold font-mono" style={{ background: '#eff6ff', color: '#2563eb' }}>{i.StationCode}</span>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-gray-900">{i.StationName}</p>
+                    {i.WarehouseName && <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1"><Warehouse size={10} />{i.WarehouseName}</p>}
+                  </div>
+                  {i.SortOrder > 0 && <span className="hide-mobile flex-shrink-0 text-xs text-gray-400">ลำดับ {i.SortOrder}</span>}
+                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+                  <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
+                    <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
       );
     }
   };
@@ -366,6 +485,10 @@ export default function Master() {
             <label className="label">GPS Longitude</label>
             <input type="number" step="0.000001" value={form.GpsLng || form.gpsLng || ''} onChange={e => setForm(p => ({ ...p, GpsLng: e.target.value }))} className="input-field" placeholder="100.353664" />
           </div>
+          <div>
+            <label className="label">รัศมีคลัง (กม.) <span className="text-gray-400 font-normal">— รถเข้าถึงถือว่าถึงแล้ว</span></label>
+            <input type="number" step="0.5" min="0.5" value={form.RadiusKm ?? form.radiusKm ?? 5} onChange={e => setForm(p => ({ ...p, RadiusKm: e.target.value }))} className="input-field" placeholder="5" />
+          </div>
         </div>
       </>);
       case 'customers': return (<>
@@ -376,10 +499,40 @@ export default function Master() {
           <div className="col-span-2"><label className="label">ที่อยู่</label><textarea value={form.Address || form.address || ''} onChange={e => setForm(p => ({ ...p, Address: e.target.value }))} className="input-field resize-none" rows={2} /></div>
         </div>
       </>);
-      case 'vehicleTypes': return (<>
-        <div><label className="label">ชื่อประเภทรถ *</label><input value={form.TypeName || form.typeName || ''} onChange={e => setForm(p => ({ ...p, TypeName: e.target.value }))} className="input-field" placeholder="รถ 10 ล้อ" /></div>
-        <div className="mt-3"><label className="label">รายละเอียด</label><input value={form.Description || form.description || ''} onChange={e => setForm(p => ({ ...p, Description: e.target.value }))} className="input-field" /></div>
-      </>);
+      case 'vehicleTypes': return (
+        <div className="space-y-3">
+          <div><label className="label">ชื่อประเภทรถ *</label><input value={form.TypeName || form.typeName || ''} onChange={e => setForm(p => ({ ...p, TypeName: e.target.value }))} className="input-field" placeholder="รถ 10 ล้อ" /></div>
+          <div><label className="label">รายละเอียด</label><input value={form.Description || form.description || ''} onChange={e => setForm(p => ({ ...p, Description: e.target.value }))} className="input-field" /></div>
+          <div className="rounded-2xl p-4 space-y-3" style={{ background: '#fef9f0', border: '1px solid #fde68a' }}>
+            <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5">⏰ ช่วงเวลารับสินค้า (ใช้คำนวณ ในเวลา/นอกเวลา)</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="label text-amber-700">เวลาเปิดรับ</label>
+                <input type="time"
+                  value={`${String(form.StartHour ?? form.startHour ?? 8).padStart(2,'0')}:${String(form.StartMinute ?? form.startMinute ?? 0).padStart(2,'0')}`}
+                  onChange={e => {
+                    const [h, m] = e.target.value.split(':');
+                    setForm(p => ({ ...p, StartHour: parseInt(h), StartMinute: parseInt(m) }));
+                  }}
+                  className="input-field w-full" />
+              </div>
+              <div>
+                <label className="label text-amber-700">เวลาปิดรับ (Cutoff)</label>
+                <input type="time"
+                  value={`${String(form.CutoffHour ?? form.cutoffHour ?? 16).padStart(2,'0')}:${String(form.CutoffMinute ?? form.cutoffMinute ?? 0).padStart(2,'0')}`}
+                  onChange={e => {
+                    const [h, m] = e.target.value.split(':');
+                    setForm(p => ({ ...p, CutoffHour: parseInt(h), CutoffMinute: parseInt(m) }));
+                  }}
+                  className="input-field w-full" />
+              </div>
+            </div>
+            <p className="text-xs text-amber-600">
+              รถที่ชั่งเข้าภายในช่วงเวลานี้ถือเป็น "ในเวลา" นอกจากนี้คือ "นอกเวลา"
+            </p>
+          </div>
+        </div>
+      );
       case 'loadingStations': return (<>
         <div className="grid grid-cols-2 gap-3">
           <div><label className="label">รหัสสถานี *</label><input value={form.StationCode || form.stationCode || ''} onChange={e => setForm(p => ({ ...p, StationCode: e.target.value }))} className="input-field" placeholder="ST001" /></div>
@@ -391,8 +544,31 @@ export default function Master() {
     }
   };
 
+  const summaryItems = [
+    { key: 'warehouses', label: 'คลังสินค้า', unit: 'คลัง', icon: Warehouse, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { key: 'customers', label: 'ลูกค้า', unit: 'ราย', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { key: 'vehicleTypes', label: 'ประเภทรถ', unit: 'ประเภท', icon: Truck, color: 'text-amber-600', bg: 'bg-amber-50' },
+    { key: 'loadingStations', label: 'สถานีขึ้นสินค้า', unit: 'สถานี', icon: Package, color: 'text-red-600', bg: 'bg-red-50' },
+  ];
+
   return (
     <div className="space-y-6">
+      {/* Summary */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+        {summaryItems.map(s => (
+          <button key={s.key} onClick={() => setTab(s.key)}
+            className={`card flex items-center gap-3 py-2.5 px-3 transition-all hover:shadow-md ${tab === s.key ? 'ring-2 ring-red-400' : ''}`}>
+            <div className={`flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg ${s.bg}`}>
+              <s.icon size={13} className={s.color} />
+            </div>
+            <div className="text-left min-w-0">
+              <div className="text-base font-black text-gray-900 leading-tight">{data[s.key]?.length ?? '—'}</div>
+              <div className="text-xs text-gray-400 truncate">{s.label}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+
       <div className="flex flex-wrap gap-2">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
@@ -408,7 +584,13 @@ export default function Master() {
           <div className="flex items-center gap-2">
             {tab === 'customers' && (<>
               <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
-              <button onClick={() => importRef.current?.click()} className="btn-secondary text-sm"><Upload size={14} />นำเข้า Excel</button>
+              <button onClick={() => !importing && importRef.current?.click()} disabled={importing}
+                className="btn-secondary text-sm flex items-center gap-1.5">
+                {importing
+                  ? <><span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />กำลังนำเข้า...</>
+                  : <><Upload size={14} />นำเข้าข้อมูล</>
+                }
+              </button>
               <button onClick={handleDownloadTemplate} className="btn-secondary text-sm"><Download size={14} />Template</button>
             </>)}
             <button onClick={openCreate} className="btn-primary text-sm">
@@ -416,6 +598,16 @@ export default function Master() {
             </button>
           </div>
         </div>
+        {selected.size > 0 && (
+          <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-2xl">
+            <span className="text-sm font-semibold text-red-700">เลือก {selected.size} รายการ</span>
+            <button onClick={handleBulkDelete}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
+              <Trash2 size={12} />ลบที่เลือก
+            </button>
+            <button onClick={() => setSelected(new Set())} className="text-xs text-red-400 hover:text-red-600 transition-colors ml-auto">ยกเลิก</button>
+          </div>
+        )}
         <div className="overflow-x-auto">{renderTable()}</div>
       </div>
 

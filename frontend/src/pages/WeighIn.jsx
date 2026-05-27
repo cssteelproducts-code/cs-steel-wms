@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { Scale, Clock, Search, AlertCircle, CheckCircle, RotateCcw, Truck, Hash } from 'lucide-react';
+import LoadingSpinner from '../components/LoadingSpinner';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatWeight } from '../utils/helpers';
@@ -23,6 +24,7 @@ export default function WeighIn() {
   const [masters, setMasters] = useState({ vehicleTypes: [], warehouses: [], customers: [] });
   const [todayList, setTodayList] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [pageLoading, setPageLoading] = useState(true);
   const [checking, setChecking] = useState(false);
   const [plateCheck, setPlateCheck] = useState(null);
   const [custQuery, setCustQuery] = useState('');
@@ -51,7 +53,7 @@ export default function WeighIn() {
         warehouses: wh.data.data || [],
         customers: cu.data.data || []
       });
-    } catch {}
+    } catch {} finally { setPageLoading(false); }
   };
 
   const fetchTodayList = async () => {
@@ -143,6 +145,12 @@ export default function WeighIn() {
   );
 
   const totalToday = todayList.length;
+
+  if (pageLoading) return (
+    <div className="flex items-center justify-center h-64">
+      <LoadingSpinner size="lg" text="กำลังโหลดข้อมูล..." />
+    </div>
+  );
 
   return (
     <div className="h-full flex flex-col gap-4">

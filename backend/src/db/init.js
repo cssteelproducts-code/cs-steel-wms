@@ -383,7 +383,8 @@ const initDatabase = async () => {
     { code: 'REPORTS', name: 'รายงาน' },
     { code: 'ALERTS', name: 'การแจ้งเตือน' },
     { code: 'STOCK', name: 'สต็อกสินค้า' },
-    { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' }
+    { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' },
+    { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน' }
   ];
 
   const adminRoleRow = await pool.request()

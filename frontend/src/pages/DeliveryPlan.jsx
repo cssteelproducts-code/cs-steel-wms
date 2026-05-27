@@ -24,6 +24,10 @@ export default function DeliveryPlan() {
   const [products, setProducts] = useState([]);
   const [customers, setCustomers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [savingOrder, setSavingOrder] = useState(false);
+  const [savingPlan, setSavingPlan] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [completingRoute, setCompletingRoute] = useState(null);
 
   // Order form
   const [showOrderForm, setShowOrderForm] = useState(false);
@@ -110,6 +114,7 @@ export default function DeliveryPlan() {
 
   const saveOrder = async () => {
     if (!orderForm.warehouseId || !orderForm.requestedDate) { toast.error('กรุณากรอกข้อมูลให้ครบ'); return; }
+    setSavingOrder(true);
     try {
       await api.post('/delivery/orders', orderForm);
       toast.success('สร้างคำสั่งจัดส่งสำเร็จ');
@@ -117,7 +122,7 @@ export default function DeliveryPlan() {
       setOrderForm({ warehouseId: '', customerId: '', productId: '', quantity: '', unit: 'ตัน', deliveryAddress: '', deliveryLat: '', deliveryLng: '', requestedDate: new Date().toISOString().slice(0, 10), timeWindowStart: '08:00', timeWindowEnd: '17:00', notes: '' });
       setCustSearch(''); setCustResults([]);
       fetchOrders();
-    } catch { toast.error('สร้างไม่สำเร็จ'); }
+    } catch { toast.error('สร้างไม่สำเร็จ'); } finally { setSavingOrder(false); }
   };
 
   const cancelOrder = async (id) => {
@@ -128,6 +133,7 @@ export default function DeliveryPlan() {
 
   const savePlan = async () => {
     if (!planForm.warehouseId) { toast.error('กรุณาเลือกคลัง'); return; }
+    setSavingPlan(true);
     try {
       const r = await api.post('/delivery/plans', planForm);
       toast.success(`สร้างแผน ${r.data.planCode} สำเร็จ`);
@@ -135,7 +141,7 @@ export default function DeliveryPlan() {
       fetchPlans();
       fetchPlanDetail(r.data.planId);
       setShowVrpForm(true);
-    } catch { toast.error('สร้างไม่สำเร็จ'); }
+    } catch { toast.error('สร้างไม่สำเร็จ'); } finally { setSavingPlan(false); }
   };
 
   const runVRP = async () => {
@@ -152,15 +158,21 @@ export default function DeliveryPlan() {
   };
 
   const confirmPlan = async () => {
-    await api.put(`/delivery/plans/${planDetail.PlanID}/confirm`);
-    toast.success('ยืนยันแผนจัดส่งแล้ว');
-    fetchPlanDetail(planDetail.PlanID);
+    setConfirming(true);
+    try {
+      await api.put(`/delivery/plans/${planDetail.PlanID}/confirm`);
+      toast.success('ยืนยันแผนจัดส่งแล้ว');
+      fetchPlanDetail(planDetail.PlanID);
+    } catch { toast.error('ยืนยันไม่สำเร็จ'); } finally { setConfirming(false); }
   };
 
   const completeRoute = async (routeId) => {
-    await api.put(`/delivery/routes/${routeId}/complete`);
-    toast.success('บันทึกเส้นทางเสร็จสิ้น');
-    fetchPlanDetail(planDetail.PlanID);
+    setCompletingRoute(routeId);
+    try {
+      await api.put(`/delivery/routes/${routeId}/complete`);
+      toast.success('บันทึกเส้นทางเสร็จสิ้น');
+      fetchPlanDetail(planDetail.PlanID);
+    } catch { toast.error('บันทึกไม่สำเร็จ'); } finally { setCompletingRoute(null); }
   };
 
   const extractProvince = (addr) => {
@@ -329,7 +341,10 @@ export default function DeliveryPlan() {
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={saveOrder} className="btn-primary text-sm px-4 py-2">บันทึก</button>
+                <button onClick={saveOrder} disabled={savingOrder} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                  {savingOrder && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                  {savingOrder ? 'กำลังบันทึก...' : 'บันทึก'}
+                </button>
                 <button onClick={() => setShowOrderForm(false)} className="btn-secondary text-sm px-4 py-2">ยกเลิก</button>
               </div>
             </div>
@@ -397,7 +412,10 @@ export default function DeliveryPlan() {
                       <input value={planForm.notes} onChange={e => setPlanForm(p => ({ ...p, notes: e.target.value }))} className="input-field" /></div>
                   </div>
                   <div className="flex gap-2">
-                    <button onClick={savePlan} className="btn-primary text-sm px-4 py-2">สร้างแผน</button>
+                    <button onClick={savePlan} disabled={savingPlan} className="btn-primary text-sm px-4 py-2 flex items-center gap-1.5">
+                      {savingPlan && <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />}
+                      {savingPlan ? 'กำลังสร้าง...' : 'สร้างแผน'}
+                    </button>
                     <button onClick={() => setShowPlanForm(false)} className="btn-secondary text-sm px-4 py-2">ยกเลิก</button>
                   </div>
                 </div>
@@ -440,8 +458,9 @@ export default function DeliveryPlan() {
                       <Zap size={14} />วางแผนอัตโนมัติ VRP
                     </button>
                     {planDetail.Status === 'DRAFT' && planDetail.routes?.length > 0 && (
-                      <button onClick={confirmPlan} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-medium">
-                        <CheckCircle size={14} />ยืนยันแผน
+                      <button onClick={confirmPlan} disabled={confirming} className="flex items-center gap-1.5 px-3 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm rounded-lg font-medium disabled:opacity-60">
+                        {confirming ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <CheckCircle size={14} />}
+                        {confirming ? 'กำลังยืนยัน...' : 'ยืนยันแผน'}
                       </button>
                     )}
                     {planDetail.routes?.length > 0 && (
@@ -529,8 +548,12 @@ export default function DeliveryPlan() {
                           <span className={`text-xs px-2 py-0.5 rounded-full ${STATUS_STYLE[route.Status] || ''}`}>{STATUS_LABEL[route.Status] || route.Status}</span>
                           {route.Status !== 'COMPLETED' && (
                             <button onClick={e => { e.stopPropagation(); completeRoute(route.RouteID); }}
-                              className="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-1">
-                              <CheckCircle size={11} />เสร็จสิ้น
+                              disabled={completingRoute === route.RouteID}
+                              className="text-xs px-2 py-1 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg flex items-center gap-1 disabled:opacity-60">
+                              {completingRoute === route.RouteID
+                                ? <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                : <CheckCircle size={11} />}
+                              {completingRoute === route.RouteID ? 'กำลังบันทึก...' : 'เสร็จสิ้น'}
                             </button>
                           )}
                           {expandedRoute === route.RouteID ? <ChevronDown size={16} className="text-slate-400" /> : <ChevronRight size={16} className="text-slate-400" />}
