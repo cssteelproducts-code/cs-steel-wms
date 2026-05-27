@@ -283,22 +283,22 @@ export default function WeighIn() {
                   className="input-field w-full py-2.5 text-sm resize-none"
                   rows={2} placeholder="หมายเหตุ (ถ้ามี)" />
               </div>
-            </div>
-          </div>
 
-          {/* Buttons */}
-          <div className="mt-6 grid grid-cols-[1fr_auto] gap-3">
-            <button type="submit" disabled={loading || plateCheck?.inYard}
-              className="py-3.5 rounded-xl text-white font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-50"
-              style={{ background: 'linear-gradient(135deg,#dc2626 0%,#b91c1c 60%,#991b1b 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.3)' }}>
-              {loading
-                ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />กำลังบันทึก...</span>
-                : '✓  บันทึกรับรถ'}
-            </button>
-            <button type="button" onClick={resetForm}
-              className="px-5 py-3.5 rounded-xl text-slate-500 text-sm font-medium flex items-center gap-2 transition-all hover:text-slate-700 bg-slate-100 border border-slate-200 whitespace-nowrap">
-              <RotateCcw size={13} />ล้างข้อมูล
-            </button>
+              {/* Buttons */}
+              <div className="grid grid-cols-[1fr_auto] gap-3 pt-1">
+                <button type="submit" disabled={loading || plateCheck?.inYard}
+                  className="py-3.5 rounded-xl text-white font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-50"
+                  style={{ background: 'linear-gradient(135deg,#dc2626 0%,#b91c1c 60%,#991b1b 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.3)' }}>
+                  {loading
+                    ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />กำลังบันทึก...</span>
+                    : '✓  บันทึกรับรถ'}
+                </button>
+                <button type="button" onClick={resetForm}
+                  className="px-5 py-3.5 rounded-xl text-slate-500 text-sm font-medium flex items-center gap-2 transition-all hover:text-slate-700 bg-slate-100 border border-slate-200 whitespace-nowrap">
+                  <RotateCcw size={13} />ล้างข้อมูล
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>
