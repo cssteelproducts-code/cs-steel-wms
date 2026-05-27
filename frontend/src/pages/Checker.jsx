@@ -81,8 +81,8 @@ export default function Checker() {
     setForm({ remarks: '' });
     setShowRework(false);
     setReworkSelected([]);
-    checkerStartRef.current = new Date();
-    setElapsedSeconds(0);
+    checkerStartRef.current = trip.WeighOutDateTime ? new Date(trip.WeighOutDateTime) : new Date();
+    setElapsedSeconds(Math.floor((new Date() - checkerStartRef.current) / 1000));
     if (timerRef.current) clearInterval(timerRef.current);
     timerRef.current = setInterval(() => {
       setElapsedSeconds(Math.floor((new Date() - checkerStartRef.current) / 1000));

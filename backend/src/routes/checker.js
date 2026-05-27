@@ -80,6 +80,7 @@ router.get('/pending', authenticate, async (req, res) => {
                c.CustomerName,
                ds.PickDocumentNo,
                ls_target.StationName as TargetStation,
+               wo.WeighDateTime as WeighOutDateTime,
                DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
@@ -87,6 +88,7 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
         LEFT JOIN WMS_LoadingStations ls_target ON ds.TargetStationID = ls_target.StationID
+        LEFT JOIN WMS_WeighOut wo ON t.TripID = wo.TripID
         WHERE t.Status = 'Checker'
         AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
         ORDER BY t.CreatedAt ASC
