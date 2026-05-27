@@ -91,7 +91,7 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_WeighOut wo ON t.TripID = wo.TripID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         WHERE t.Status = 'Checker'
-        AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
     res.json({ success: true, data: result.recordset });

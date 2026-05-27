@@ -18,7 +18,6 @@ router.post('/', authenticate, async (req, res) => {
 
     try {
       const tripResult = await transaction.request()
-        .input('TripDate', sql.Date, new Date())
         .input('LicensePlate', sql.NVarChar, licensePlate.toUpperCase().trim())
         .input('VehicleTypeID', sql.Int, vehicleTypeId)
         .input('WarehouseID', sql.Int, warehouseId)
@@ -30,7 +29,7 @@ router.post('/', authenticate, async (req, res) => {
         .query(`
           INSERT INTO WMS_Trips (TripDate, LicensePlate, VehicleTypeID, WarehouseID, CustomerID, DeliveryType, Priority, Status, CreatedBy)
           OUTPUT INSERTED.TripID
-          VALUES (@TripDate, @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Priority, @Status, @CreatedBy)
+          VALUES (CAST(GETDATE() AS DATE), @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Priority, @Status, @CreatedBy)
         `);
 
       const tripId = tripResult.recordset[0].TripID;

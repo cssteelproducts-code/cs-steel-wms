@@ -17,7 +17,7 @@ router.get('/', authenticate, async (req, res) => {
       whereClause += ' AND CAST(t.TripDate AS DATE) = @Date';
       request.input('Date', sql.Date, date);
     } else {
-      whereClause += ' AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)';
+      whereClause += ' AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)';
     }
 
     if (status) {
@@ -118,7 +118,7 @@ router.get('/active', authenticate, async (req, res) => {
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
         LEFT JOIN WMS_LoadingStations ls_target ON ds.TargetStationID = ls_target.StationID
         WHERE t.Status NOT IN ('Complete', 'Cancelled')
-        AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
         ORDER BY t.CreatedAt DESC
       `);
     res.json({ success: true, data: result.recordset });

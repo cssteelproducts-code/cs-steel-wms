@@ -102,14 +102,16 @@ router.get('/pending', authenticate, async (req, res) => {
                ds.PickDocumentNo,
                DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse
         FROM WMS_Trips t
-        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        INNER JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        WHERE t.Status = 'WeighOut'
-        AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
-        ORDER BY t.CreatedAt ASC
+        WHERE t.Status NOT IN ('Complete', 'Cancelled', 'Checker')
+        AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
+        ORDER BY
+          CASE WHEN t.Status = 'WeighOut' THEN 0 ELSE 1 END,
+          t.CreatedAt ASC
       `);
     res.json({ success: true, data: result.recordset });
   } catch (err) {

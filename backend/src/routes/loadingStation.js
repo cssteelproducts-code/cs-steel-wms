@@ -161,7 +161,7 @@ router.get('/active', authenticate, async (req, res) => {
     const pool = getPool();
     const { stationId } = req.query;
 
-    let whereClause = 'WHERE lr.ExitTime IS NULL AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)';
+    let whereClause = 'WHERE lr.ExitTime IS NULL AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)';
     const request = pool.request();
 
     if (stationId) {
