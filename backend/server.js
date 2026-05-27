@@ -154,6 +154,10 @@ const runMigrations = async () => {
           CreatedAt DATETIME DEFAULT GETDATE()
         );
     `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Trips') AND name='DeliveryType')
+        ALTER TABLE WMS_Trips ADD DeliveryType NVARCHAR(20) NULL;
+    `);
     // Ensure TRANSFER permission exists for Admin role
     await pool.request().query(`
       IF NOT EXISTS (
