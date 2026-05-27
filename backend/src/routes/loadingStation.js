@@ -97,6 +97,30 @@ router.put('/exit/:recordId', authenticate, async (req, res) => {
               Notes=@Notes WHERE RecordID=@RecordID`);
 
     const r = record.recordset[0];
+    const tripId = r.TripID;
+
+    // Check if all assigned stations have been exited
+    const remaining = await pool.request()
+      .input('TripID', sql.Int, tripId)
+      .query(`
+        SELECT COUNT(*) as Remaining
+        FROM WMS_DataStationTargets dst
+        WHERE dst.TripID = @TripID
+        AND NOT EXISTS (
+          SELECT 1 FROM WMS_LoadingRecord lr
+          WHERE lr.TripID = dst.TripID
+          AND lr.StationID = dst.StationID
+          AND lr.ExitTime IS NOT NULL
+        )
+      `);
+
+    if (remaining.recordset[0].Remaining > 0) {
+      // Still has stations remaining — return to WaitPick so it shows in entry tab
+      await pool.request()
+        .input('TripID', sql.Int, tripId)
+        .query(`UPDATE WMS_Trips SET Status='WaitPick' WHERE TripID=@TripID AND Status='Loading'`);
+    }
+
     res.json({
       success: true,
       message: `บันทึกออกจากสถานี "${r.StationName}" สำเร็จ | ทะเบียน: ${r.LicensePlate} | เวลาอยู่: ${durationMinutes} นาที`
