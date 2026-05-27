@@ -147,7 +147,7 @@ export default function WeighOut() {
                 </div>
 
                 <div>
-                  <label className="label">น้ำหนักหนัก (Gross Weight) กิโลกรัม *</label>
+                  <label className="label">น้ำหนักหนัก (กก.) *</label>
                   <input type="number" step="0.01" min="0" value={form.grossWeight}
                     onChange={e => setForm(p => ({ ...p, grossWeight: e.target.value }))}
                     className="input-field h-10 text-xl font-bold" placeholder="0.00" required autoFocus />
