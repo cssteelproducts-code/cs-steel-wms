@@ -3,6 +3,10 @@ import { Scale, Clock, Search, AlertCircle, CheckCircle, RotateCcw } from 'lucid
 import LoadingSpinner from '../components/LoadingSpinner';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import { useLang } from '../context/LanguageContext';
+
+const PRIORITY_IDS = ['ปกติ', 'เร่งด่วน', 'ด่วนมาก'];
+const PRIORITY_KEYS = { 'ปกติ': 'priority.normal', 'เร่งด่วน': 'priority.urgent', 'ด่วนมาก': 'priority.veryUrgent' };
 
 const DELIVERY_TYPES = [
   { id: 'CSS', label: 'CSS.' },
@@ -10,13 +14,8 @@ const DELIVERY_TYPES = [
   { id: 'Supplier', label: 'Sup.' }
 ];
 
-const PRIORITY_TYPES = [
-  { id: 'ปกติ', label: 'ปกติ' },
-  { id: 'เร่งด่วน', label: 'เร่งด่วน' },
-  { id: 'ด่วนมาก', label: 'ด่วนมาก' }
-];
-
 export default function WeighIn() {
+  const { t } = useLang();
   const todayStr = new Date().toISOString().slice(0, 10);
   const timeNow = () => new Date().toTimeString().slice(0, 5);
 
@@ -37,9 +36,7 @@ export default function WeighIn() {
   const custTimer = useRef(null);
   const plateTimer = useRef(null);
 
-  useEffect(() => {
-    fetchMasters();
-  }, []);
+  useEffect(() => { fetchMasters(); }, []);
 
   const fetchMasters = async () => {
     try {
@@ -98,11 +95,11 @@ export default function WeighIn() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (plateCheck?.inYard) {
-      toast.error(`ทะเบียน ${form.licensePlate} ยังอยู่ในคลัง`);
+      toast.error(`${t('weighIn.stillInYard')}${form.licensePlate}`);
       return;
     }
-    if (!form.warehouseId) { toast.error('กรุณาเลือกคลังสินค้า'); return; }
-    if (!form.vehicleTypeId) { toast.error('กรุณาเลือกประเภทรถ'); return; }
+    if (!form.warehouseId) { toast.error(t('weighIn.warehouseLabel')); return; }
+    if (!form.vehicleTypeId) { toast.error(t('weighIn.vehicleTypeLabel')); return; }
     setLoading(true);
     try {
       const res = await api.post('/weigh-in', form);
@@ -114,7 +111,7 @@ export default function WeighIn() {
         setCustName('');
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('common.noData'));
     } finally { setLoading(false); }
   };
 
@@ -125,20 +122,20 @@ export default function WeighIn() {
     setCustName('');
   };
 
-  const Pill = ({ item, active, onClick, stretch }) => (
+  const Pill = ({ item, active, onClick, stretch, label }) => (
     <button type="button" onClick={onClick}
       className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all text-center ${stretch ? 'w-full' : ''} ${
         active
           ? 'bg-red-600 border-red-600 text-white shadow-sm'
           : 'bg-white border-slate-200 text-slate-600 hover:border-red-400 hover:text-red-600'
       }`}>
-      {item.label || item.TypeName || item.WarehouseName}
+      {label || item.label || item.TypeName || item.WarehouseName}
     </button>
   );
 
   if (pageLoading) return (
     <div className="flex items-center justify-center h-64">
-      <LoadingSpinner size="lg" text="กำลังโหลดข้อมูล..." />
+      <LoadingSpinner size="lg" text={t('common.loading')} />
     </div>
   );
 
@@ -155,38 +152,35 @@ export default function WeighIn() {
           <div className="w-8 h-8 rounded-xl flex items-center justify-center flex-shrink-0" style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
             <Scale size={16} className="text-white" />
           </div>
-          <span className="font-bold text-slate-900">บันทึกรับรถเข้า</span>
+          <span className="font-bold text-slate-900">{t('weighIn.title')}</span>
         </div>
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-5">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-x-8 gap-y-4 h-full">
 
-            {/* ── LEFT: เวลา / ทะเบียน / ประเภทรถ ── */}
+            {/* LEFT */}
             <div className="space-y-4">
-
-              {/* Date + Time */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <Label>วันที่</Label>
+                  <Label>{t('common.date')}</Label>
                   <div className="rounded-xl px-3 h-10 flex items-center text-sm font-medium text-slate-700 bg-slate-100">{todayStr}</div>
                 </div>
                 <div>
-                  <Label><span className="flex items-center gap-1"><Clock size={10} />เวลาเข้า</span></Label>
+                  <Label><span className="flex items-center gap-1"><Clock size={10} />{t('weighIn.entryTime')}</span></Label>
                   <input type="time" value={form.entryTime}
                     onChange={e => setForm(p => ({ ...p, entryTime: e.target.value }))}
                     className="input-field w-full h-10 text-sm" />
-                  <div className="text-red-400 text-[10px] mt-0.5">แก้ไขได้ก่อนบันทึก</div>
+                  <div className="text-red-400 text-[10px] mt-0.5">{t('weighIn.editBeforeSave')}</div>
                 </div>
               </div>
 
-              {/* License plate */}
               <div>
-                <Label>ทะเบียนรถ *</Label>
+                <Label>{t('weighIn.licensePlateLabel')}</Label>
                 <div className="relative">
                   <input type="text" value={form.licensePlate} onChange={handlePlateChange}
                     className="input-field w-full h-10 text-slate-900 text-xl font-bold tracking-widest uppercase placeholder:text-slate-300 placeholder:font-normal placeholder:text-sm placeholder:tracking-normal"
-                    placeholder="เช่น กข-1234" required />
+                    placeholder={t('weighIn.licensePlatePlaceholder')} required />
                   {checking && (
                     <div className="absolute right-3 top-1/2 -translate-y-1/2">
                       <div className="w-4 h-4 border-2 border-red-400 border-t-transparent rounded-full animate-spin" />
@@ -195,19 +189,18 @@ export default function WeighIn() {
                 </div>
                 {plateCheck?.inYard && (
                   <div className="mt-2 flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-xl p-2.5">
-                    <AlertCircle size={14} /><span className="text-xs font-medium">ยังอยู่ในคลัง! Trip #{plateCheck.trip?.TripID}</span>
+                    <AlertCircle size={14} /><span className="text-xs font-medium">{t('weighIn.stillInYard')} Trip #{plateCheck.trip?.TripID}</span>
                   </div>
                 )}
                 {plateCheck && !plateCheck.inYard && form.licensePlate && (
                   <div className="mt-1.5 flex items-center gap-1 text-emerald-600 text-xs font-medium">
-                    <CheckCircle size={12} />พร้อมบันทึก
+                    <CheckCircle size={12} />{t('weighIn.readyToRecord')}
                   </div>
                 )}
               </div>
 
-              {/* Vehicle type */}
               <div>
-                <Label>ประเภทรถ *</Label>
+                <Label>{t('weighIn.vehicleTypeLabel')}</Label>
                 <div className="grid grid-cols-4 gap-2">
                   {masters.vehicleTypes.map(vt => (
                     <Pill key={vt.TypeID} item={vt} stretch
@@ -218,12 +211,10 @@ export default function WeighIn() {
               </div>
             </div>
 
-            {/* ── RIGHT: คลัง / ขนส่ง / ลูกค้า / หมายเหตุ ── */}
+            {/* RIGHT */}
             <div className="space-y-4">
-
-              {/* Warehouse */}
               <div>
-                <Label>คลังสินค้า *</Label>
+                <Label>{t('weighIn.warehouseLabel')}</Label>
                 <div className="flex flex-wrap gap-2">
                   {masters.warehouses.map(w => (
                     <Pill key={w.WarehouseID} item={w}
@@ -233,21 +224,19 @@ export default function WeighIn() {
                 </div>
               </div>
 
-              {/* Priority */}
               <div>
-                <Label>ความเร่งด่วน</Label>
+                <Label>{t('weighIn.priorityLabel')}</Label>
                 <div className="grid grid-cols-3 gap-2">
-                  {PRIORITY_TYPES.map(pt => (
-                    <Pill key={pt.id} item={pt} stretch
-                      active={form.priority === pt.id}
-                      onClick={() => setForm(p => ({ ...p, priority: pt.id }))} />
+                  {PRIORITY_IDS.map(id => (
+                    <Pill key={id} item={{}} stretch label={t(PRIORITY_KEYS[id])}
+                      active={form.priority === id}
+                      onClick={() => setForm(p => ({ ...p, priority: id }))} />
                   ))}
                 </div>
               </div>
 
-              {/* Delivery type */}
               <div>
-                <Label>ขนส่ง</Label>
+                <Label>{t('weighIn.deliveryLabel')}</Label>
                 <div className="grid grid-cols-3 gap-2">
                   {DELIVERY_TYPES.map(dt => (
                     <Pill key={dt.id} item={dt} stretch
@@ -257,24 +246,22 @@ export default function WeighIn() {
                 </div>
               </div>
 
-              {/* Tare weight */}
               <div>
-                <Label>น้ำหนักเบา (กก.)</Label>
+                <Label>{t('weighIn.tareWeightLabel')}</Label>
                 <input type="number" step="0.01" value={form.tareWeight}
                   onChange={e => setForm(p => ({ ...p, tareWeight: e.target.value }))}
                   className="input-field w-full h-10 text-sm"
                   placeholder="0.00" />
               </div>
 
-              {/* Customer */}
               <div>
-                <Label>ลูกค้า (ARCODE / ชื่อ)</Label>
+                <Label>{t('weighIn.customerLabel')}</Label>
                 <div className="relative">
                   <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input type="text" value={custQuery} onChange={e => handleCustInput(e.target.value)}
                     onBlur={() => setTimeout(() => setShowCustDrop(false), 150)}
                     className="input-field w-full pl-9 pr-3 h-10 text-sm"
-                    placeholder="พิมพ์ ARCODE หรือชื่อลูกค้า" />
+                    placeholder={t('weighIn.customerPlaceholder')} />
                   {showCustDrop && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-44 overflow-y-auto">
                       {custResults.map(c => (
@@ -294,26 +281,24 @@ export default function WeighIn() {
                 )}
               </div>
 
-              {/* Notes */}
               <div>
-                <Label>หมายเหตุ</Label>
+                <Label>{t('common.note')}</Label>
                 <input type="text" value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
                   className="input-field w-full h-10 text-sm"
-                  placeholder="หมายเหตุ (ถ้ามี)" />
+                  placeholder={t('weighIn.notesPlaceholder')} />
               </div>
 
-              {/* Buttons */}
               <div className="grid grid-cols-[1fr_auto] gap-3 pt-1">
                 <button type="submit" disabled={loading || plateCheck?.inYard}
                   className="py-3.5 rounded-xl text-white font-bold text-base tracking-wide transition-all active:scale-[0.98] disabled:opacity-50"
                   style={{ background: 'linear-gradient(135deg,#dc2626 0%,#b91c1c 60%,#991b1b 100%)', boxShadow: '0 4px 18px rgba(185,28,28,0.3)' }}>
                   {loading
-                    ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />กำลังบันทึก...</span>
-                    : '✓  บันทึกรับรถ'}
+                    ? <span className="flex items-center justify-center gap-2"><span className="w-4 h-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />{t('common.saving')}</span>
+                    : t('weighIn.submit')}
                 </button>
                 <button type="button" onClick={resetForm}
                   className="px-5 py-3.5 rounded-xl text-slate-500 text-sm font-medium flex items-center gap-2 transition-all hover:text-slate-700 bg-slate-100 border border-slate-200 whitespace-nowrap">
-                  <RotateCcw size={13} />ล้างข้อมูล
+                  <RotateCcw size={13} />{t('common.clearForm')}
                 </button>
               </div>
             </div>

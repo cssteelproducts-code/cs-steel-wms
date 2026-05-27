@@ -259,8 +259,8 @@ export default function DeliveryPlan() {
           <Route size={14} />แผนจัดส่ง (VRP)
         </button>
         <button onClick={() => { fetchOrders(); fetchPlans(); }}
-          className="ml-auto btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
-          <RefreshCw size={13} />รีเฟรช
+          className="ml-auto p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
+          <RefreshCw size={14} />
         </button>
       </div>
 

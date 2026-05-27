@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { FileText, Check, Clock, HourglassIcon } from 'lucide-react';
+import { FileText, Check, Clock, HourglassIcon, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatDuration } from '../utils/helpers';
@@ -95,7 +95,7 @@ export default function DataStation() {
               <Clock size={18} className="text-purple-500" />
               รออยู่ที่สถานี Data ({pending.length})
             </h3>
-            <button onClick={fetchPending} className="text-blue-500 text-sm hover:text-blue-600">รีเฟรช</button>
+            <button onClick={fetchPending} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors"><RefreshCw size={15} /></button>
           </div>
 
           <div className="space-y-2 max-h-96 overflow-y-auto">

@@ -7,8 +7,8 @@ import toast from 'react-hot-toast';
 
 const FLOW_STEPS = [
   { key: 'WeighIn',  label: 'ชั่งเข้า',       shortLabel: '1.ชั่งเข้า' },
-  { key: 'Data',     label: 'รอเอกสาร Pick',   shortLabel: '2.Pick' },
-  { key: 'WaitPick', label: 'รอเอกสาร Pick',   shortLabel: '3.Pick' },
+  { key: 'Data',     label: 'บันทึกสถานี',     shortLabel: '2.DataStation' },
+  { key: 'WaitPick', label: 'รอเอกสาร Pick',   shortLabel: '3.รอPick' },
   { key: 'Loading',  label: 'ขึ้นสินค้า',      shortLabel: '4.ขึ้นสินค้า' },
   { key: 'WeighOut', label: 'รอชั่งออก',       shortLabel: '5.ชั่งออก' },
   { key: 'Checker',  label: 'เช็คเกอร์',       shortLabel: '6.เช็คเกอร์' },
@@ -62,8 +62,8 @@ export default function TripMonitor() {
             {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
           </p>
         </div>
-        <button onClick={fetchTrips} className="btn-secondary text-sm px-4 py-2 self-start">
-          <RefreshCw size={14} />รีเฟรช
+        <button onClick={fetchTrips} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white self-start">
+          <RefreshCw size={15} />
         </button>
       </div>
 
@@ -125,11 +125,14 @@ export default function TripMonitor() {
                       {trip.WeighInTime && (
                         <div><span className="text-slate-400">ชั่งเข้า:</span> <span className="text-slate-600">{formatDateTime(trip.WeighInTime)}</span></div>
                       )}
+                      {trip.DeliveryType && (
+                        <div><span className="text-slate-400">ขนส่ง:</span> <span className="text-indigo-500 font-medium">{trip.DeliveryType}</span></div>
+                      )}
+                      {trip.Priority && trip.Priority !== 'ปกติ' && (
+                        <div><span className="text-slate-400">ความเร่งด่วน:</span> <span className="text-red-500 font-medium">{trip.Priority}</span></div>
+                      )}
                       {trip.PickDocumentNo && (
                         <div><span className="text-slate-400">เอกสาร:</span> <span className="text-purple-500 font-mono">{trip.PickDocumentNo}</span></div>
-                      )}
-                      {trip.TargetStation && (
-                        <div><span className="text-slate-400">เป้าหมาย:</span> <span className="text-amber-500">{trip.TargetStation}</span></div>
                       )}
                       <div>
                         <span className="text-slate-400">เวลาในคลัง:</span>
@@ -138,6 +141,21 @@ export default function TripMonitor() {
                         </span>
                       </div>
                     </div>
+                    {trip.TargetStations && (
+                      <div className="mt-2 flex flex-wrap gap-1.5 items-center">
+                        <span className="text-slate-400 text-xs">สถานีขึ้นสินค้า:</span>
+                        {trip.TargetStations.split(',').map((entry, i) => {
+                          const [name, done] = entry.split(':');
+                          return (
+                            <span key={i} className={`text-xs px-2 py-0.5 rounded-full border ${done === '1'
+                              ? 'bg-slate-100 border-slate-200 text-slate-400 line-through'
+                              : 'bg-amber-50 border-amber-200 text-amber-700'}`}>
+                              {name}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Progress */}

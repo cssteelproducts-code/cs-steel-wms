@@ -209,8 +209,8 @@ export default function Dashboard() {
 
       {/* Refresh */}
       <div className="flex justify-end">
-        <button onClick={fetchData} className="btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
-          <RefreshCw size={13} />รีเฟรช
+        <button onClick={fetchData} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
+          <RefreshCw size={15} />
         </button>
       </div>
 

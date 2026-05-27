@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Scale, CheckCircle, RefreshCw } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Scale, CheckCircle, RefreshCw, Search, Edit2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatWeight } from '../utils/helpers';
@@ -9,17 +9,29 @@ export default function WeighOut() {
   const [pending, setPending] = useState([]);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ grossWeight: '', notes: '' });
+  const [editForm, setEditForm] = useState({ licensePlate: '', tareWeight: '', entryTime: '', custQuery: '', custName: '', customerId: null });
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState([]);
   const [tab, setTab] = useState('weigh');
   const [pageLoading, setPageLoading] = useState(true);
 
+  // Customer search
+  const [custResults, setCustResults] = useState([]);
+  const [showCustDrop, setShowCustDrop] = useState(false);
+  const [allCustomers, setAllCustomers] = useState([]);
+  const custTimer = useRef(null);
+
   useEffect(() => {
     fetchPending();
     fetchCompleted();
+    fetchCustomers();
     const interval = setInterval(() => { fetchPending(); fetchCompleted(); }, 15000);
     return () => clearInterval(interval);
   }, []);
+
+  const fetchCustomers = async () => {
+    try { const res = await api.get('/master/customers'); setAllCustomers(res.data.data || []); } catch {}
+  };
 
   const fetchPending = async () => {
     try { const res = await api.get('/weigh-out/pending'); setPending(res.data.data || []); } catch {} finally { setPageLoading(false); }
@@ -32,18 +44,58 @@ export default function WeighOut() {
   const selectTrip = (trip) => {
     setSelected(trip);
     setForm({ grossWeight: '', notes: '' });
+    setEditForm({
+      licensePlate: trip.LicensePlate || '',
+      tareWeight: trip.TareWeight != null ? String(trip.TareWeight) : '',
+      entryTime: trip.EntryTime || '',
+      custQuery: trip.CustomerName || '',
+      custName: trip.CustomerName || '',
+      customerId: trip.CustomerID || null,
+    });
+    setCustResults([]);
+    setShowCustDrop(false);
+  };
+
+  const handleCustInput = (val) => {
+    setEditForm(p => ({ ...p, custQuery: val, custName: '', customerId: null }));
+    clearTimeout(custTimer.current);
+    if (!val.trim()) { setCustResults([]); setShowCustDrop(false); return; }
+    custTimer.current = setTimeout(() => {
+      const q = val.toLowerCase();
+      const filtered = allCustomers.filter(c =>
+        c.ARCode?.toLowerCase().includes(q) || c.CustomerName?.toLowerCase().includes(q)
+      ).slice(0, 8);
+      setCustResults(filtered);
+      setShowCustDrop(filtered.length > 0);
+    }, 200);
+  };
+
+  const pickCustomer = (c) => {
+    setEditForm(p => ({ ...p, custQuery: c.ARCode || '', custName: c.CustomerName, customerId: c.CustomerID }));
+    setShowCustDrop(false);
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!selected || !form.grossWeight) return;
     const gross = parseFloat(form.grossWeight);
-    const tare = parseFloat(selected.TareWeight || 0);
+    const tare = parseFloat(editForm.tareWeight || selected.TareWeight || 0);
     const net = gross - tare;
     if (net < 0) { toast.error('น้ำหนักหนักน้อยกว่าน้ำหนักเบา กรุณาตรวจสอบ'); return; }
     setSubmitting(true);
     try {
-      const res = await api.post('/weigh-out', { tripId: selected.TripID, grossWeight: form.grossWeight, notes: form.notes });
+      const payload = {
+        tripId: selected.TripID,
+        grossWeight: form.grossWeight,
+        notes: form.notes,
+      };
+      // Only send overrides if changed
+      if (editForm.licensePlate !== selected.LicensePlate) payload.overrideLicensePlate = editForm.licensePlate;
+      if (String(editForm.tareWeight) !== String(selected.TareWeight ?? '')) payload.overrideTareWeight = editForm.tareWeight;
+      if (editForm.customerId != null && editForm.customerId !== selected.CustomerID) payload.overrideCustomerId = editForm.customerId;
+      if (editForm.entryTime !== (selected.EntryTime || '')) payload.overrideEntryTime = editForm.entryTime;
+
+      const res = await api.post('/weigh-out', payload);
       if (res.data.success) {
         toast.success(res.data.message);
         setSelected(null);
@@ -56,7 +108,7 @@ export default function WeighOut() {
   };
 
   const grossWeight = parseFloat(form.grossWeight || 0);
-  const tareWeight = parseFloat(selected?.TareWeight || 0);
+  const tareWeight = parseFloat(editForm.tareWeight || selected?.TareWeight || 0);
   const netWeight = grossWeight - tareWeight;
 
   if (pageLoading) return (
@@ -78,8 +130,8 @@ export default function WeighOut() {
           <CheckCircle size={14} className="inline mr-1" />เสร็จสิ้นวันนี้ ({completed.length})
         </button>
         <button onClick={() => { fetchPending(); fetchCompleted(); }}
-          className="ml-auto btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
-          <RefreshCw size={13} />รีเฟรช
+          className="ml-auto p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
+          <RefreshCw size={15} />
         </button>
       </div>
 
@@ -98,6 +150,9 @@ export default function WeighOut() {
                     <div>
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
+                      {trip.Status && trip.Status !== 'WeighOut' && (
+                        <span className="ml-2 text-xs bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{trip.Status}</span>
+                      )}
                       <div className="text-slate-500 text-xs mt-1">
                         {trip.VehicleType}{trip.DeliveryType ? ` | ${trip.DeliveryType}` : ''}{trip.WarehouseName ? ` | ${trip.WarehouseName}` : ''}
                       </div>
@@ -130,22 +185,69 @@ export default function WeighOut() {
 
             {selected ? (
               <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4">
-                  <div className="text-cyan-600 text-sm font-medium mb-2">รถที่เลือก</div>
-                  <div className="grid grid-cols-2 gap-2 text-sm">
-                    <div><span className="text-slate-500">ทะเบียน:</span> <span className="text-slate-900 font-bold">{selected.LicensePlate}</span></div>
-                    <div><span className="text-slate-500">น้ำหนักเบา:</span> <span className="text-cyan-600 font-bold">{formatWeight(selected.TareWeight)}</span></div>
-                    <div><span className="text-slate-500">ลูกค้า:</span> <span className="text-slate-900">{selected.CustomerName || '-'}</span></div>
-                    <div><span className="text-slate-500">คลัง:</span> <span className="text-slate-900">{selected.WarehouseName}</span></div>
-                    {selected.PickDocumentNo && (
-                      <div className="col-span-2">
-                        <span className="text-slate-500">เอกสาร:</span>
-                        <span className="text-purple-500 font-mono ml-2">{selected.PickDocumentNo}</span>
+                {/* Editable trip info */}
+                <div className="bg-cyan-50 border border-cyan-200 rounded-lg p-4 space-y-3">
+                  <div className="flex items-center gap-1 text-cyan-600 text-xs font-semibold mb-1">
+                    <Edit2 size={11} />แก้ไขข้อมูลก่อนบันทึก
+                  </div>
+
+                  {/* License plate */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label text-xs">ทะเบียนรถ</label>
+                      <input type="text" value={editForm.licensePlate}
+                        onChange={e => setEditForm(p => ({ ...p, licensePlate: e.target.value.toUpperCase() }))}
+                        className="input-field h-9 text-sm font-bold tracking-widest uppercase" />
+                    </div>
+                    <div>
+                      <label className="label text-xs">น้ำหนักเบา (กก.)</label>
+                      <input type="number" step="0.01" value={editForm.tareWeight}
+                        onChange={e => setEditForm(p => ({ ...p, tareWeight: e.target.value }))}
+                        className="input-field h-9 text-sm" placeholder="0.00" />
+                    </div>
+                  </div>
+
+                  {/* Entry time */}
+                  <div>
+                    <label className="label text-xs">เวลาเข้า (ชั่งเข้า)</label>
+                    <input type="time" value={editForm.entryTime}
+                      onChange={e => setEditForm(p => ({ ...p, entryTime: e.target.value }))}
+                      className="input-field h-9 text-sm w-full" />
+                  </div>
+
+                  {/* Customer */}
+                  <div className="relative">
+                    <label className="label text-xs">ลูกค้า</label>
+                    <div className="relative">
+                      <Search size={13} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                      <input type="text" value={editForm.custQuery}
+                        onChange={e => handleCustInput(e.target.value)}
+                        onBlur={() => setTimeout(() => setShowCustDrop(false), 150)}
+                        className="input-field w-full pl-9 pr-3 h-9 text-sm"
+                        placeholder="ค้นหาลูกค้า..." />
+                      {showCustDrop && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-40 overflow-y-auto">
+                          {custResults.map(c => (
+                            <button key={c.CustomerID} type="button" onMouseDown={() => pickCustomer(c)}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                              <div className="text-sm font-semibold text-slate-900">{c.ARCode}</div>
+                              <div className="text-xs text-slate-500">{c.CustomerName}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                    {editForm.custName && (
+                      <div className="mt-1 text-xs text-cyan-700 px-2 py-1 rounded-lg bg-cyan-50 border border-cyan-200">
+                        {editForm.custName}
                       </div>
                     )}
                   </div>
+
+                  <div className="text-xs text-slate-400 mt-1">{selected.WarehouseName} · #{selected.TripID}</div>
                 </div>
 
+                {/* Gross weight input */}
                 <div>
                   <label className="label">น้ำหนักหนัก (กก.) *</label>
                   <input type="number" step="0.01" min="0" value={form.grossWeight}
@@ -235,7 +337,7 @@ export default function WeighOut() {
                   </tr>
                 ))}
                 {!completed.length && (
-                  <tr><td colSpan={6} className="text-center py-8 text-slate-400">ยังไม่มีรายการเสร็จสิ้นวันนี้</td></tr>
+                  <tr><td colSpan={7} className="text-center py-8 text-slate-400">ยังไม่มีรายการเสร็จสิ้นวันนี้</td></tr>
                 )}
               </tbody>
               {completed.length > 0 && (

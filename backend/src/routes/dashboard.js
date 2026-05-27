@@ -291,24 +291,33 @@ router.get('/live', authenticate, async (req, res) => {
     const pool = getPool();
     const result = await pool.request().query(`
       SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+             t.DeliveryType, t.Priority,
              vt.TypeName as VehicleType,
              w.WarehouseName,
              c.CustomerName,
              wi.TareWeight, wi.WeighDateTime as WeighInTime,
              ds.PickDocumentNo,
-             ls_target.StationName as TargetStation,
-             DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse,
+             DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse,
              (SELECT TOP 1 ls2.StationName
               FROM WMS_LoadingRecord lr2
               JOIN WMS_LoadingStations ls2 ON lr2.StationID = ls2.StationID
-              WHERE lr2.TripID = t.TripID AND lr2.ExitTime IS NULL) as CurrentStation
+              WHERE lr2.TripID = t.TripID AND lr2.ExitTime IS NULL) as CurrentStation,
+             STUFF((
+               SELECT ',' + ls3.StationName + ':' +
+                 CAST(CASE WHEN EXISTS(
+                   SELECT 1 FROM WMS_LoadingRecord lr3
+                   WHERE lr3.TripID = t.TripID AND lr3.StationID = dst2.StationID AND lr3.ExitTime IS NOT NULL
+                 ) THEN 1 ELSE 0 END AS NVARCHAR(1))
+               FROM WMS_DataStationTargets dst2
+               JOIN WMS_LoadingStations ls3 ON dst2.StationID = ls3.StationID
+               WHERE dst2.TripID = t.TripID
+               FOR XML PATH(''), TYPE).value('.','NVARCHAR(MAX)'), 1, 1, '') as TargetStations
       FROM WMS_Trips t
       LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
       LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
       LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
       LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
       LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-      LEFT JOIN WMS_LoadingStations ls_target ON ds.TargetStationID = ls_target.StationID
       WHERE t.Status NOT IN ('Complete','Cancelled')
       AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
       ORDER BY t.CreatedAt DESC

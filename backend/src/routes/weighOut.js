@@ -6,7 +6,7 @@ const { authenticate } = require('../middleware/auth');
 // POST /api/weigh-out - Record weigh-out and complete trip
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { tripId, grossWeight, notes } = req.body;
+    const { tripId, grossWeight, notes, overrideLicensePlate, overrideTareWeight, overrideCustomerId, overrideEntryTime } = req.body;
 
     if (!tripId || !grossWeight) {
       return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
@@ -14,7 +14,6 @@ router.post('/', authenticate, async (req, res) => {
 
     const pool = getPool();
 
-    // Get trip info and tare weight from weigh-in
     const tripInfo = await pool.request()
       .input('TripID', sql.Int, tripId)
       .query(`
@@ -30,13 +29,31 @@ router.post('/', authenticate, async (req, res) => {
     }
 
     const trip = tripInfo.recordset[0];
-    const tareWeight = trip.TareWeight || 0;
-    const netWeight = parseFloat(grossWeight) - parseFloat(tareWeight);
+    const tareWeight = overrideTareWeight != null ? parseFloat(overrideTareWeight) : (parseFloat(trip.TareWeight) || 0);
+    const netWeight = parseFloat(grossWeight) - tareWeight;
+    const licensePlate = overrideLicensePlate?.trim().toUpperCase() || trip.LicensePlate;
 
     const transaction = new sql.Transaction(pool);
     await transaction.begin();
 
     try {
+      // Apply inline edits to source records if overrides provided
+      if (overrideLicensePlate || overrideCustomerId != null || overrideEntryTime) {
+        const upd = transaction.request().input('TripID', sql.Int, tripId);
+        let setClauses = [];
+        if (overrideLicensePlate) { upd.input('LP', sql.NVarChar, licensePlate); setClauses.push('LicensePlate=@LP'); }
+        if (overrideCustomerId != null) { upd.input('CID', sql.Int, overrideCustomerId || null); setClauses.push('CustomerID=@CID'); }
+        if (setClauses.length) await upd.query(`UPDATE WMS_Trips SET ${setClauses.join(',')} WHERE TripID=@TripID`);
+      }
+
+      if (overrideTareWeight != null || overrideEntryTime) {
+        const wUpd = transaction.request().input('WTID', sql.Int, tripId);
+        let wSet = [];
+        if (overrideTareWeight != null) { wUpd.input('TW', sql.Decimal(10, 2), tareWeight); wSet.push('TareWeight=@TW'); }
+        if (overrideEntryTime) { wUpd.input('ET', sql.NVarChar, overrideEntryTime); wSet.push('EntryTime=@ET'); }
+        if (wSet.length) await wUpd.query(`UPDATE WMS_WeighIn SET ${wSet.join(',')} WHERE TripID=@WTID`);
+      }
+
       await transaction.request()
         .input('TripID', sql.Int, tripId)
         .input('WeighDateTime', sql.DateTime, new Date())
@@ -56,13 +73,8 @@ router.post('/', authenticate, async (req, res) => {
 
       res.json({
         success: true,
-        message: `ชั่งออกสำเร็จ | ทะเบียน: ${trip.LicensePlate} | น้ำหนักสุทธิ: ${netWeight.toFixed(2)} กก.`,
-        data: {
-          tripId,
-          grossWeight,
-          tareWeight,
-          netWeight: parseFloat(netWeight.toFixed(2))
-        }
+        message: `ชั่งออกสำเร็จ | ทะเบียน: ${licensePlate} | น้ำหนักสุทธิ: ${netWeight.toFixed(2)} กก.`,
+        data: { tripId, grossWeight, tareWeight, netWeight: parseFloat(netWeight.toFixed(2)) }
       });
     } catch (err) {
       await transaction.rollback();
@@ -74,27 +86,29 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/weigh-out/pending - Get trips waiting for weigh-out
+// GET /api/weigh-out/pending - Get all weighed-in vehicles not yet weighed-out
 router.get('/pending', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
       .query(`
         SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-               t.DeliveryType,
+               t.DeliveryType, t.CustomerID,
                vt.TypeName as VehicleType,
                w.WarehouseName,
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
+               wi.EntryTime,
                ds.PickDocumentNo,
                DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse
         FROM WMS_Trips t
+        INNER JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        WHERE t.Status = 'WeighOut'
+        WHERE t.Status NOT IN ('Complete')
+        AND NOT EXISTS (SELECT 1 FROM WMS_WeighOut wo WHERE wo.TripID = t.TripID)
         AND CAST(t.TripDate AS DATE) = CAST(GETDATE() AS DATE)
         ORDER BY t.CreatedAt ASC
       `);

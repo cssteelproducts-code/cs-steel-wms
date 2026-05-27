@@ -174,8 +174,8 @@ export default function Users() {
           <Shield size={14} className="inline mr-1" />บทบาท / สิทธิ์
         </button>
         <button onClick={fetchAll}
-          className="ml-auto btn-secondary text-sm px-3 py-1.5 flex items-center gap-1.5">
-          <RefreshCw size={13} />รีเฟรช
+          className="ml-auto p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
+          <RefreshCw size={14} />
         </button>
       </div>
 

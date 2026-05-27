@@ -140,8 +140,8 @@ export default function Alerts() {
                 </button>
               )}
               <button onClick={fetchAlerts}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-600 text-sm rounded-lg transition-colors hover:bg-slate-50">
-                <RefreshCw size={13} />รีเฟรช
+                className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
+                <RefreshCw size={14} />
               </button>
             </div>
           </div>
