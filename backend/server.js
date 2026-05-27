@@ -158,6 +158,10 @@ const runMigrations = async () => {
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Trips') AND name='DeliveryType')
         ALTER TABLE WMS_Trips ADD DeliveryType NVARCHAR(20) NULL;
     `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Trips') AND name='Priority')
+        ALTER TABLE WMS_Trips ADD Priority NVARCHAR(20) NULL DEFAULT N'ปกติ';
+    `);
     // Set on-time windows per vehicle type — only if still at default (8), so UI changes are preserved
     await pool.request().query(`
       UPDATE WMS_VehicleTypes SET StartHour=6,StartMinute=0,CutoffHour=16,CutoffMinute=0 WHERE TypeName LIKE N'%4 ล้อ%'   AND StartHour=8 AND CutoffHour=16;

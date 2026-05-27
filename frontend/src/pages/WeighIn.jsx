@@ -10,13 +10,19 @@ const DELIVERY_TYPES = [
   { id: 'Supplier', label: 'Sup.' }
 ];
 
+const PRIORITY_TYPES = [
+  { id: 'ปกติ', label: 'ปกติ' },
+  { id: 'เร่งด่วน', label: 'เร่งด่วน' },
+  { id: 'ด่วนมาก', label: 'ด่วนมาก' }
+];
+
 export default function WeighIn() {
   const todayStr = new Date().toISOString().slice(0, 10);
   const timeNow = () => new Date().toTimeString().slice(0, 5);
 
   const [form, setForm] = useState({
     licensePlate: '', vehicleTypeId: '', warehouseId: '',
-    customerId: '', deliveryType: '', tareWeight: '',
+    customerId: '', deliveryType: '', priority: 'ปกติ', tareWeight: '',
     entryTime: timeNow(), notes: ''
   });
   const [masters, setMasters] = useState({ vehicleTypes: [], warehouses: [], customers: [] });
@@ -102,7 +108,7 @@ export default function WeighIn() {
       const res = await api.post('/weigh-in', form);
       if (res.data.success) {
         toast.success(res.data.message);
-        setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', tareWeight: '', entryTime: timeNow(), notes: '' });
+        setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', priority: 'ปกติ', tareWeight: '', entryTime: timeNow(), notes: '' });
         setPlateCheck(null);
         setCustQuery('');
         setCustName('');
@@ -113,7 +119,7 @@ export default function WeighIn() {
   };
 
   const resetForm = () => {
-    setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', tareWeight: '', entryTime: timeNow(), notes: '' });
+    setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', priority: 'ปกติ', tareWeight: '', entryTime: timeNow(), notes: '' });
     setPlateCheck(null);
     setCustQuery('');
     setCustName('');
@@ -223,6 +229,18 @@ export default function WeighIn() {
                     <Pill key={w.WarehouseID} item={w}
                       active={String(form.warehouseId) === String(w.WarehouseID)}
                       onClick={() => setForm(p => ({ ...p, warehouseId: w.WarehouseID }))} />
+                  ))}
+                </div>
+              </div>
+
+              {/* Priority */}
+              <div>
+                <Label>ความเร่งด่วน</Label>
+                <div className="grid grid-cols-3 gap-2">
+                  {PRIORITY_TYPES.map(pt => (
+                    <Pill key={pt.id} item={pt} stretch
+                      active={form.priority === pt.id}
+                      onClick={() => setForm(p => ({ ...p, priority: pt.id }))} />
                   ))}
                 </div>
               </div>

@@ -6,7 +6,7 @@ const { authenticate } = require('../middleware/auth');
 // POST /api/weigh-in - Create new trip + weigh-in record
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { licensePlate, vehicleTypeId, warehouseId, customerId, deliveryType, tareWeight, notes } = req.body;
+    const { licensePlate, vehicleTypeId, warehouseId, customerId, deliveryType, priority, tareWeight, notes } = req.body;
 
     if (!licensePlate || !vehicleTypeId || !warehouseId) {
       return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
@@ -24,12 +24,13 @@ router.post('/', authenticate, async (req, res) => {
         .input('WarehouseID', sql.Int, warehouseId)
         .input('CustomerID', sql.Int, customerId || null)
         .input('DeliveryType', sql.NVarChar, deliveryType || null)
+        .input('Priority', sql.NVarChar, priority || 'ปกติ')
         .input('Status', sql.NVarChar, 'Data')
         .input('CreatedBy', sql.Int, req.user.UserID)
         .query(`
-          INSERT INTO WMS_Trips (TripDate, LicensePlate, VehicleTypeID, WarehouseID, CustomerID, DeliveryType, Status, CreatedBy)
+          INSERT INTO WMS_Trips (TripDate, LicensePlate, VehicleTypeID, WarehouseID, CustomerID, DeliveryType, Priority, Status, CreatedBy)
           OUTPUT INSERTED.TripID
-          VALUES (@TripDate, @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Status, @CreatedBy)
+          VALUES (@TripDate, @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Priority, @Status, @CreatedBy)
         `);
 
       const tripId = tripResult.recordset[0].TripID;

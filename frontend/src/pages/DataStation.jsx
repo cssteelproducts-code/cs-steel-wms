@@ -163,7 +163,7 @@ export default function DataStation() {
 
               <div>
                 <label className="label">สถานีที่ต้องไป <span className="text-slate-400 font-normal">(เลือกได้หลายสถานี)</span></label>
-                <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-80 overflow-y-auto">
+                <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-60 overflow-y-auto">
                   {stations.length === 0 ? (
                     <p className="text-slate-400 text-xs p-3">ยังไม่มีสถานี — เพิ่มในเมนูข้อมูลหลัก</p>
                   ) : stations.map(s => {
