@@ -1,5 +1,18 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, Component } from 'react';
 import { Settings, Plus, Edit, Trash2, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
+
+class MapErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { error: false }; }
+  static getDerivedStateFromError() { return { error: true }; }
+  render() {
+    if (this.state.error) return (
+      <div className="flex items-center justify-center h-full bg-slate-50 rounded-xl border border-slate-200 text-slate-400 text-sm">
+        ไม่สามารถโหลดแผนที่ได้ — กรอก GPS ด้วยตนเอง
+      </div>
+    );
+    return this.props.children;
+  }
+}
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import L from 'leaflet';
@@ -374,11 +387,12 @@ export default function Master() {
               <MapPin size={13} className="text-red-500" />
               แผนที่ — ลากหมุดแดงหรือคลิกบนแผนที่เพื่อตั้งตำแหน่ง
             </label>
+            <MapErrorBoundary>
             <div className="rounded-xl overflow-hidden border border-slate-200" style={{ height: 240 }}>
               <MapContainer
                 center={[parseFloat(form.GpsLat || form.gpsLat) || 13.5792, parseFloat(form.GpsLng || form.gpsLng) || 100.3534]}
                 zoom={parseFloat(form.GpsLat || form.gpsLat) ? 15 : 11}
-                style={{ height: '100%', width: '100%' }}
+                style={{ height: '240px', width: '100%' }}
                 scrollWheelZoom
               >
                 <TileLayer
@@ -394,6 +408,7 @@ export default function Master() {
                 <MapClickHandler onClick={handleMapMove} />
               </MapContainer>
             </div>
+            </MapErrorBoundary>
             <p className="text-[11px] mt-1 text-slate-400">
               ลากหมุดสีแดง หรือคลิกบนแผนที่ เพื่อเลือกตำแหน่ง · ที่อยู่จะดึงอัตโนมัติ
             </p>
