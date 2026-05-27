@@ -401,7 +401,7 @@ export default function Master() {
           <div className="flex items-center gap-2">
             {tab === 'customers' && (<>
               <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
-              <button onClick={() => importRef.current?.click()} className="btn-secondary text-sm"><Upload size={14} />Import Excel</button>
+              <button onClick={() => importRef.current?.click()} className="btn-secondary text-sm"><Upload size={14} />นำเข้า Excel</button>
               <button onClick={handleDownloadTemplate} className="btn-secondary text-sm"><Download size={14} />Template</button>
             </>)}
             <button onClick={openCreate} className="btn-primary text-sm">

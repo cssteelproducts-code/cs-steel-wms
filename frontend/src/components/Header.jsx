@@ -1,12 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useLang } from '../context/LanguageContext';
+import { FLAGS } from './FlagIcons';
 import { Menu, LogOut, User } from 'lucide-react';
 import AlertBell from './AlertBell';
 import dayjs from 'dayjs';
 
+const LANGS = [
+  { code: 'th', label: 'ไทย' },
+  { code: 'en', label: 'EN' },
+  { code: 'my', label: 'MM' },
+];
+
 export default function Header({ onMenuClick, title }) {
   const { user, logout } = useAuth();
+  const { lang, changeLang } = useLang();
   const navigate = useNavigate();
   const [showProfile, setShowProfile] = useState(false);
   const [time, setTime] = useState(dayjs().format('HH:mm:ss'));
@@ -44,6 +53,25 @@ export default function Header({ onMenuClick, title }) {
           <span className="text-sm font-medium" style={{ color: '#64748b' }}>
             {dayjs().format('DD/MM/YYYY')}
           </span>
+        </div>
+
+        {/* Language switcher */}
+        <div className="flex items-center gap-1 h-9 px-2 rounded-xl" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+          {LANGS.map(({ code, label }) => {
+            const Flag = FLAGS[code];
+            const active = lang === code;
+            return (
+              <button
+                key={code}
+                onClick={() => changeLang(code)}
+                title={label}
+                className="flex items-center gap-1 px-1.5 py-1 rounded-lg transition-all"
+                style={active ? { background: '#fff', boxShadow: '0 1px 4px rgba(0,0,0,0.10)', color: '#0f172a' } : { color: '#94a3b8' }}
+              >
+                <Flag size={0.85} />
+              </button>
+            );
+          })}
         </div>
 
         {/* Profile dropdown */}

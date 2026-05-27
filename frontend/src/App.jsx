@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { LanguageProvider } from './context/LanguageContext';
 import MainLayout from './layouts/MainLayout';
 import LoadingSpinner from './components/LoadingSpinner';
 
@@ -77,6 +78,7 @@ function AppRoutes() {
 export default function App() {
   return (
     <BrowserRouter>
+      <LanguageProvider>
       <AuthProvider>
         <AppRoutes />
         <Toaster
@@ -95,6 +97,7 @@ export default function App() {
           }}
         />
       </AuthProvider>
+      </LanguageProvider>
     </BrowserRouter>
   );
 }
