@@ -284,6 +284,55 @@ export default function Dashboard() {
         )}
       </div>
 
+      {/* ประเภทขนส่ง */}
+      <div className="card">
+        <SectionHeader title="ประเภทขนส่ง" sectionKey="delivery" collapsed={collapsed.delivery} onToggle={toggleSection} />
+        {!collapsed.delivery && (() => {
+          const TYPES = [
+            { key: 'CSS',      label: 'CSS.',  color: 'text-red-600',     bar: 'bg-red-400' },
+            { key: 'Customer', label: 'Cust.', color: 'text-blue-600',    bar: 'bg-blue-400' },
+            { key: 'Supplier', label: 'Sup.',  color: 'text-emerald-600', bar: 'bg-emerald-400' },
+          ];
+          const stats = data?.deliveryTypeStats || [];
+          const periods = [
+            { label: 'วันนี้',    key: 'TodayCount' },
+            { label: 'เดือนนี้', key: 'MonthCount' },
+            { label: 'ปีนี้',    key: 'YearCount' },
+          ];
+          return (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {periods.map(p => {
+                const total = stats.reduce((s, r) => s + (r[p.key] || 0), 0);
+                return (
+                  <div key={p.key} className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3">{p.label}</p>
+                    <div className="space-y-2.5">
+                      {TYPES.map(t => {
+                        const row = stats.find(r => r.DeliveryType === t.key);
+                        const count = row?.[p.key] || 0;
+                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                        return (
+                          <div key={t.key}>
+                            <div className="flex items-center justify-between mb-1">
+                              <span className={`text-sm font-semibold ${t.color}`}>{t.label}</span>
+                              <span className={`text-sm font-bold ${t.color}`}>{count}</span>
+                            </div>
+                            <div className="w-full h-1.5 rounded-full bg-slate-200">
+                              <div className={`h-1.5 rounded-full transition-all ${t.bar}`}
+                                style={{ width: `${pct}%` }} />
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })()}
+      </div>
+
       {/* ในเวลา / นอกเวลา */}
       <div className="card">
         <SectionHeader title="ในเวลา / นอกเวลา" sectionKey="ontime" collapsed={collapsed.ontime} onToggle={toggleSection} />

@@ -54,7 +54,7 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
           style={{ borderBottom: '1px solid #f3f4f6' }}>
           <div className="flex-1 flex justify-center">
-            <img src={logoImg} alt="CS.Smart" className="h-10 w-auto object-contain" />
+            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 60 }} />
           </div>
           <button onClick={onClose} className="lg:hidden text-gray-400 hover:text-gray-700 p-1.5 rounded-xl hover:bg-gray-100 transition-colors">
             <X size={15} />

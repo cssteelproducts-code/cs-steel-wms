@@ -12,7 +12,7 @@ router.get('/summary', authenticate, async (req, res) => {
       todayStats, weightStats, statusFlow, avgTime, recentActivity,
       stationLoad, weeklyTrend, tripCounts, weightHistory,
       vehicleTypesToday, onTimeStats, vtBreakdownMonth, vtBreakdownYear,
-      incompleteLoading, completedToday
+      incompleteLoading, completedToday, deliveryTypeStats
     ] = await Promise.all([
       pool.request().query(`
         SELECT
@@ -173,6 +173,16 @@ router.get('/summary', authenticate, async (req, res) => {
         LEFT JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
         WHERE t.Status='Complete' AND CAST(t.CompletedAt AS DATE)=CAST(GETDATE() AS DATE)
         ORDER BY t.CompletedAt DESC
+      `),
+      pool.request().query(`
+        SELECT
+          ISNULL(DeliveryType,'') as DeliveryType,
+          SUM(CASE WHEN CAST(TripDate AS DATE)=CAST(GETDATE() AS DATE) THEN 1 ELSE 0 END) as TodayCount,
+          SUM(CASE WHEN YEAR(TripDate)=YEAR(GETDATE()) AND MONTH(TripDate)=MONTH(GETDATE()) THEN 1 ELSE 0 END) as MonthCount,
+          SUM(CASE WHEN YEAR(TripDate)=YEAR(GETDATE()) THEN 1 ELSE 0 END) as YearCount
+        FROM WMS_Trips
+        WHERE DeliveryType IS NOT NULL AND DeliveryType != ''
+        GROUP BY DeliveryType
       `)
     ]);
 
@@ -193,7 +203,8 @@ router.get('/summary', authenticate, async (req, res) => {
         vtBreakdownMonth: vtBreakdownMonth.recordset,
         vtBreakdownYear: vtBreakdownYear.recordset,
         incompleteLoading: incompleteLoading.recordset,
-        completedToday: completedToday.recordset
+        completedToday: completedToday.recordset,
+        deliveryTypeStats: deliveryTypeStats.recordset
       }
     });
   } catch (err) {
