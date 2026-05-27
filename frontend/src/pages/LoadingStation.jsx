@@ -40,7 +40,7 @@ export default function LoadingStation() {
       if (activeRes.status === 'fulfilled') setActiveRecords(activeRes.value.data.data || []);
       if (tripsRes.status === 'fulfilled') {
         const all = tripsRes.value.data.data || [];
-        setLoadingTrips(all.filter(t => t.Status === 'WaitPick'));
+        setLoadingTrips(all.filter(t => t.Status === 'WaitPick' && t.DataStationID));
         setLoadingDoneTrips(all.filter(t => t.Status === 'Loading'));
       }
     } finally { setPageLoading(false); }
@@ -50,7 +50,7 @@ export default function LoadingStation() {
     try {
       const res = await api.get('/trips/active');
       const all = res.data.data || [];
-      setLoadingTrips(all.filter(t => t.Status === 'WaitPick'));
+      setLoadingTrips(all.filter(t => t.Status === 'WaitPick' && t.DataStationID));
       setLoadingDoneTrips(all.filter(t => t.Status === 'Loading'));
     } catch {}
   };
@@ -101,44 +101,6 @@ export default function LoadingStation() {
 
   return (
     <div className="space-y-6">
-      {/* Station status overview */}
-      <div className="card">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="card-header mb-0">สถานะสถานีขึ้นสินค้า</h3>
-          <button onClick={fetchAll} className="btn-secondary text-sm px-3 py-1.5">
-            <RefreshCw size={13} />รีเฟรช
-          </button>
-        </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
-          {stationStatus.map(s => (
-            <div key={s.StationID}
-              className={`p-3 rounded-lg border text-center cursor-pointer transition-all
-                ${s.ActiveTrucks > 0
-                  ? 'border-amber-300 bg-amber-50'
-                  : 'border-emerald-200 bg-emerald-50'}`}
-              onClick={() => setSelectedStation(String(s.StationID))}>
-              <div className="text-xs text-slate-500 mb-1">{s.StationName}</div>
-              {s.ActiveTrucks > 0 ? (
-                <>
-                  <div className="text-amber-500 font-bold text-lg">{s.ActiveTrucks}</div>
-                  <div className="text-amber-500 text-xs">คันอยู่ในสถานี</div>
-                  {s.CurrentTruck && (
-                    <div className="text-slate-700 text-xs mt-1 font-medium">{s.CurrentTruck}</div>
-                  )}
-                </>
-              ) : (
-                <div className="text-emerald-600 text-sm font-medium">✓ ว่าง</div>
-              )}
-            </div>
-          ))}
-          {!stationStatus.length && (
-            <div className="col-span-full text-center text-slate-400 py-4">
-              ยังไม่มีสถานีที่กำหนด กรุณาเพิ่มในเมนู "ข้อมูลหลัก"
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Tabs */}
       <div className="flex gap-2">
         <button onClick={() => setTab('entry')}

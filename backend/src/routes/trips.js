@@ -96,7 +96,7 @@ router.get('/active', authenticate, async (req, res) => {
                w.WarehouseName,
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
-               ds.PickDocumentNo, ds.TargetStationID,
+               ds.DataStationID, ds.PickDocumentNo, ds.TargetStationID,
                ls_target.StationName as TargetStation,
                DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse,
                (SELECT TOP 1 StationName FROM WMS_LoadingStations ls
