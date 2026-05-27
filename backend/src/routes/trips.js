@@ -98,6 +98,13 @@ router.get('/active', authenticate, async (req, res) => {
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
                ds.DataStationID, ds.PickDocumentNo, ds.TargetStationID,
                ls_target.StationName as TargetStation,
+               (SELECT COUNT(*) FROM WMS_DataStationTargets dst2
+                WHERE dst2.TripID = t.TripID
+                AND NOT EXISTS (
+                  SELECT 1 FROM WMS_LoadingRecord lr2
+                  WHERE lr2.TripID = dst2.TripID AND lr2.StationID = dst2.StationID
+                  AND lr2.ExitTime IS NOT NULL
+                )) as RemainingStations,
                DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse,
                (SELECT TOP 1 StationName FROM WMS_LoadingStations ls
                 JOIN WMS_LoadingRecord lr ON ls.StationID = lr.StationID
