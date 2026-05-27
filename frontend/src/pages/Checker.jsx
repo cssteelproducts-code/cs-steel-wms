@@ -314,7 +314,7 @@ export default function Checker() {
                     <AlertTriangle size={15} />กำหนดสถานีที่ต้องแก้ไขงาน (รอบ 2)
                   </div>
                   <div className="border border-red-200 rounded-lg divide-y divide-red-100 max-h-48 overflow-y-auto bg-white">
-                    {loadingStations.map(s => {
+                    {loadingStations.filter(s => reworkStations.includes(s.StationID)).map(s => {
                       const checked = reworkSelected.includes(s.StationID);
                       return (
                         <label key={s.StationID}
