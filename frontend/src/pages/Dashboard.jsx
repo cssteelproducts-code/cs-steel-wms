@@ -214,6 +214,40 @@ export default function Dashboard() {
         <FlipStatCard title="ปีนี้" value={counts.YearTotal ?? 0} icon={Package} color="text-violet-500" breakdown={data?.vtBreakdownYear} />
       </div>
 
+      {/* 4 stat cards — row 2 */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard
+          title="รถทั้งหมดวันนี้"
+          value={todayStats.TotalTrips || 0}
+          sub="เที่ยวรถ"
+          icon={TruckIcon}
+          color="text-blue-500"
+          onClick={() => navigate('/monitor')}
+        />
+        <StatCard
+          title="เสร็จสิ้นแล้ว"
+          value={todayStats.Completed || 0}
+          sub={`เฉลี่ย ${formatDuration(data?.avgProcessingMinutes)}`}
+          icon={CheckCircle}
+          color="text-emerald-500"
+        />
+        <StatCard
+          title="กำลังดำเนินการ"
+          value={todayStats.InProgress || 0}
+          sub="รถในคลัง"
+          icon={Clock}
+          color="text-amber-500"
+          onClick={() => navigate('/monitor')}
+        />
+        <StatCard
+          title="น้ำหนักรวม"
+          value={weight.TotalNetWeight ? `${parseFloat(weight.TotalNetWeight).toLocaleString('th-TH', { maximumFractionDigits: 0 })}` : '0'}
+          sub="กิโลกรัม (สุทธิ)"
+          icon={Scale}
+          color="text-cyan-500"
+        />
+      </div>
+
       {/* น้ำหนักสินค้าที่ขึ้น */}
       <div className="card">
         <SectionHeader title="น้ำหนักสินค้าที่ขึ้น" sectionKey="weight" collapsed={collapsed.weight} onToggle={toggleSection} />
@@ -359,40 +393,6 @@ export default function Dashboard() {
             )}
           </div>
         </div>}
-      </div>
-
-      {/* 4 stat cards */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          title="รถทั้งหมดวันนี้"
-          value={todayStats.TotalTrips || 0}
-          sub="เที่ยวรถ"
-          icon={TruckIcon}
-          color="text-blue-500"
-          onClick={() => navigate('/monitor')}
-        />
-        <StatCard
-          title="เสร็จสิ้นแล้ว"
-          value={todayStats.Completed || 0}
-          sub={`เฉลี่ย ${formatDuration(data?.avgProcessingMinutes)}`}
-          icon={CheckCircle}
-          color="text-emerald-500"
-        />
-        <StatCard
-          title="กำลังดำเนินการ"
-          value={todayStats.InProgress || 0}
-          sub="รถในคลัง"
-          icon={Clock}
-          color="text-amber-500"
-          onClick={() => navigate('/monitor')}
-        />
-        <StatCard
-          title="น้ำหนักรวม"
-          value={weight.TotalNetWeight ? `${parseFloat(weight.TotalNetWeight).toLocaleString('th-TH', { maximumFractionDigits: 0 })}` : '0'}
-          sub="กิโลกรัม (สุทธิ)"
-          icon={Scale}
-          color="text-cyan-500"
-        />
       </div>
 
       {/* ปริมาณรถสะสมที่สถานี */}
