@@ -119,6 +119,11 @@ router.put('/exit/:recordId', authenticate, async (req, res) => {
       await pool.request()
         .input('TripID', sql.Int, tripId)
         .query(`UPDATE WMS_Trips SET Status='WaitPick' WHERE TripID=@TripID AND Status='Loading'`);
+    } else {
+      // All stations done — auto-advance to WeighOut
+      await pool.request()
+        .input('TripID', sql.Int, tripId)
+        .query(`UPDATE WMS_Trips SET Status='WeighOut' WHERE TripID=@TripID AND Status='Loading'`);
     }
 
     res.json({

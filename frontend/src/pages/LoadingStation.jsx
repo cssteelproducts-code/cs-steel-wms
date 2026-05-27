@@ -129,10 +129,6 @@ export default function LoadingStation() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'exit' ? 'bg-amber-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <LogOut size={14} className="inline mr-1" />บันทึกออกสถานี ({activeRecords.length})
         </button>
-        <button onClick={() => setTab('done')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'done' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <CheckCircle size={14} className="inline mr-1" />ส่งชั่งออก ({loadingDoneTrips.length})
-        </button>
       </div>
 
       {tab === 'entry' && (
