@@ -210,6 +210,7 @@ export default function WeighOut() {
                   <th className="table-header text-right px-4 py-2">น้ำหนักหนัก</th>
                   <th className="table-header text-right px-4 py-2">น้ำหนักสุทธิ</th>
                   <th className="table-header text-left px-4 py-2 hide-mobile">เวลาชั่งออก</th>
+                  <th className="table-header text-right px-4 py-2 hide-mobile">เวลาทั้งหมด</th>
                 </tr>
               </thead>
               <tbody>
@@ -224,6 +225,13 @@ export default function WeighOut() {
                     <td className="table-cell text-right text-slate-600">{formatWeight(t.GrossWeight)}</td>
                     <td className="table-cell text-right font-bold text-emerald-500">{formatWeight(t.NetWeight)}</td>
                     <td className="table-cell hide-mobile">{formatDateTime(t.WeighOutTime)}</td>
+                    <td className="table-cell text-right hide-mobile text-slate-500 text-xs">
+                      {t.TotalMinutes != null
+                        ? t.TotalMinutes < 60
+                          ? `${t.TotalMinutes} นาที`
+                          : `${Math.floor(t.TotalMinutes / 60)} ชั่วโมง ${t.TotalMinutes % 60} นาที`
+                        : '-'}
+                    </td>
                   </tr>
                 ))}
                 {!completed.length && (
@@ -237,6 +245,7 @@ export default function WeighOut() {
                     <td className="table-cell text-right font-bold text-emerald-500 text-lg">
                       {formatWeight(completed.reduce((sum, t) => sum + (parseFloat(t.NetWeight) || 0), 0))}
                     </td>
+                    <td className="table-cell hide-mobile" />
                     <td className="table-cell hide-mobile" />
                   </tr>
                 </tfoot>
