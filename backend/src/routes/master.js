@@ -11,7 +11,7 @@ router.get('/warehouses', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_Warehouses WHERE IsActive = 1 ORDER BY WarehouseName');
+      .query('SELECT * FROM WMS_Warehouses WHERE IsActive = 1 ORDER BY WarehouseID DESC');
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -66,7 +66,7 @@ router.get('/customers', authenticate, async (req, res) => {
       .input('Search', sql.NVarChar, `%${search}%`)
       .query(`SELECT * FROM WMS_Customers
               WHERE IsActive = 1 AND (CustomerName LIKE @Search OR CustomerCode LIKE @Search)
-              ORDER BY CustomerName`);
+              ORDER BY CustomerID DESC`);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -115,7 +115,7 @@ router.get('/vehicle-types', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_VehicleTypes WHERE IsActive = 1 ORDER BY TypeName');
+      .query('SELECT * FROM WMS_VehicleTypes WHERE IsActive = 1 ORDER BY TypeID DESC');
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
