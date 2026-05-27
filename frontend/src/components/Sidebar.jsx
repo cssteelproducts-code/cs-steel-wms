@@ -51,14 +51,13 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="flex items-center justify-between px-4 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.15)', paddingTop: 14, paddingBottom: 14 }}>
           <div className="flex items-center gap-3">
-            <div className="flex-shrink-0 rounded-xl flex items-center justify-center"
-              style={{ width: 48, height: 48, background: 'rgba(255,255,255,0.15)', boxShadow: '0 2px 8px rgba(0,0,0,0.2)' }}>
-              <img src={logoImg} alt="CS" className="object-contain"
-                style={{ width: 34, height: 34, filter: 'brightness(0) invert(1) drop-shadow(0 1px 4px rgba(0,0,0,0.3))' }} />
+            <div className="flex-shrink-0 rounded-2xl flex items-center justify-center bg-white"
+              style={{ width: 46, height: 46, boxShadow: '0 2px 10px rgba(0,0,0,0.25)' }}>
+              <img src={logoImg} alt="CS" className="object-contain" style={{ width: 32, height: 32 }} />
             </div>
             <div>
-              <div className="text-white font-extrabold leading-tight tracking-wide" style={{ fontSize: 17 }}>CS.Smart</div>
-              <div className="font-medium leading-tight" style={{ fontSize: 10, color: 'rgba(255,220,220,0.85)', letterSpacing: '0.06em' }}>WMS PLATFORM</div>
+              <div className="text-white font-extrabold leading-tight" style={{ fontSize: 17, textShadow: '0 1px 3px rgba(0,0,0,0.2)' }}>CS.Smart</div>
+              <div className="font-semibold leading-tight tracking-widest" style={{ fontSize: 9, color: 'rgba(255,235,235,0.75)' }}>WMS PLATFORM</div>
             </div>
           </div>
           <button onClick={onClose} className="lg:hidden text-red-200 hover:text-white p-1 transition-colors">
