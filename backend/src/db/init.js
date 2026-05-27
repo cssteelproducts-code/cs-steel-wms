@@ -155,6 +155,146 @@ const initDatabase = async () => {
       OperatorID INT,
       CreatedAt DATETIME DEFAULT GETDATE()
     );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_AlertConfig' AND xtype='U')
+    CREATE TABLE WMS_AlertConfig (
+      ConfigID INT IDENTITY(1,1) PRIMARY KEY,
+      AlertType NVARCHAR(50) NOT NULL,
+      WarehouseID INT NULL,
+      ThresholdValue DECIMAL(10,2) NOT NULL,
+      IsActive BIT DEFAULT 1,
+      UpdatedAt DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_Alerts' AND xtype='U')
+    CREATE TABLE WMS_Alerts (
+      AlertID INT IDENTITY(1,1) PRIMARY KEY,
+      AlertType NVARCHAR(50) NOT NULL,
+      Severity NVARCHAR(20) DEFAULT 'WARNING',
+      TripID INT NULL,
+      WarehouseID INT NULL,
+      Message NVARCHAR(500) NOT NULL,
+      IsRead BIT DEFAULT 0,
+      IsResolved BIT DEFAULT 0,
+      CreatedAt DATETIME DEFAULT GETDATE(),
+      ResolvedAt DATETIME NULL
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_Products' AND xtype='U')
+    CREATE TABLE WMS_Products (
+      ProductID INT IDENTITY(1,1) PRIMARY KEY,
+      ProductCode NVARCHAR(50) NOT NULL,
+      ProductName NVARCHAR(200) NOT NULL,
+      Unit NVARCHAR(50) DEFAULT N'ตัน',
+      Category NVARCHAR(100),
+      Description NVARCHAR(500),
+      IsActive BIT DEFAULT 1,
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_Stock' AND xtype='U')
+    CREATE TABLE WMS_Stock (
+      StockID INT IDENTITY(1,1) PRIMARY KEY,
+      WarehouseID INT NOT NULL,
+      ProductID INT NOT NULL,
+      Quantity DECIMAL(12,3) DEFAULT 0,
+      LastUpdated DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockTransactions' AND xtype='U')
+    CREATE TABLE WMS_StockTransactions (
+      TxID INT IDENTITY(1,1) PRIMARY KEY,
+      WarehouseID INT NOT NULL,
+      ProductID INT NOT NULL,
+      TxType NVARCHAR(20) NOT NULL,
+      Quantity DECIMAL(12,3) NOT NULL,
+      RefDocNo NVARCHAR(100),
+      TripID INT NULL,
+      Remark NVARCHAR(500),
+      OperatorID INT,
+      TxDate DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCount' AND xtype='U')
+    CREATE TABLE WMS_StockCount (
+      CountID INT IDENTITY(1,1) PRIMARY KEY,
+      CountCode NVARCHAR(50) NOT NULL,
+      WarehouseID INT NOT NULL,
+      CountDate DATE NOT NULL,
+      Status NVARCHAR(20) DEFAULT 'DRAFT',
+      Remark NVARCHAR(500),
+      OperatorID INT,
+      ConfirmedBy INT NULL,
+      ConfirmedAt DATETIME NULL,
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountItems' AND xtype='U')
+    CREATE TABLE WMS_StockCountItems (
+      ItemID INT IDENTITY(1,1) PRIMARY KEY,
+      CountID INT NOT NULL,
+      ProductID INT NOT NULL,
+      SystemQty DECIMAL(12,3) DEFAULT 0,
+      ActualQty DECIMAL(12,3) NULL,
+      Remark NVARCHAR(200)
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_DeliveryOrders' AND xtype='U')
+    CREATE TABLE WMS_DeliveryOrders (
+      OrderID INT IDENTITY(1,1) PRIMARY KEY,
+      OrderCode NVARCHAR(50) NOT NULL,
+      CustomerID INT NULL,
+      WarehouseID INT NOT NULL,
+      ProductID INT NULL,
+      Quantity DECIMAL(12,3) DEFAULT 0,
+      Unit NVARCHAR(50) DEFAULT N'ตัน',
+      DeliveryAddress NVARCHAR(500),
+      DeliveryLat FLOAT,
+      DeliveryLng FLOAT,
+      RequestedDate DATE NOT NULL,
+      TimeWindowStart NVARCHAR(10),
+      TimeWindowEnd NVARCHAR(10),
+      Status NVARCHAR(20) DEFAULT 'PENDING',
+      Notes NVARCHAR(500),
+      CreatedBy INT,
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_DeliveryPlans' AND xtype='U')
+    CREATE TABLE WMS_DeliveryPlans (
+      PlanID INT IDENTITY(1,1) PRIMARY KEY,
+      PlanCode NVARCHAR(50) NOT NULL,
+      WarehouseID INT NOT NULL,
+      PlanDate DATE NOT NULL,
+      Status NVARCHAR(20) DEFAULT 'DRAFT',
+      Notes NVARCHAR(500),
+      CreatedBy INT,
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_DeliveryRoutes' AND xtype='U')
+    CREATE TABLE WMS_DeliveryRoutes (
+      RouteID INT IDENTITY(1,1) PRIMARY KEY,
+      PlanID INT NOT NULL,
+      LicensePlate NVARCHAR(20),
+      DriverName NVARCHAR(100),
+      CapacityTon DECIMAL(10,2),
+      TotalDistKm DECIMAL(10,2),
+      TotalQty DECIMAL(12,3),
+      Status NVARCHAR(20) DEFAULT 'PENDING'
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_DeliveryRouteStops' AND xtype='U')
+    CREATE TABLE WMS_DeliveryRouteStops (
+      StopID INT IDENTITY(1,1) PRIMARY KEY,
+      RouteID INT NOT NULL,
+      OrderID INT NOT NULL,
+      StopSequence INT NOT NULL,
+      DistFromPrevKm DECIMAL(10,2),
+      EstimatedArrival NVARCHAR(10),
+      ActualArrival DATETIME,
+      Status NVARCHAR(20) DEFAULT 'PENDING'
+    );
   `;
 
   // Execute table creation queries one by one
@@ -240,7 +380,10 @@ const initDatabase = async () => {
     { code: 'TRIP_MONITOR', name: 'Monitor รถในคลัง' },
     { code: 'USERS', name: 'จัดการผู้ใช้' },
     { code: 'MASTER', name: 'ข้อมูลหลัก' },
-    { code: 'REPORTS', name: 'รายงาน' }
+    { code: 'REPORTS', name: 'รายงาน' },
+    { code: 'ALERTS', name: 'การแจ้งเตือน' },
+    { code: 'STOCK', name: 'สต็อกสินค้า' },
+    { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' }
   ];
 
   const adminRoleRow = await pool.request()
@@ -264,6 +407,23 @@ const initDatabase = async () => {
             VALUES (@RoleID, @MenuCode, @MenuName, 1, 1, 1, 1)
           `);
       }
+    }
+  }
+
+  // Seed default alert configs
+  const alertDefaults = [
+    { type: 'OVERSTAY', threshold: 240 },   // 4 hours
+    { type: 'OVERWEIGHT', threshold: 30000 } // 30,000 kg
+  ];
+  for (const ac of alertDefaults) {
+    const acExists = await pool.request()
+      .input('AlertType', sql.NVarChar, ac.type)
+      .query('SELECT ConfigID FROM WMS_AlertConfig WHERE AlertType = @AlertType AND WarehouseID IS NULL');
+    if (acExists.recordset.length === 0) {
+      await pool.request()
+        .input('AlertType', sql.NVarChar, ac.type)
+        .input('Threshold', sql.Decimal(10, 2), ac.threshold)
+        .query('INSERT INTO WMS_AlertConfig (AlertType, ThresholdValue) VALUES (@AlertType, @Threshold)');
     }
   }
 

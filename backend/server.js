@@ -42,6 +42,9 @@ app.use('/api/checker', require('./src/routes/checker'));
 app.use('/api/dashboard', require('./src/routes/dashboard'));
 app.use('/api/eta', require('./src/routes/eta'));
 app.use('/api/users', require('./src/routes/users'));
+app.use('/api/alerts', require('./src/routes/alerts'));
+app.use('/api/stock', require('./src/routes/stock'));
+app.use('/api/delivery', require('./src/routes/deliveryPlan'));
 
 // Serve React frontend (production build)
 const publicPath = path.join(__dirname, 'public');

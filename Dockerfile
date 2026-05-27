@@ -8,7 +8,7 @@ RUN npm install --prefix backend --omit=dev
 
 # Install frontend dependencies and build
 COPY frontend/package*.json ./frontend/
-RUN npm install --prefix frontend --include=dev
+RUN npm install --prefix frontend --include=dev --legacy-peer-deps
 
 COPY frontend/ ./frontend/
 RUN npm run build --prefix frontend
