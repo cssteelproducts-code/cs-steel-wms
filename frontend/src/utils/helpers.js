@@ -47,7 +47,7 @@ export const getStatusConfig = (status) => {
     Loading:        { label: 'กำลังขึ้นสินค้า',                    color: 'bg-amber-50 text-amber-600 border-amber-200',    dot: 'bg-amber-500',  step: 3 },
     LoadingBetween: { label: 'กำลังไปขึ้นสินค้าสถานีถัดไป',        color: 'bg-amber-50 text-amber-700 border-amber-300',    dot: 'bg-amber-600',  step: 3 },
     WeighOut:       { label: 'กำลังชั่งออก',                       color: 'bg-cyan-50 text-cyan-600 border-cyan-200',       dot: 'bg-cyan-500',   step: 4 },
-    Checker:        { label: 'เช็คเกอร์',                          color: 'bg-orange-50 text-orange-600 border-orange-200', dot: 'bg-orange-500', step: 5 },
+    Checker:        { label: 'กำลังเช็คสินค้า',                     color: 'bg-orange-50 text-orange-600 border-orange-200', dot: 'bg-orange-500', step: 5 },
     Complete:       { label: 'เสร็จสิ้น',                          color: 'bg-emerald-50 text-emerald-600 border-emerald-200', dot: 'bg-emerald-500', step: 6 },
     Cancelled:      { label: 'ยกเลิก',                             color: 'bg-red-50 text-red-500 border-red-200',          dot: 'bg-red-400',    step: 0 }
   };
