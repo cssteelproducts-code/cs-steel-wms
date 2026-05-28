@@ -127,7 +127,6 @@ export default function ETA() {
           <p className="text-gray-400 text-xs mt-0.5">
             {source === 'mock' && <span className="text-amber-500 mr-1">⚠ Mock Data ·</span>}
             {lastUpdate ? `อัพเดต ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
-            {' · ระยะทางจริง (OSRM) · ความเร็วสูงสุด 90 กม./ชม.'}
           </p>
         </div>
         <div className="flex gap-2">

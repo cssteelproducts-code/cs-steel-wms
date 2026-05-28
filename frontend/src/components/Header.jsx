@@ -12,7 +12,7 @@ const LANGS = [
   { code: 'my', label: 'မြန်မာ' },
 ];
 
-export default function Header({ onMenuClick, title }) {
+export default function Header({ onMenuClick, title, subtitle }) {
   const { user, logout } = useAuth();
   const { lang, changeLang, t } = useLang();
   const navigate = useNavigate();
@@ -66,11 +66,10 @@ export default function Header({ onMenuClick, title }) {
             onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#6b7280'; }}>
             <Menu size={20} />
           </button>
-          <h1 className="font-black truncate hidden sm:block" style={{
-            color: '#0f172a',
-            fontSize: 17,
-            letterSpacing: '-0.025em',
-          }}>{title}</h1>
+          <div className="hidden sm:block min-w-0">
+            <h1 className="font-bold truncate leading-tight" style={{ color: '#0f172a', fontSize: 16, letterSpacing: '-0.02em' }}>{title}</h1>
+            {subtitle && <p className="text-xs text-slate-400 truncate mt-0.5">{subtitle}</p>}
+          </div>
         </div>
 
         {/* Right */}
