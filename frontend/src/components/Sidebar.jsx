@@ -41,7 +41,7 @@ export default function Sidebar({ isOpen, onClose }) {
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/30 z-40 lg:hidden backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm" onClick={onClose} />
       )}
 
       <aside className={`
@@ -50,31 +50,41 @@ export default function Sidebar({ isOpen, onClose }) {
         lg:translate-x-0 lg:static lg:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `} style={{
-        background: '#ffffff',
-        borderRight: '1px solid #e8edf3',
-        boxShadow: '1px 0 12px rgba(0,0,0,0.05)',
+        background: '#1e293b',
+        borderRight: '1px solid rgba(255,255,255,0.06)',
+        boxShadow: '2px 0 20px rgba(0,0,0,0.25)',
       }}>
 
         {/* Logo */}
         <div className="flex items-center justify-between px-4 py-4 flex-shrink-0"
-          style={{ borderBottom: '1px solid #f1f5f9' }}>
+          style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="flex-1 flex justify-center">
             <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 52 }} />
           </div>
-          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 text-slate-400 hover:text-slate-600">
+          <button onClick={onClose}
+            className="lg:hidden p-1.5 rounded-lg transition-colors flex-shrink-0"
+            style={{ color: '#64748b' }}
+            onMouseEnter={e => { e.currentTarget.style.color = '#f1f5f9'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+            onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = ''; }}>
             <X size={15} />
           </button>
         </div>
+
+        {/* Red accent line */}
+        <div style={{ height: 2, background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)', flexShrink: 0 }} />
 
         {/* Navigation */}
         <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
           {visibleItems.map((item, idx) => {
             if (item.divider) {
               return (
-                <div key={idx} className="px-2 pt-4 pb-1.5">
-                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
+                <div key={idx} className="px-2 pt-5 pb-1.5 flex items-center gap-2">
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest"
+                    style={{ color: '#475569' }}>
                     {t(item.key)}
                   </span>
+                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
                 </div>
               );
             }
@@ -84,16 +94,32 @@ export default function Sidebar({ isOpen, onClose }) {
                 to={item.path}
                 end={item.path === '/'}
                 onClick={onClose}
-                className={({ isActive }) =>
-                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ` +
-                  (isActive
-                    ? 'bg-red-50 text-red-600 font-semibold'
-                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900')
-                }
+                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150"
                 style={({ isActive }) => isActive
-                  ? { borderLeft: '3px solid #dc2626', paddingLeft: '9px' }
-                  : { borderLeft: '3px solid transparent', paddingLeft: '9px' }
+                  ? {
+                      background: 'rgba(220,38,38,0.18)',
+                      color: '#fca5a5',
+                      borderLeft: '3px solid #dc2626',
+                      paddingLeft: '9px',
+                    }
+                  : {
+                      color: '#94a3b8',
+                      borderLeft: '3px solid transparent',
+                      paddingLeft: '9px',
+                    }
                 }
+                onMouseEnter={e => {
+                  if (!e.currentTarget.style.background?.includes('220,38,38')) {
+                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                    e.currentTarget.style.color = '#e2e8f0';
+                  }
+                }}
+                onMouseLeave={e => {
+                  if (!e.currentTarget.style.background?.includes('220,38,38')) {
+                    e.currentTarget.style.background = '';
+                    e.currentTarget.style.color = '#94a3b8';
+                  }
+                }}
               >
                 <item.icon size={15} className="flex-shrink-0" />
                 <span className="flex-1 leading-tight">{t(item.key)}</span>
@@ -103,9 +129,9 @@ export default function Sidebar({ isOpen, onClose }) {
         </nav>
 
         {/* Footer */}
-        <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid #f1f5f9' }}>
-          <div className="text-[11px] font-semibold text-slate-400">CS Steel Products Co., Ltd.</div>
-          <div className="text-[10px] text-slate-300 mt-0.5">WMS v1.0 © 2026</div>
+        <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
+          <div className="text-[11px] font-semibold" style={{ color: '#475569' }}>CS Steel Products Co., Ltd.</div>
+          <div className="text-[10px] mt-0.5" style={{ color: '#334155' }}>WMS v1.0 © 2026</div>
         </div>
       </aside>
     </>
