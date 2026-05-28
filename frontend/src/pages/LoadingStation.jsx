@@ -26,10 +26,6 @@ export default function LoadingStation() {
   }, []);
 
   useEffect(() => {
-    if (selectedStation) fetchActiveForStation();
-  }, [selectedStation]);
-
-  useEffect(() => {
     if (activeTripId) fetchTargetStations(activeTripId);
     else setTripTargetStations([]);
     setSelectedStation('');
@@ -52,15 +48,6 @@ export default function LoadingStation() {
         setLoadingDoneTrips(all.filter(t => t.Status === 'Loading' && t.RemainingStations === 0));
       }
     } finally { setPageLoading(false); }
-  };
-
-  const fetchActiveForStation = async () => {
-    try {
-      const res = await api.get('/trips/active');
-      const all = res.data.data || [];
-      setLoadingTrips(all.filter(t => t.Status === 'WaitPick' && t.DataStationID));
-      setLoadingDoneTrips(all.filter(t => t.Status === 'Loading'));
-    } catch {}
   };
 
   const fetchTargetStations = async (tripId) => {
@@ -155,7 +142,7 @@ export default function LoadingStation() {
             <div>
               <label className="label">เลือกสถานี *</label>
               <select value={selectedStation}
-                onChange={e => { setSelectedStation(e.target.value); fetchActiveForStation(e.target.value); }}
+                onChange={e => setSelectedStation(e.target.value)}
                 className="input-field"
                 disabled={!activeTripId}>
                 <option value="">-- เลือกสถานีขึ้นสินค้า --</option>
