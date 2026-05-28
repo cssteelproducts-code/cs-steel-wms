@@ -191,6 +191,43 @@ const runMigrations = async () => {
       SELECT r.RoleID, 'TRANSFER', N'ย้ายสินค้าภายใน', 1, 1, 1, 1
       FROM WMS_Roles r WHERE r.RoleName='Admin';
     `);
+    // Performance indexes for common query patterns
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Trips_Status' AND object_id=OBJECT_ID('WMS_Trips'))
+        CREATE INDEX IX_Trips_Status ON WMS_Trips (Status) INCLUDE (TripDate, LicensePlate, VehicleTypeID, CustomerID, WarehouseID, Priority, CreatedAt, CompletedAt);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Trips_TripDate' AND object_id=OBJECT_ID('WMS_Trips'))
+        CREATE INDEX IX_Trips_TripDate ON WMS_Trips (TripDate, Status);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_LoadingRecord_TripID' AND object_id=OBJECT_ID('WMS_LoadingRecord'))
+        CREATE INDEX IX_LoadingRecord_TripID ON WMS_LoadingRecord (TripID) INCLUDE (StationID, EntryTime, ExitTime, DurationMinutes, Round);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_LoadingRecord_StationID' AND object_id=OBJECT_ID('WMS_LoadingRecord'))
+        CREATE INDEX IX_LoadingRecord_StationID ON WMS_LoadingRecord (StationID, ExitTime) INCLUDE (TripID, EntryTime);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_WeighIn_TripID' AND object_id=OBJECT_ID('WMS_WeighIn'))
+        CREATE INDEX IX_WeighIn_TripID ON WMS_WeighIn (TripID);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_WeighOut_TripID' AND object_id=OBJECT_ID('WMS_WeighOut'))
+        CREATE INDEX IX_WeighOut_TripID ON WMS_WeighOut (TripID);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_CheckerRecord_TripID' AND object_id=OBJECT_ID('WMS_CheckerRecord'))
+        CREATE INDEX IX_CheckerRecord_TripID ON WMS_CheckerRecord (TripID);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Alerts_Unread' AND object_id=OBJECT_ID('WMS_Alerts'))
+        CREATE INDEX IX_Alerts_Unread ON WMS_Alerts (IsRead, IsResolved) INCLUDE (AlertType, TripID, CreatedAt);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_DataStation_TripID' AND object_id=OBJECT_ID('WMS_DataStation'))
+        CREATE INDEX IX_DataStation_TripID ON WMS_DataStation (TripID);
+    `);
     // Add VehicleTypeID to WMS_AlertConfig for per-vehicle-type OVERSTAY thresholds
     await pool.request().query(`
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_AlertConfig') AND name='VehicleTypeID')
