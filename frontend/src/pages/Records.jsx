@@ -197,7 +197,7 @@ export default function Records() {
             <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
               className="input-field h-9 text-sm" />
           </div>
-          <div className="flex-1 min-w-[180px]">
+          <div className="w-64">
             <label className="label">ค้นหา</label>
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />

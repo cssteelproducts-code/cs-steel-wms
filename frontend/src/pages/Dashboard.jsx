@@ -1,10 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
-} from 'recharts';
-import {
-  TruckIcon, CheckCircle, Clock, Scale, Activity, ArrowRight,
+  TruckIcon, CheckCircle, Clock, Scale, Activity,
   Calendar, Package, Search, ChevronDown, ChevronUp, X, RefreshCw
 } from 'lucide-react';
 import api from '../services/api';
@@ -132,18 +129,6 @@ export default function Dashboard() {
     return next;
   });
 
-  // Historical search state
-  const today = dayjs().format('YYYY-MM-DD');
-  const [histFrom, setHistFrom] = useState(today);
-  const [histTo, setHistTo] = useState(today);
-  const [histData, setHistData] = useState(null);
-  const [histLoading, setHistLoading] = useState(false);
-
-  // Monthly report state
-  const [reportMonth, setReportMonth] = useState(dayjs().format('YYYY-MM'));
-  const [reportData, setReportData] = useState(null);
-  const [reportLoading, setReportLoading] = useState(false);
-
   // Station popup state
   const [stationPopup, setStationPopup] = useState(null); // { stationName, vehicles, loading }
 
@@ -175,32 +160,6 @@ export default function Dashboard() {
     const interval = setInterval(fetchData, 30000);
     return () => clearInterval(interval);
   }, [fetchData]);
-
-  const searchHistory = async () => {
-    if (!histFrom || !histTo) return;
-    setHistLoading(true);
-    try {
-      const res = await api.get(`/dashboard/history?from=${histFrom}&to=${histTo}`);
-      if (res.data.success) setHistData(res.data.data);
-    } catch {
-      toast.error('ไม่สามารถโหลดข้อมูลย้อนหลังได้');
-    } finally {
-      setHistLoading(false);
-    }
-  };
-
-  const searchReport = async () => {
-    if (!reportMonth) return;
-    setReportLoading(true);
-    try {
-      const res = await api.get(`/dashboard/monthly-report?month=${reportMonth}`);
-      if (res.data.success) setReportData(res.data.data);
-    } catch {
-      toast.error('ไม่สามารถโหลดรายงานได้');
-    } finally {
-      setReportLoading(false);
-    }
-  };
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
@@ -399,70 +358,6 @@ export default function Dashboard() {
         </div>}
       </div>
 
-      {/* Flow status + weekly chart */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="card">
-          <SectionHeader title="สถานะรถในคลัง" sectionKey="flow" collapsed={collapsed.flow} onToggle={toggleSection}
-            extra={<button onClick={() => navigate('/monitor')} className="text-blue-500 hover:text-blue-600 text-xs flex items-center gap-1">ดูทั้งหมด <ArrowRight size={11} /></button>} />
-          {!collapsed.flow && <>
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            {[
-              { status: 'Data', label: 'รอเอกสาร Pick' },
-              { status: 'Loading', label: 'ขึ้นสินค้า' },
-              { status: 'WeighOut', label: 'รอชั่งออก' }
-            ].map(item => {
-              const count = data?.statusFlow?.find(s => s.Status === item.status)?.Count || 0;
-              const cfg = getStatusConfig(item.status);
-              return (
-                <div key={item.status} className="border border-slate-200 rounded-lg p-3 text-center bg-slate-50">
-                  <div className={`text-2xl font-bold ${cfg.color?.split(' ').find(c => c.startsWith('text')) || 'text-slate-900'}`}>
-                    {count}
-                  </div>
-                  <div className="text-xs text-slate-500 mt-1">{item.label}</div>
-                </div>
-              );
-            })}
-          </div>
-          <div>
-            <p className="text-xs text-slate-500 uppercase tracking-wider mb-2">สถานีขึ้นสินค้า</p>
-            <div className="space-y-1.5 max-h-48 overflow-y-auto">
-              {[...(data?.stationLoad || [])].sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(station => (
-                <div key={station.StationName}
-                  className="flex items-center justify-between px-3 py-2 bg-slate-50 rounded-lg border border-slate-100">
-                  <span className="text-slate-700 text-sm truncate">{station.StationName}</span>
-                  <span className={`text-sm font-medium ${station.ActiveTrucks > 0 ? 'text-amber-500' : 'text-emerald-500'}`}>
-                    {station.ActiveTrucks > 0 ? `${station.ActiveTrucks} คัน` : '✓ ว่าง'}
-                  </span>
-                </div>
-              ))}
-              {!data?.stationLoad?.length && (
-                <p className="text-slate-400 text-sm text-center py-4">ยังไม่มีสถานีที่กำหนด</p>
-              )}
-            </div>
-          </div>
-          </>}
-        </div>
-
-        <div className="card">
-          <SectionHeader title="จำนวนรถ 7 วันย้อนหลัง" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection} />
-          {!collapsed.chart && <ResponsiveContainer width="100%" height={220}>
-            <BarChart data={data?.weeklyTrend || []} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
-              <XAxis dataKey="TripDate" tick={{ fill: '#64748b', fontSize: 11 }}
-                tickFormatter={v => v ? dayjs(v).format('DD/MM/YY') : ''} />
-              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
-              <Tooltip
-                contentStyle={{ backgroundColor: '#ffffff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
-                labelStyle={{ color: '#475569' }}
-                formatter={(value, name) => [value, name === 'TotalTrips' ? 'รวม' : 'เสร็จ']}
-              />
-              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} name="TotalTrips" />
-              <Bar dataKey="Completed" fill="#10b981" radius={[4, 4, 0, 0]} name="Completed" />
-            </BarChart>
-          </ResponsiveContainer>}
-        </div>
-      </div>
-
       {/* Recent activity */}
       <div className="card">
         <SectionHeader title="กิจกรรมล่าสุดวันนี้" sectionKey="activity" collapsed={collapsed.activity} onToggle={toggleSection}
@@ -505,106 +400,6 @@ export default function Dashboard() {
         </div>}
       </div>
 
-      {/* ย้อนหลัง */}
-      <div className="card">
-        <SectionHeader title="ย้อนหลัง" sectionKey="hist" collapsed={collapsed.hist} onToggle={toggleSection} />
-        {!collapsed.hist && <div className="flex flex-wrap items-end gap-3 mb-4">
-          <div>
-            <label className="label">จากวันที่</label>
-            <input type="date" className="input-field" value={histFrom}
-              onChange={e => setHistFrom(e.target.value)} style={{ width: 160 }} />
-          </div>
-          <div>
-            <label className="label">ถึงวันที่</label>
-            <input type="date" className="input-field" value={histTo}
-              onChange={e => setHistTo(e.target.value)} style={{ width: 160 }} />
-          </div>
-          <button onClick={searchHistory} disabled={histLoading} className="btn-primary">
-            {histLoading ? <LoadingSpinner size="sm" /> : <Search size={14} />}
-            ค้นหาข้อมูลย้อนหลัง
-          </button>
-        </div>}
-        {!collapsed.hist && histData !== null && (
-          histData.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="table-header text-left px-3 py-2">ทะเบียน</th>
-                    <th className="table-header text-left px-3 py-2 hide-mobile">ประเภท</th>
-                    <th className="table-header text-left px-3 py-2 hide-mobile">ลูกค้า</th>
-                    <th className="table-header text-left px-3 py-2 hide-mobile">น้ำหนักสุทธิ</th>
-                    <th className="table-header text-left px-3 py-2">วันที่</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {histData.map(trip => (
-                    <tr key={trip.TripID} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="table-cell font-medium">{trip.LicensePlate}</td>
-                      <td className="table-cell hide-mobile text-slate-500">{trip.TypeName}</td>
-                      <td className="table-cell hide-mobile text-slate-500">{trip.CustomerName}</td>
-                      <td className="table-cell hide-mobile">{trip.NetWeight ? fmtKg(trip.NetWeight) : '-'}</td>
-                      <td className="table-cell text-slate-500">{dayjs(trip.TripDate).format('DD/MM/YY')}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="text-xs text-slate-400 mt-2">พบ {histData.length} รายการ</p>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400 py-4 text-center">ไม่พบข้อมูลในช่วงวันที่ที่เลือก</p>
-          )
-        )}
-      </div>
-
-      {/* รายงานผลการจัดส่งรายทะเบียน */}
-      <div className="card">
-        <SectionHeader title="รายงานผลการจัดส่งรายทะเบียน" sectionKey="report" collapsed={collapsed.report} onToggle={toggleSection} />
-        {!collapsed.report && <>
-          <div className="flex flex-wrap items-end gap-3 mb-4">
-            <div>
-              <label className="label">เดือน</label>
-              <input type="month" className="input-field" value={reportMonth}
-                onChange={e => setReportMonth(e.target.value)} style={{ width: 160 }} />
-            </div>
-            <button onClick={searchReport} disabled={reportLoading} className="btn-primary">
-              {reportLoading ? <LoadingSpinner size="sm" /> : <Search size={14} />}
-              ดูรายงาน
-            </button>
-          </div>
-          {reportData !== null && (
-          reportData.length ? (
-            <div className="overflow-x-auto">
-              <table className="w-full">
-                <thead>
-                  <tr className="border-b border-slate-200">
-                    <th className="table-header text-left px-3 py-2">ทะเบียน</th>
-                    <th className="table-header text-left px-3 py-2 hide-mobile">ประเภทรถ</th>
-                    <th className="table-header text-right px-3 py-2">จำนวนเที่ยว</th>
-                    <th className="table-header text-right px-3 py-2 hide-mobile">เสร็จสิ้น</th>
-                    <th className="table-header text-right px-3 py-2 hide-mobile">น้ำหนักรวม</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {reportData.map((row, i) => (
-                    <tr key={i} className="border-b border-slate-50 hover:bg-slate-50">
-                      <td className="table-cell font-medium">{row.LicensePlate}</td>
-                      <td className="table-cell hide-mobile text-slate-500">{row.TypeName}</td>
-                      <td className="table-cell text-right font-semibold">{row.TripCount}</td>
-                      <td className="table-cell hide-mobile text-right text-emerald-600">{row.Completed}</td>
-                      <td className="table-cell hide-mobile text-right">{row.TotalWeight ? fmtKg(row.TotalWeight) : '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-              <p className="text-xs text-slate-400 mt-2">{reportData.length} ทะเบียน</p>
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400 py-4 text-center">ไม่พบข้อมูลในเดือนที่เลือก</p>
-          )
-          )}
-        </>}
-      </div>
     </div>
 
     {/* Station vehicles popup */}

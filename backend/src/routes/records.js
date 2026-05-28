@@ -26,7 +26,7 @@ router.get('/', authenticate, async (req, res) => {
     }
 
     if (search) {
-      where += ' AND (t.LicensePlate LIKE @Search OR c.CustomerName LIKE @Search OR c.ARCode LIKE @Search)';
+      where += ' AND (t.LicensePlate LIKE @Search OR c.CustomerName LIKE @Search OR c.CustomerCode LIKE @Search)';
       req1.input('Search', sql.NVarChar, `%${search}%`);
     }
 
@@ -50,7 +50,7 @@ router.get('/', authenticate, async (req, res) => {
         t.CreatedAt, t.CompletedAt,
         vt.TypeID as VehicleTypeID, vt.TypeName as VehicleType,
         w.WarehouseID, w.WarehouseName,
-        c.CustomerID, c.CustomerName, c.ARCode,
+        c.CustomerID, c.CustomerName, c.CustomerCode,
         wi.TareWeight, wi.WeighDateTime as WeighInTime,
         wo.GrossWeight, wo.NetWeight, wo.WeighDateTime as WeighOutTime,
         cr.IsApproved, cr.Remarks as CheckerRemarks, cr.CheckTime,
