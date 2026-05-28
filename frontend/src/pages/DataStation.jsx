@@ -21,7 +21,7 @@ export default function DataStation() {
     fetchPending();
     fetchStations();
     const pollInterval = setInterval(fetchPending, 15000);
-    const tickInterval = setInterval(() => setNowMs(Date.now()), 60000);
+    const tickInterval = setInterval(() => setNowMs(Date.now()), 15000);
     return () => { clearInterval(pollInterval); clearInterval(tickInterval); };
   }, []);
 
@@ -33,14 +33,15 @@ export default function DataStation() {
     } catch {} finally { setPageLoading(false); }
   };
 
-  const liveSOWaitMinutes = (trip) => {
+  const liveSOWaitSeconds = (trip) => {
     if (!trip.SOWaitStartedAt) return null;
-    const elapsedMs = nowMs - new Date(trip.SOWaitStartedAt).getTime();
-    return Math.max(0, Math.floor(elapsedMs / 60000));
+    return Math.max(0, Math.floor((nowMs - new Date(trip.SOWaitStartedAt).getTime()) / 1000));
   };
 
-  const fmtWait = (mins) => {
-    if (mins === null) return null;
+  const fmtWait = (secs) => {
+    if (secs === null) return null;
+    if (secs < 60) return `${secs} วินาที`;
+    const mins = Math.floor(secs / 60);
     if (mins < 60) return `${mins} นาที`;
     return `${Math.floor(mins / 60)} ชม. ${mins % 60} นาที`;
   };
@@ -153,8 +154,8 @@ export default function DataStation() {
                       {trip.Status === 'WaitPick' && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
                       )}
-                      {trip.Status === 'WaitPick' && liveSOWaitMinutes(trip) !== null && (
-                        <span className="text-xs font-semibold text-rose-500">⏱ {fmtWait(liveSOWaitMinutes(trip))}</span>
+                      {trip.Status === 'WaitPick' && liveSOWaitSeconds(trip) !== null && (
+                        <span className="text-xs font-semibold text-rose-500">⏱ {fmtWait(liveSOWaitSeconds(trip))}</span>
                       )}
                     </div>
                   </div>
