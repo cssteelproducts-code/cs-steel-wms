@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { FileText, Check, Clock, HourglassIcon, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -14,14 +14,13 @@ export default function DataStation() {
   const [loading, setLoading] = useState(false);
   const [waitLoading, setWaitLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [nowMs, setNowMs] = useState(Date.now());
-  const fetchedAtRef = useRef(Date.now());
+  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     fetchPending();
     fetchStations();
     const pollInterval = setInterval(fetchPending, 15000);
-    const tickInterval = setInterval(() => setNowMs(Date.now()), 15000);
+    const tickInterval = setInterval(() => setTick(n => n + 1), 1000);
     return () => { clearInterval(pollInterval); clearInterval(tickInterval); };
   }, []);
 
@@ -29,13 +28,12 @@ export default function DataStation() {
     try {
       const res = await api.get('/data-station/pending');
       setPending(res.data.data || []);
-      fetchedAtRef.current = Date.now();
     } catch {} finally { setPageLoading(false); }
   };
 
   const liveSOWaitSeconds = (trip) => {
     if (!trip.SOWaitStartedAt) return null;
-    return Math.max(0, Math.floor((nowMs - new Date(trip.SOWaitStartedAt).getTime()) / 1000));
+    return Math.max(0, Math.floor((Date.now() - new Date(trip.SOWaitStartedAt).getTime()) / 1000));
   };
 
   const fmtWait = (secs) => {
