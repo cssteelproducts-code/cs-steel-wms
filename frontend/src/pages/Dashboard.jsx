@@ -226,6 +226,7 @@ export default function Dashboard() {
           sub="รถในคลัง"
           icon={Clock}
           color="text-amber-500"
+          onClick={() => navigate('/monitor')}
         />
         <StatCard
           title="น้ำหนักรวม"
