@@ -237,11 +237,6 @@ const runMigrations = async () => {
       IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Customers_Search' AND object_id=OBJECT_ID('WMS_Customers'))
         CREATE INDEX IX_Customers_Search ON WMS_Customers (CustomerName, CustomerCode) WHERE IsActive = 1;
     `);
-    // Track when trip enters WaitPick (รอเอกสาร SO) status
-    await pool.request().query(`
-      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Trips') AND name='SOWaitStartedAt')
-        ALTER TABLE WMS_Trips ADD SOWaitStartedAt DATETIME NULL;
-    `);
     // Add VehicleTypeID to WMS_AlertConfig for per-vehicle-type OVERSTAY thresholds
     await pool.request().query(`
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_AlertConfig') AND name='VehicleTypeID')
@@ -261,6 +256,17 @@ const runMigrations = async () => {
     console.log('✅ Migrations applied');
   } catch (e) {
     console.warn('⚠ Migration warning:', e.message);
+  }
+
+  // Critical standalone migrations (each in own try/catch so others still run)
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Trips') AND name='SOWaitStartedAt')
+        ALTER TABLE WMS_Trips ADD SOWaitStartedAt DATETIME NULL;
+    `);
+    console.log('✅ SOWaitStartedAt column ready');
+  } catch (e) {
+    console.warn('⚠ SOWaitStartedAt migration:', e.message);
   }
 };
 
