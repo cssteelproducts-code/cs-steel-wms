@@ -146,13 +146,13 @@ export default function DataStation() {
                     </div>
                     <div className="text-slate-400 text-xs">{formatDateTime(trip.WeighDateTime)}</div>
                     <div className="mt-1 flex items-center justify-end gap-1.5">
-                      {trip.Status === 'Data' && (
+                      {(trip.Status === 'Data' || (trip.Status === 'WaitPick' && !trip.SOWaitStartedAt)) && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-medium">รอเอกสาร Pick</span>
                       )}
-                      {trip.Status === 'WaitPick' && (
+                      {trip.Status === 'WaitPick' && trip.SOWaitStartedAt && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
                       )}
-                      {trip.Status === 'WaitPick' && liveSOWaitSeconds(trip) !== null && (
+                      {trip.Status === 'WaitPick' && trip.SOWaitStartedAt && (
                         <span className="text-xs font-semibold text-rose-500">⏱ {fmtWait(liveSOWaitSeconds(trip))}</span>
                       )}
                     </div>
