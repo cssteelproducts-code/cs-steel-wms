@@ -41,8 +41,15 @@ const cardFace = {
   position: 'absolute', inset: 0
 };
 
-const FlipStatCard = ({ title, value, icon: Icon, color, breakdown }) => {
+const DELIVERY_TYPES = [
+  { key: 'CSS',      label: 'CSS.',  color: 'text-red-600',     bar: 'bg-red-400' },
+  { key: 'Customer', label: 'Cust.', color: 'text-blue-600',    bar: 'bg-blue-400' },
+  { key: 'Supplier', label: 'Sup.',  color: 'text-emerald-600', bar: 'bg-emerald-400' },
+];
+
+const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKey }) => {
   const [flipped, setFlipped] = useState(false);
+  const total = (deliveryStats || []).reduce((s, r) => s + (r[periodKey] || 0), 0);
   return (
     <div style={{ perspective: '1000px', minHeight: 90, cursor: 'pointer' }} onClick={() => setFlipped(f => !f)}>
       <div style={{
@@ -56,7 +63,7 @@ const FlipStatCard = ({ title, value, icon: Icon, color, breakdown }) => {
             <div>
               <p className="text-slate-500 text-xs">{title}</p>
               <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value ?? 0}</p>
-              <p className="text-slate-400 text-xs mt-1">คัน · กดดูรายละเอียด</p>
+              <p className="text-slate-400 text-xs mt-1">คัน · กดดูประเภทขนส่ง</p>
             </div>
             <div className={`p-2.5 rounded-xl ${colorBg[color] || 'bg-slate-100'}`}>
               <Icon size={20} className={color} />
@@ -64,17 +71,25 @@ const FlipStatCard = ({ title, value, icon: Icon, color, breakdown }) => {
           </div>
         </div>
         <div style={{ ...cardFace, transform: 'rotateY(180deg)' }}>
-          <p className="text-xs font-semibold text-slate-500 mb-2">{title} — รายประเภท</p>
-          {breakdown?.length > 0 ? (
-            <div className="space-y-1">
-              {breakdown.slice(0, 4).map(b => (
-                <div key={b.TypeName} className="flex justify-between items-center">
-                  <span className="text-xs text-slate-600 truncate mr-2">{b.TypeName}</span>
-                  <span className={`text-xs font-bold ${color}`}>{b.Count} คัน</span>
+          <p className="text-xs font-semibold text-slate-500 mb-2">{title} — ประเภทขนส่ง</p>
+          <div className="space-y-1.5">
+            {DELIVERY_TYPES.map(t => {
+              const row = (deliveryStats || []).find(r => r.DeliveryType === t.key);
+              const count = row?.[periodKey] || 0;
+              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+              return (
+                <div key={t.key}>
+                  <div className="flex items-center justify-between mb-0.5">
+                    <span className={`text-xs font-semibold ${t.color}`}>{t.label}</span>
+                    <span className={`text-xs font-bold ${t.color}`}>{count}<span className="text-slate-400 font-normal ml-1">/{pct}%</span></span>
+                  </div>
+                  <div className="w-full h-1 rounded-full bg-slate-200">
+                    <div className={`h-1 rounded-full transition-all ${t.bar}`} style={{ width: `${pct}%` }} />
+                  </div>
                 </div>
-              ))}
-            </div>
-          ) : <p className="text-xs text-slate-400">ยังไม่มีข้อมูล</p>}
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
@@ -216,9 +231,9 @@ export default function Dashboard() {
 
       {/* Stat cards: today / month / year (flip to show type breakdown) */}
       <div className="grid grid-cols-3 gap-4">
-        <FlipStatCard title="วันนี้" value={counts.TodayTotal ?? 0} icon={Calendar} color="text-blue-500" breakdown={data?.vehicleTypesToday} />
-        <FlipStatCard title="เดือนนี้" value={counts.MonthTotal ?? 0} icon={TruckIcon} color="text-emerald-500" breakdown={data?.vtBreakdownMonth} />
-        <FlipStatCard title="ปีนี้" value={counts.YearTotal ?? 0} icon={Package} color="text-violet-500" breakdown={data?.vtBreakdownYear} />
+        <FlipStatCard title="วันนี้" value={counts.TodayTotal ?? 0} icon={Calendar} color="text-blue-500" deliveryStats={data?.deliveryTypeStats} periodKey="TodayCount" />
+        <FlipStatCard title="เดือนนี้" value={counts.MonthTotal ?? 0} icon={TruckIcon} color="text-emerald-500" deliveryStats={data?.deliveryTypeStats} periodKey="MonthCount" />
+        <FlipStatCard title="ปีนี้" value={counts.YearTotal ?? 0} icon={Package} color="text-violet-500" deliveryStats={data?.deliveryTypeStats} periodKey="YearCount" />
       </div>
 
       {/* 4 stat cards — row 2 */}
