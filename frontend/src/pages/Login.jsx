@@ -492,12 +492,18 @@ export default function Login() {
 
         {/* Logo */}
         <div className="text-center mb-8">
-          <img
-            src={logoImg}
-            alt="CS Steel"
-            className="w-40 h-40 object-contain mx-auto mb-4"
-            style={{ filter: 'drop-shadow(0 0 40px rgba(220,38,38,0.75)) drop-shadow(0 0 12px rgba(220,38,38,0.4)) drop-shadow(0 6px 20px rgba(0,0,0,0.9))' }}
-          />
+          <div className="relative mx-auto mb-4" style={{ width: 160, height: 160 }}>
+            <div className="absolute inset-0" style={{
+              background: 'radial-gradient(circle at center, rgba(220,38,38,0.5) 0%, rgba(185,28,28,0.25) 35%, transparent 70%)',
+              filter: 'blur(22px)',
+            }}/>
+            <img
+              src={logoImg}
+              alt="CS Steel"
+              className="w-full h-full object-contain relative z-10"
+              style={{ filter: 'drop-shadow(0 4px 16px rgba(0,0,0,0.8))' }}
+            />
+          </div>
           <h1 className="text-3xl font-bold text-white leading-tight">{t.title}</h1>
           <p className="text-gray-400 mt-1.5 text-base">{t.subtitle}</p>
         </div>

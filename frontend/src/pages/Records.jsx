@@ -191,29 +191,29 @@ export default function Records() {
 
       {/* Filters */}
       <div className="card">
-        <div className="flex flex-wrap gap-3 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 items-end">
           <div>
             <label className="label">วันที่</label>
             <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-              className="input-field h-9 text-sm" />
+              className="input-field h-10 text-sm w-full" />
           </div>
-          <div className="w-64">
+          <div>
             <label className="label">ค้นหา</label>
             <div className="relative">
               <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={filterSearch} onChange={e => setFilterSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="ทะเบียน / ชื่อลูกค้า..."
-                className="input-field h-9 text-sm pl-8" />
+                className="input-field h-10 text-sm pl-8 w-full" />
             </div>
           </div>
           <div>
             <label className="label">สถานะ</label>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field h-9 text-sm min-w-[110px]">
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field h-10 text-sm w-full">
               {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
-          <button onClick={handleSearch} className="btn-primary h-9 px-4 text-sm">ค้นหา</button>
+          <button onClick={handleSearch} className="btn-primary h-10 px-4 text-sm w-full sm:w-auto">ค้นหา</button>
         </div>
       </div>
 

@@ -69,20 +69,20 @@ export default function TripMonitor() {
       </div>
 
       {/* Flow summary */}
-      <div className="grid grid-cols-6 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
         {FLOW_STEPS.slice(0, 6).map(step => {
           const count = statusCounts[step.key] || 0;
           const cfg = getStatusConfig(step.key);
           return (
             <button key={step.key}
               onClick={() => setFilter(filter === step.key ? 'all' : step.key)}
-              className={`p-3 rounded-xl border text-center transition-all ${filter === step.key
+              className={`p-2.5 rounded-xl border text-center transition-all ${filter === step.key
                 ? `${cfg.color} scale-105`
                 : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}>
-              <div className={`text-2xl font-bold ${filter === step.key ? '' : count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
+              <div className={`text-xl font-bold ${filter === step.key ? '' : count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
                 {count}
               </div>
-              <div className="text-xs mt-1 text-slate-500">{step.shortLabel}</div>
+              <div className="text-xs mt-0.5 text-slate-500 leading-tight">{step.shortLabel}</div>
             </button>
           );
         })}
