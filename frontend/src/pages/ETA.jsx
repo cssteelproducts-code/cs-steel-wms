@@ -92,9 +92,9 @@ export default function ETA() {
       v.address?.toLowerCase().includes(q);
   });
 
-  const arriving = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 0 && v.etaMinutes <= 30).length;
+  const arriving = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 0 && v.etaMinutes <= 60).length;
   const inRadius = vehicles.filter(v => v.withinRadius).length;
-  const farAway = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 120).length;
+  const farAway = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 180).length;
 
   const shortAddress = (addr) => {
     if (!addr) return '';
@@ -167,8 +167,8 @@ export default function ETA() {
         {[
           { label: 'รถทั้งหมด',          value: vehicles.length, color: 'text-gray-900' },
           { label: 'อยู่ภายในคลัง',      value: inRadius,        color: 'text-red-600' },
-          { label: 'ใกล้ถึง 30 นาที',    value: arriving,        color: 'text-amber-500' },
-          { label: 'ห่างจากคลัง 2 ชม.+', value: farAway,         color: 'text-blue-600' },
+          { label: 'ถึงคลังภายใน 60 นาที',  value: arriving,  color: 'text-amber-500' },
+          { label: 'ห่างจากคลัง 180 นาที+', value: farAway,  color: 'text-blue-600' },
         ].map(s => (
           <div key={s.label} className="card text-center py-3">
             <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>

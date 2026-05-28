@@ -92,14 +92,16 @@ router.post('/check', async (req, res) => {
       if (cfg.AlertType === 'OVERSTAY') {
         const r = pool.request().input('threshold', sql.Decimal(10, 2), cfg.ThresholdValue);
         if (cfg.WarehouseID) r.input('warehouseId', sql.Int, cfg.WarehouseID);
+        if (cfg.VehicleTypeID) r.input('vehicleTypeId', sql.Int, cfg.VehicleTypeID);
 
         const trips = await r.query(`
-          SELECT t.TripID, t.LicensePlate, t.WarehouseID,
+          SELECT t.TripID, t.LicensePlate, t.WarehouseID, t.VehicleTypeID,
             DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) AS MinutesInWarehouse
           FROM WMS_Trips t
           WHERE t.Status NOT IN ('Complete', 'Cancelled')
             AND DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) > @threshold
             ${cfg.WarehouseID ? 'AND t.WarehouseID = @warehouseId' : ''}
+            ${cfg.VehicleTypeID ? 'AND t.VehicleTypeID = @vehicleTypeId' : ''}
             AND NOT EXISTS (
               SELECT 1 FROM WMS_Alerts a
               WHERE a.TripID = t.TripID AND a.AlertType = 'OVERSTAY'
@@ -169,9 +171,10 @@ router.get('/config', async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().query(`
-      SELECT c.*, w.WarehouseName
+      SELECT c.*, w.WarehouseName, vt.TypeName as VehicleTypeName
       FROM WMS_AlertConfig c
       LEFT JOIN WMS_Warehouses w ON c.WarehouseID = w.WarehouseID
+      LEFT JOIN WMS_VehicleTypes vt ON c.VehicleTypeID = vt.TypeID
       ORDER BY c.AlertType, c.ConfigID
     `);
     res.json({ success: true, data: result.recordset });
@@ -184,22 +187,24 @@ router.get('/config', async (req, res) => {
 router.post('/config', async (req, res) => {
   try {
     const pool = getPool();
-    const { alertType, warehouseId, thresholdValue, isActive, configId } = req.body;
+    const { alertType, warehouseId, vehicleTypeId, thresholdValue, isActive, configId } = req.body;
 
     if (configId) {
       await pool.request()
         .input('id', sql.Int, configId)
         .input('threshold', sql.Decimal(10, 2), thresholdValue)
         .input('active', sql.Bit, isActive !== false ? 1 : 0)
-        .query('UPDATE WMS_AlertConfig SET ThresholdValue=@threshold, IsActive=@active, UpdatedAt=GETDATE() WHERE ConfigID=@id');
+        .input('vehicleTypeId', sql.Int, vehicleTypeId || null)
+        .query('UPDATE WMS_AlertConfig SET ThresholdValue=@threshold, IsActive=@active, VehicleTypeID=@vehicleTypeId, UpdatedAt=GETDATE() WHERE ConfigID=@id');
     } else {
       await pool.request()
         .input('alertType', sql.NVarChar, alertType)
         .input('warehouseId', sql.Int, warehouseId || null)
+        .input('vehicleTypeId', sql.Int, vehicleTypeId || null)
         .input('threshold', sql.Decimal(10, 2), thresholdValue)
         .query(`
-          INSERT INTO WMS_AlertConfig (AlertType, WarehouseID, ThresholdValue)
-          VALUES (@alertType, @warehouseId, @threshold)
+          INSERT INTO WMS_AlertConfig (AlertType, WarehouseID, VehicleTypeID, ThresholdValue)
+          VALUES (@alertType, @warehouseId, @vehicleTypeId, @threshold)
         `);
     }
     res.json({ success: true });

@@ -23,14 +23,16 @@ export default function Alerts() {
   const [checking, setChecking] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
+  const [vehicleTypes, setVehicleTypes] = useState([]);
   const [showAddConfig, setShowAddConfig] = useState(false);
   const [editingConfig, setEditingConfig] = useState(null);
-  const [cfgForm, setCfgForm] = useState({ alertType: 'OVERSTAY', thresholdValue: 240, warehouseId: '', isActive: true });
+  const [cfgForm, setCfgForm] = useState({ alertType: 'OVERSTAY', thresholdValue: 240, warehouseId: '', vehicleTypeId: '', isActive: true });
 
   useEffect(() => {
     fetchAlerts();
     fetchConfigs();
     fetchWarehouses();
+    fetchVehicleTypes();
   }, []);
 
   const fetchAlerts = async () => {
@@ -52,6 +54,13 @@ export default function Alerts() {
     try {
       const res = await api.get('/master/warehouses');
       setWarehouses(res.data.data || []);
+    } catch {}
+  };
+
+  const fetchVehicleTypes = async () => {
+    try {
+      const res = await api.get('/master/vehicle-types');
+      setVehicleTypes(res.data.data || []);
     } catch {}
   };
 
@@ -96,7 +105,7 @@ export default function Alerts() {
 
   const startEdit = (cfg) => {
     setEditingConfig(cfg);
-    setCfgForm({ alertType: cfg.AlertType, thresholdValue: cfg.ThresholdValue, warehouseId: cfg.WarehouseID || '', isActive: cfg.IsActive });
+    setCfgForm({ alertType: cfg.AlertType, thresholdValue: cfg.ThresholdValue, warehouseId: cfg.WarehouseID || '', vehicleTypeId: cfg.VehicleTypeID || '', isActive: cfg.IsActive });
     setShowAddConfig(true);
   };
 
@@ -209,7 +218,7 @@ export default function Alerts() {
               <Settings size={18} className="text-red-500" />
               <span className="font-semibold text-slate-900">ตั้งค่าเกณฑ์การแจ้งเตือน</span>
             </div>
-            <button onClick={() => { setShowAddConfig(true); setEditingConfig(null); setCfgForm({ alertType: 'OVERSTAY', thresholdValue: 240, warehouseId: '', isActive: true }); }}
+            <button onClick={() => { setShowAddConfig(true); setEditingConfig(null); setCfgForm({ alertType: 'OVERSTAY', thresholdValue: 240, warehouseId: '', vehicleTypeId: '', isActive: true }); }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg font-medium">
               + เพิ่มเกณฑ์
             </button>
@@ -235,6 +244,16 @@ export default function Alerts() {
                     onChange={e => setCfgForm(p => ({ ...p, thresholdValue: e.target.value }))}
                     className="input-field" />
                 </div>
+                {cfgForm.alertType === 'OVERSTAY' && (
+                  <div>
+                    <label className="label">ประเภทรถ (ว่าง = ทุกประเภท)</label>
+                    <select value={cfgForm.vehicleTypeId} onChange={e => setCfgForm(p => ({ ...p, vehicleTypeId: e.target.value }))}
+                      className="input-field" disabled={!!editingConfig}>
+                      <option value="">ทุกประเภท</option>
+                      {vehicleTypes.map(vt => <option key={vt.TypeID} value={vt.TypeID}>{vt.TypeName}</option>)}
+                    </select>
+                  </div>
+                )}
                 <div>
                   <label className="label">คลังสินค้า (ว่าง = ทุกคลัง)</label>
                   <select value={cfgForm.warehouseId} onChange={e => setCfgForm(p => ({ ...p, warehouseId: e.target.value }))}
@@ -268,6 +287,7 @@ export default function Alerts() {
                   <div className="text-xs text-slate-500 mt-0.5">
                     เกณฑ์: <span className="text-red-500 font-semibold">{cfg.ThresholdValue}</span>
                     {cfg.AlertType === 'OVERSTAY' ? ' นาที' : ' กก.'}
+                    {cfg.VehicleTypeName ? ` · ${cfg.VehicleTypeName}` : cfg.AlertType === 'OVERSTAY' ? ' · ทุกประเภทรถ' : ''}
                     {cfg.WarehouseName ? ` · ${cfg.WarehouseName}` : ' · ทุกคลัง'}
                   </div>
                 </div>

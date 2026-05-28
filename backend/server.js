@@ -191,6 +191,11 @@ const runMigrations = async () => {
       SELECT r.RoleID, 'TRANSFER', N'ย้ายสินค้าภายใน', 1, 1, 1, 1
       FROM WMS_Roles r WHERE r.RoleName='Admin';
     `);
+    // Add VehicleTypeID to WMS_AlertConfig for per-vehicle-type OVERSTAY thresholds
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_AlertConfig') AND name='VehicleTypeID')
+        ALTER TABLE WMS_AlertConfig ADD VehicleTypeID INT NULL;
+    `);
     // Ensure RECORDS permission exists for Admin role
     await pool.request().query(`
       IF NOT EXISTS (
