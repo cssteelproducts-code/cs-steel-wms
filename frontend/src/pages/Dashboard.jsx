@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   TruckIcon, CheckCircle, Clock, Scale, Activity,
-  Calendar, Package, Search, ChevronDown, ChevronUp, X, RefreshCw, BarChart2
+  Calendar, Package, Search, ChevronDown, ChevronUp, X, RefreshCw, BarChart2, Timer
 } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
@@ -273,6 +273,49 @@ export default function Dashboard() {
           )
         )}
       </div>
+
+      {/* เวลาเฉลี่ยขึ้นสินค้าต่อสถานี */}
+      {data?.stationAvgTime?.length > 0 && (() => {
+        const maxAvg = Math.max(...data.stationAvgTime.map(s => s.AvgMinutes || 0), 1);
+        const fmtMin = (m) => {
+          if (!m && m !== 0) return '-';
+          if (m < 60) return `${Math.round(m)} นาที`;
+          return `${Math.floor(m / 60)} ชม. ${Math.round(m % 60)} นาที`;
+        };
+        return (
+          <div className="card">
+            <SectionHeader title="เวลาเฉลี่ยขึ้นสินค้าต่อสถานี" sectionKey="stationAvg" collapsed={collapsed.stationAvg} onToggle={toggleSection}
+              icon={Clock}
+              extra={<span className="text-xs text-slate-400">30 วันล่าสุด</span>} />
+            {!collapsed.stationAvg && (
+              <div className="space-y-3">
+                {data.stationAvgTime.map(s => {
+                  const pct = Math.round((s.AvgMinutes / maxAvg) * 100);
+                  const barColor = pct >= 80 ? 'bg-red-400' : pct >= 50 ? 'bg-amber-400' : 'bg-emerald-400';
+                  return (
+                    <div key={s.StationName}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-semibold text-slate-700 truncate">{s.StationName}</span>
+                          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">{s.TodayTrips > 0 ? `วันนี้ ${s.TodayTrips} เที่ยว` : `30 วัน ${s.TotalTrips} เที่ยว`}</span>
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 ml-2 whitespace-nowrap">{fmtMin(s.AvgMinutes)}</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-100">
+                        <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${Math.max(pct, 4)}%` }} />
+                      </div>
+                      <div className="flex justify-between mt-0.5">
+                        <span className="text-xs text-slate-400">ต่ำสุด {fmtMin(s.MinMinutes)}</span>
+                        <span className="text-xs text-slate-400">สูงสุด {fmtMin(s.MaxMinutes)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
 
       {/* น้ำหนักสินค้าที่ขึ้น */}
       <div className="card">

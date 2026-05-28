@@ -203,6 +203,21 @@ router.get('/summary', authenticate, async (req, res) => {
         FROM WMS_Trips
         WHERE DeliveryType IS NOT NULL AND DeliveryType != ''
         GROUP BY DeliveryType
+      `),
+      pool.request().query(`
+        SELECT ls.StationName, ls.StationCode,
+          COUNT(*) as TotalTrips,
+          AVG(lr.DurationMinutes) as AvgMinutes,
+          MIN(lr.DurationMinutes) as MinMinutes,
+          MAX(lr.DurationMinutes) as MaxMinutes,
+          SUM(CASE WHEN CAST(lr.EntryTime AS DATE)=CAST(GETUTCDATE() AS DATE) THEN 1 ELSE 0 END) as TodayTrips
+        FROM WMS_LoadingRecord lr
+        JOIN WMS_LoadingStations ls ON lr.StationID=ls.StationID
+        WHERE lr.ExitTime IS NOT NULL
+          AND lr.DurationMinutes > 0
+          AND lr.EntryTime >= DATEADD(DAY,-30,GETUTCDATE())
+        GROUP BY ls.StationID, ls.StationName, ls.StationCode
+        ORDER BY AVG(lr.DurationMinutes) DESC
       `)
     ]);
 
@@ -210,7 +225,7 @@ router.get('/summary', authenticate, async (req, res) => {
       todayStats, weightStats, statusFlow, avgTime, recentActivity,
       stationLoad, weeklyTrend, tripCounts, weightHistory,
       vehicleTypesToday, onTimeStats, vtBreakdownMonth, vtBreakdownYear,
-      incompleteLoading, completedToday, deliveryTypeResult
+      incompleteLoading, completedToday, deliveryTypeResult, stationAvgTimeResult
     ] = results.map(settle);
 
     // Log any failed queries for debugging
@@ -236,7 +251,8 @@ router.get('/summary', authenticate, async (req, res) => {
       vtBreakdownYear: vtBreakdownYear?.recordset || [],
       incompleteLoading: incompleteLoading?.recordset || [],
       completedToday: completedToday?.recordset || [],
-      deliveryTypeStats
+      deliveryTypeStats,
+      stationAvgTime: stationAvgTimeResult?.recordset || []
     };
     setCache('dashboard:summary', responseData, 12000); // 12s cache
     res.json({ success: true, data: responseData });
