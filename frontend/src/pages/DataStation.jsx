@@ -123,12 +123,30 @@ export default function DataStation() {
                 className={`p-3 rounded-lg border cursor-pointer transition-all ${selected?.TripID === trip.TripID
                   ? 'border-purple-400 bg-purple-50'
                   : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50'}`}>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between gap-3">
+                  <div className="min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs">#{trip.TripID}</span>
                       <PriorityBadge priority={trip.Priority} />
+                    </div>
+                    <div className="text-slate-500 text-xs mt-1">
+                      {trip.VehicleType}{trip.DeliveryType && ` | ${trip.DeliveryType}`}{trip.WarehouseName && ` | ${trip.WarehouseName}`}
+                    </div>
+                    {trip.CustomerName && (
+                      <div className="text-blue-500 text-xs">{trip.CustomerName}</div>
+                    )}
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <div className="text-amber-500 text-sm font-medium">
+                      {trip.WaitMinutes > 0
+                        ? trip.WaitMinutes < 60
+                          ? `รอ ${trip.WaitMinutes} นาที`
+                          : `รอ ${Math.floor(trip.WaitMinutes / 60)} ชั่วโมง ${trip.WaitMinutes % 60} นาที`
+                        : 'เพิ่งเข้า'}
+                    </div>
+                    <div className="text-slate-400 text-xs">{formatDateTime(trip.WeighDateTime)}</div>
+                    <div className="mt-1 flex items-center justify-end gap-1.5">
                       {trip.Status === 'Data' && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-medium">รอเอกสาร Pick</span>
                       )}
@@ -139,22 +157,6 @@ export default function DataStation() {
                         <span className="text-xs font-semibold text-rose-500">⏱ {fmtWait(liveSOWaitMinutes(trip))}</span>
                       )}
                     </div>
-                    <div className="text-slate-500 text-xs mt-1">
-                      {trip.VehicleType}{trip.DeliveryType && ` | ${trip.DeliveryType}`}{trip.WarehouseName && ` | ${trip.WarehouseName}`}
-                    </div>
-                    {trip.CustomerName && (
-                      <div className="text-blue-500 text-xs">{trip.CustomerName}</div>
-                    )}
-                  </div>
-                  <div className="text-right">
-                    <div className="text-amber-500 text-sm font-medium">
-                      {trip.WaitMinutes > 0
-                        ? trip.WaitMinutes < 60
-                          ? `รอ ${trip.WaitMinutes} นาที`
-                          : `รอ ${Math.floor(trip.WaitMinutes / 60)} ชั่วโมง ${trip.WaitMinutes % 60} นาที`
-                        : 'เพิ่งเข้า'}
-                    </div>
-                    <div className="text-slate-400 text-xs">{formatDateTime(trip.WeighDateTime)}</div>
                   </div>
                 </div>
               </div>
