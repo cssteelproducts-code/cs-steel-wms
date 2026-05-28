@@ -305,6 +305,31 @@ const runMigrations = async () => {
     console.warn('⚠ WMS_Products migration:', e.message);
   }
 
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name='WMS_LocationTypes')
+        CREATE TABLE WMS_LocationTypes (
+          TypeID    INT IDENTITY(1,1) PRIMARY KEY,
+          TypeCode  NVARCHAR(20)  NOT NULL UNIQUE,
+          TypeName  NVARCHAR(50)  NOT NULL,
+          SortOrder INT DEFAULT 0,
+          IsActive  BIT DEFAULT 1
+        );
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name='WMS_Locations')
+        CREATE TABLE WMS_Locations (
+          LocationID     INT IDENTITY(1,1) PRIMARY KEY,
+          WarehouseID    INT NULL,
+          LocationCode   NVARCHAR(20)  NOT NULL,
+          LocationName   NVARCHAR(100) NOT NULL,
+          LocationTypeID INT NULL,
+          IsActive       BIT DEFAULT 1
+        );
+    `);
+    console.log('✅ WMS_LocationTypes + WMS_Locations ready');
+  } catch (e) {
+    console.warn('⚠ WMS_Products migration:', e.message);
+  }
+
   // Performance indexes
   const indexes = [
     [`IX_Trips_TripDate_Status`, `WMS_Trips`, `TripDate, Status`],

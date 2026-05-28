@@ -299,82 +299,60 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* ในเวลา / นอกเวลา */}
+      {/* ในเวลา / นอกเวลา + ประเภทรถ */}
       <div className="card">
         <SectionHeader title="ในเวลา / นอกเวลา" sectionKey="ontime" collapsed={collapsed.ontime} onToggle={toggleSection} />
-        {!collapsed.ontime && <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {/* วันนี้ */}
-          <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">วันนี้</p>
-            <div className="flex items-center gap-4 mb-2">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                <span className="text-sm text-slate-600">ในเวลา</span>
-                <span className="text-base font-bold text-emerald-600 ml-1">{ot.TodayOnTime ?? 0}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
-                <span className="text-sm text-slate-600">นอกเวลา</span>
-                <span className="text-base font-bold text-amber-600 ml-1">{ot.TodayOvertime ?? 0}</span>
-              </div>
-            </div>
-            {data?.vehicleTypesToday?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {data.vehicleTypesToday.map(vt => (
-                  <TypeTag key={vt.TypeName} name={vt.TypeName} count={vt.Count} color="bg-blue-50 text-blue-700" />
+        {!collapsed.ontime && (() => {
+          const todayMap  = Object.fromEntries((data?.vehicleTypesToday  || []).map(v => [v.TypeName, v.Count]));
+          const monthMap  = Object.fromEntries((data?.vtBreakdownMonth   || []).map(v => [v.TypeName, v.Count]));
+          const yearMap   = Object.fromEntries((data?.vtBreakdownYear    || []).map(v => [v.TypeName, v.Count]));
+          const allTypes  = [...new Set([...Object.keys(todayMap), ...Object.keys(monthMap), ...Object.keys(yearMap)])].sort();
+          return (
+            <div className="space-y-3">
+              {/* ในเวลา/นอกเวลา row */}
+              <div className="grid grid-cols-3 gap-3">
+                {[
+                  { label: 'วันนี้',   inTime: ot.TodayOnTime,  overtime: ot.TodayOvertime  },
+                  { label: 'เดือนนี้', inTime: ot.MonthOnTime,  overtime: ot.MonthOvertime  },
+                  { label: 'ปีนี้',    inTime: ot.YearOnTime,   overtime: ot.YearOvertime   },
+                ].map(({ label, inTime, overtime }) => (
+                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                    <p className="text-xs font-semibold text-slate-400 mb-2">{label}</p>
+                    <div className="flex justify-center gap-4">
+                      <div><p className="text-lg font-bold text-emerald-600">{inTime ?? 0}</p><p className="text-xs text-slate-400">ในเวลา</p></div>
+                      <div><p className="text-lg font-bold text-amber-500">{overtime ?? 0}</p><p className="text-xs text-slate-400">นอกเวลา</p></div>
+                    </div>
+                  </div>
                 ))}
               </div>
-            )}
-          </div>
-
-          {/* เดือนนี้ */}
-          <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">เดือนนี้</p>
-            <div className="flex items-center gap-4 mb-2">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                <span className="text-sm text-slate-600">ในเวลา</span>
-                <span className="text-base font-bold text-emerald-600 ml-1">{ot.MonthOnTime ?? 0}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
-                <span className="text-sm text-slate-600">นอกเวลา</span>
-                <span className="text-base font-bold text-amber-600 ml-1">{ot.MonthOvertime ?? 0}</span>
-              </div>
+              {/* ประเภทรถ table */}
+              {allTypes.length > 0 && (
+                <div className="rounded-xl overflow-hidden border border-slate-100">
+                  <table className="w-full text-sm">
+                    <thead>
+                      <tr className="bg-slate-50">
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500">ประเภทรถ</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-blue-600">วันนี้</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-emerald-600">เดือนนี้</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-violet-600">ปีนี้</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {allTypes.map((name, i) => (
+                        <tr key={name} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
+                          <td className="px-3 py-1.5 font-medium text-slate-700">{name}</td>
+                          <td className="px-3 py-1.5 text-center font-bold text-blue-600">{todayMap[name] ?? '—'}</td>
+                          <td className="px-3 py-1.5 text-center font-bold text-emerald-600">{monthMap[name] ?? '—'}</td>
+                          <td className="px-3 py-1.5 text-center font-bold text-violet-600">{yearMap[name] ?? '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
-            {data?.vtBreakdownMonth?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {data.vtBreakdownMonth.map(vt => (
-                  <TypeTag key={vt.TypeName} name={vt.TypeName} count={vt.Count} color="bg-emerald-50 text-emerald-700" />
-                ))}
-              </div>
-            )}
-          </div>
-
-          {/* ปีนี้ */}
-          <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">ปีนี้</p>
-            <div className="flex items-center gap-4 mb-2">
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
-                <span className="text-sm text-slate-600">ในเวลา</span>
-                <span className="text-base font-bold text-emerald-600 ml-1">{ot.YearOnTime ?? 0}</span>
-              </div>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-500 flex-shrink-0" />
-                <span className="text-sm text-slate-600">นอกเวลา</span>
-                <span className="text-base font-bold text-amber-600 ml-1">{ot.YearOvertime ?? 0}</span>
-              </div>
-            </div>
-            {data?.vtBreakdownYear?.length > 0 && (
-              <div className="flex flex-wrap gap-1 mt-1">
-                {data.vtBreakdownYear.map(vt => (
-                  <TypeTag key={vt.TypeName} name={vt.TypeName} count={vt.Count} color="bg-violet-50 text-violet-700" />
-                ))}
-              </div>
-            )}
-          </div>
-        </div>}
+          );
+        })()}
       </div>
 
       {/* Weekly bar chart */}

@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, ShoppingBag } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, ShoppingBag, Grid3X3, LayoutGrid } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import DraggableMap from '../components/DraggableMap';
@@ -7,11 +7,13 @@ import DraggableMap from '../components/DraggableMap';
 const SKU_TYPES = ['ขายดี','ขายน้อยขายต่อเนื่อง','ขายน้อยขายไม่ต่อเนื่อง','สต็อค','NewItem','สินค้าโป๊ว','ไม่ควบคุมสต็อค','เหล็กอื่น (เกรด B)','เหล็กเกรด C','อื่นๆ'];
 
 const tabs = [
-  { key: 'warehouses', label: 'คลังสินค้า', icon: Warehouse },
-  { key: 'customers', label: 'ลูกค้า', icon: Users },
-  { key: 'vehicleTypes', label: 'ประเภทรถ', icon: Truck },
-  { key: 'loadingStations', label: 'สถานีขึ้นสินค้า', icon: Package },
-  { key: 'products', label: 'สินค้า', icon: ShoppingBag }
+  { key: 'warehouses',     label: 'คลังสินค้า',        icon: Warehouse   },
+  { key: 'customers',      label: 'ลูกค้า',             icon: Users       },
+  { key: 'vehicleTypes',   label: 'ประเภทรถ',           icon: Truck       },
+  { key: 'loadingStations',label: 'สถานีขึ้นสินค้า',    icon: Package     },
+  { key: 'products',       label: 'สินค้า',             icon: ShoppingBag },
+  { key: 'locationTypes',  label: 'ประเภท Location',    icon: Grid3X3     },
+  { key: 'locations',      label: 'Location',           icon: LayoutGrid  },
 ];
 
 export default function Master() {
@@ -26,6 +28,7 @@ export default function Master() {
   const [productSearch, setProductSearch] = useState('');
   const [productSKUFilter, setProductSKUFilter] = useState('');
   const productImportRef = useRef(null);
+  const [locationTypes, setLocationTypes] = useState([]);
   const [selected, setSelected] = useState(new Set());
   // Location search state
   const [locQuery, setLocQuery] = useState('');
@@ -107,10 +110,15 @@ export default function Master() {
     );
   };
 
-  useEffect(() => { fetchData(tab); setSelected(new Set()); }, [tab]);
+  useEffect(() => {
+    fetchData(tab);
+    setSelected(new Set());
+    if (tab === 'locations') api.get('/master/location-types').then(r => setLocationTypes(r.data.data || [])).catch(() => {});
+  }, [tab]);
   useEffect(() => {
     fetchWarehouses();
-    ['warehouses', 'customers', 'vehicleTypes', 'loadingStations', 'products'].forEach(t => fetchData(t));
+    ['warehouses', 'customers', 'vehicleTypes', 'loadingStations', 'products', 'locationTypes', 'locations'].forEach(t => fetchData(t));
+    api.get('/master/location-types').then(r => setLocationTypes(r.data.data || [])).catch(() => {});
   }, []);
 
   const fetchWarehouses = async () => {
@@ -127,7 +135,9 @@ export default function Master() {
         customers: '/master/customers',
         vehicleTypes: '/master/vehicle-types',
         loadingStations: '/master/loading-stations',
-        products: '/master/products'
+        products: '/master/products',
+        locationTypes: '/master/location-types',
+        locations: '/master/locations'
       };
       const res = await api.get(endpoints[type]);
       setData(p => ({ ...p, [type]: res.data.data || [] }));
@@ -187,14 +197,18 @@ export default function Master() {
         customers: '/master/customers',
         vehicleTypes: '/master/vehicle-types',
         loadingStations: '/master/loading-stations',
-        products: '/master/products'
+        products: '/master/products',
+        locationTypes: '/master/location-types',
+        locations: '/master/locations'
       };
       const idFields = {
         warehouses: 'WarehouseID',
         customers: 'CustomerID',
         vehicleTypes: 'TypeID',
         loadingStations: 'StationID',
-        products: 'ProductID'
+        products: 'ProductID',
+        locationTypes: 'TypeID',
+        locations: 'LocationID'
       };
       const endpoint = endpoints[tab];
       const payload = getFormPayload();
@@ -219,10 +233,10 @@ export default function Master() {
   };
 
   const handleDelete = async (item) => {
-    const labels = { warehouses: 'คลังสินค้า', customers: 'ลูกค้า', vehicleTypes: 'ประเภทรถ', loadingStations: 'สถานีขึ้นสินค้า', products: 'สินค้า' };
-    const idFields = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID', products: 'ProductID' };
-    const endpoints = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations', products: '/master/products' };
-    const name = item.TypeName || item.WarehouseName || item.CustomerName || item.StationName || item.ProductName || '';
+    const labels = { warehouses: 'คลังสินค้า', customers: 'ลูกค้า', vehicleTypes: 'ประเภทรถ', loadingStations: 'สถานีขึ้นสินค้า', products: 'สินค้า', locationTypes: 'ประเภท Location', locations: 'Location' };
+    const idFields = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID', products: 'ProductID', locationTypes: 'TypeID', locations: 'LocationID' };
+    const endpoints = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations', products: '/master/products', locationTypes: '/master/location-types', locations: '/master/locations' };
+    const name = item.TypeName || item.WarehouseName || item.CustomerName || item.StationName || item.ProductName || item.LocationName || '';
     if (!window.confirm(`ยืนยันลบ${labels[tab]} "${name}" ?`)) return;
     try {
       const res = await api.delete(`${endpoints[tab]}/${item[idFields[tab]]}`);
@@ -236,8 +250,8 @@ export default function Master() {
     }
   };
 
-  const idField = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID', products: 'ProductID' };
-  const endpointMap = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations', products: '/master/products' };
+  const idField = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID', products: 'ProductID', locationTypes: 'TypeID', locations: 'LocationID' };
+  const endpointMap = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations', products: '/master/products', locationTypes: '/master/location-types', locations: '/master/locations' };
 
   const toggleSelect = (id) => setSelected(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; });
   const toggleSelectAll = () => {
@@ -274,6 +288,8 @@ export default function Master() {
       };
       case 'loadingStations': return { stationCode: form.StationCode || form.stationCode, stationName: form.StationName || form.stationName, warehouseId: form.WarehouseID || form.warehouseId, sortOrder: form.SortOrder || form.sortOrder || 0, isActive: form.IsActive ?? 1 };
       case 'products': return { productCode: form.ProductCode, productName: form.ProductName, skuType: form.SKUType || null, categoryCode: form.CategoryCode || null, categoryName: form.CategoryName || null, materialType: form.MaterialType || null, formCode: form.FormCode || null, sizeCode: form.SizeCode || null, thickness: form.Thickness || null, targetGroup: form.TargetGroup || null, unitNetWeight: form.UnitNetWeight || null, isActive: form.IsActive ?? 1 };
+      case 'locationTypes': return { typeCode: form.TypeCode || form.typeCode, typeName: form.TypeName || form.typeName, sortOrder: form.SortOrder || 0, isActive: form.IsActive ?? 1 };
+      case 'locations': return { locationCode: form.LocationCode || form.locationCode, locationName: form.LocationName || form.locationName, warehouseId: form.WarehouseID || form.warehouseId || null, locationTypeId: form.LocationTypeID || form.locationTypeId || null, isActive: form.IsActive ?? 1 };
       default: return form;
     }
   };
@@ -427,6 +443,50 @@ export default function Master() {
               );
             })}
           </div>
+        </div>
+      );
+      case 'locationTypes': return (
+        <div className="rounded-xl overflow-hidden border border-gray-100">
+          {selectAllRow}
+          {items.map(i => (
+            <div key={i.TypeID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${selected.has(i.TypeID) ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+              <Checkbox id={i.TypeID} checked={selected.has(i.TypeID)} onChange={() => toggleSelect(i.TypeID)} />
+              <span className="flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-bold font-mono" style={{ background: '#eff6ff', color: '#2563eb' }}>{i.TypeCode}</span>
+              <div className="flex-1"><p className="text-sm font-semibold text-gray-900">{i.TypeName}</p><p className="text-xs text-gray-400">ลำดับ {i.SortOrder}</p></div>
+              <span className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+              <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
+                <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+              </div>
+            </div>
+          ))}
+          {!items.length && <p className="text-center text-slate-400 py-8 text-sm">ยังไม่มีข้อมูล</p>}
+        </div>
+      );
+      case 'locations': return (
+        <div className="rounded-xl overflow-hidden border border-gray-100">
+          {selectAllRow}
+          {items.map(i => {
+            const ltColor = i.LocationTypeName ? 'bg-purple-50 text-purple-700' : 'bg-slate-100 text-slate-400';
+            return (
+              <div key={i.LocationID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${selected.has(i.LocationID) ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                <Checkbox id={i.LocationID} checked={selected.has(i.LocationID)} onChange={() => toggleSelect(i.LocationID)} />
+                <span className="flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-bold font-mono" style={{ background: '#eff6ff', color: '#2563eb' }}>{i.LocationCode}</span>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-gray-900 truncate">{i.LocationName}</p>
+                  {i.WarehouseName && <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1"><Warehouse size={10} />{i.WarehouseName}</p>}
+                </div>
+                <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${ltColor}`}>
+                  {i.LocationTypeName || 'ไม่ระบุประเภท'}
+                </span>
+                <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
+                  <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+                </div>
+              </div>
+            );
+          })}
+          {!items.length && <p className="text-center text-slate-400 py-8 text-sm">ยังไม่มีข้อมูล</p>}
         </div>
       );
       case 'products': {
@@ -622,6 +682,39 @@ export default function Master() {
           <div><label className="label">ชื่อสถานี *</label><input value={form.StationName || form.stationName || ''} onChange={e => setForm(p => ({ ...p, StationName: e.target.value }))} className="input-field" placeholder="สถานีที่ 1" /></div>
           <div><label className="label">คลังสินค้า</label><select value={form.WarehouseID || form.warehouseId || ''} onChange={e => setForm(p => ({ ...p, WarehouseID: e.target.value }))} className="input-field"><option value="">-- ทุกคลัง --</option>{warehouses.map(w => <option key={w.WarehouseID} value={w.WarehouseID}>{w.WarehouseName}</option>)}</select></div>
           <div><label className="label">ลำดับการแสดง</label><input type="number" value={form.SortOrder || form.sortOrder || 0} onChange={e => setForm(p => ({ ...p, SortOrder: e.target.value }))} className="input-field" /></div>
+        </div>
+      </>);
+      case 'locationTypes': return (<>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="label">รหัสประเภท *</label><input value={form.TypeCode || form.typeCode || ''} onChange={e => setForm(p => ({ ...p, TypeCode: e.target.value }))} className="input-field font-mono" placeholder="FAST" disabled={!!editing} /></div>
+          <div><label className="label">ชื่อประเภท *</label><input value={form.TypeName || form.typeName || ''} onChange={e => setForm(p => ({ ...p, TypeName: e.target.value }))} className="input-field" placeholder="ขายดี" /></div>
+          <div><label className="label">ลำดับ</label><input type="number" value={form.SortOrder || 0} onChange={e => setForm(p => ({ ...p, SortOrder: e.target.value }))} className="input-field" /></div>
+          {editing && <div className="flex items-center gap-2 pt-5">
+            <input type="checkbox" id="ltActive" checked={form.IsActive ?? 1} onChange={e => setForm(p => ({ ...p, IsActive: e.target.checked ? 1 : 0 }))} />
+            <label htmlFor="ltActive" className="text-sm text-slate-600 cursor-pointer">ใช้งาน</label>
+          </div>}
+        </div>
+      </>);
+      case 'locations': return (<>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="label">รหัส Location *</label><input value={form.LocationCode || form.locationCode || ''} onChange={e => setForm(p => ({ ...p, LocationCode: e.target.value }))} className="input-field font-mono" placeholder="A-01-01" disabled={!!editing} /></div>
+          <div><label className="label">ชื่อ Location *</label><input value={form.LocationName || form.locationName || ''} onChange={e => setForm(p => ({ ...p, LocationName: e.target.value }))} className="input-field" placeholder="ชั้น A แถว 1 ช่อง 1" /></div>
+          <div><label className="label">คลังสินค้า</label>
+            <select value={form.WarehouseID || form.warehouseId || ''} onChange={e => setForm(p => ({ ...p, WarehouseID: e.target.value }))} className="input-field">
+              <option value="">-- ทุกคลัง --</option>
+              {warehouses.map(w => <option key={w.WarehouseID} value={w.WarehouseID}>{w.WarehouseName}</option>)}
+            </select>
+          </div>
+          <div><label className="label">ประเภท Location (SKU Matching)</label>
+            <select value={form.LocationTypeID || form.locationTypeId || ''} onChange={e => setForm(p => ({ ...p, LocationTypeID: e.target.value }))} className="input-field">
+              <option value="">-- ไม่ระบุ --</option>
+              {locationTypes.map(lt => <option key={lt.TypeID} value={lt.TypeID}>{lt.TypeCode} — {lt.TypeName}</option>)}
+            </select>
+          </div>
+          {editing && <div className="col-span-2 flex items-center gap-2">
+            <input type="checkbox" id="locActive" checked={form.IsActive ?? 1} onChange={e => setForm(p => ({ ...p, IsActive: e.target.checked ? 1 : 0 }))} />
+            <label htmlFor="locActive" className="text-sm text-slate-600 cursor-pointer">ใช้งาน</label>
+          </div>}
         </div>
       </>);
       case 'products': return (<>

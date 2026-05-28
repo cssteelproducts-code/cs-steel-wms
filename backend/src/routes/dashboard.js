@@ -3,8 +3,15 @@ const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
+// Simple in-memory TTL cache — avoids re-running expensive queries on every poll
+const _cache = new Map();
+const getCache = (k) => { const e = _cache.get(k); return (e && Date.now() < e.exp) ? e.data : null; };
+const setCache = (k, d, ms) => _cache.set(k, { data: d, exp: Date.now() + ms });
+
 // GET /api/dashboard/summary
 router.get('/summary', authenticate, async (req, res) => {
+  const cached = getCache('dashboard:summary');
+  if (cached) return res.json({ success: true, data: cached });
   try {
     const pool = getPool();
 
@@ -213,27 +220,26 @@ router.get('/summary', authenticate, async (req, res) => {
 
     const deliveryTypeStats = deliveryTypeResult?.recordset || [];
 
-    res.json({
-      success: true,
-      data: {
-        today: todayStats?.recordset[0] || {},
-        weight: weightStats?.recordset[0] || {},
-        statusFlow: statusFlow?.recordset || [],
-        avgProcessingMinutes: avgTime?.recordset[0]?.AvgMinutes || 0,
-        recentActivity: recentActivity?.recordset || [],
-        stationLoad: stationLoad?.recordset || [],
-        weeklyTrend: weeklyTrend?.recordset || [],
-        tripCounts: tripCounts?.recordset[0] || {},
-        weightHistory: weightHistory?.recordset[0] || {},
-        vehicleTypesToday: vehicleTypesToday?.recordset || [],
-        onTimeStats: onTimeStats?.recordset[0] || {},
-        vtBreakdownMonth: vtBreakdownMonth?.recordset || [],
-        vtBreakdownYear: vtBreakdownYear?.recordset || [],
-        incompleteLoading: incompleteLoading?.recordset || [],
-        completedToday: completedToday?.recordset || [],
-        deliveryTypeStats
-      }
-    });
+    const responseData = {
+      today: todayStats?.recordset[0] || {},
+      weight: weightStats?.recordset[0] || {},
+      statusFlow: statusFlow?.recordset || [],
+      avgProcessingMinutes: avgTime?.recordset[0]?.AvgMinutes || 0,
+      recentActivity: recentActivity?.recordset || [],
+      stationLoad: stationLoad?.recordset || [],
+      weeklyTrend: weeklyTrend?.recordset || [],
+      tripCounts: tripCounts?.recordset[0] || {},
+      weightHistory: weightHistory?.recordset[0] || {},
+      vehicleTypesToday: vehicleTypesToday?.recordset || [],
+      onTimeStats: onTimeStats?.recordset[0] || {},
+      vtBreakdownMonth: vtBreakdownMonth?.recordset || [],
+      vtBreakdownYear: vtBreakdownYear?.recordset || [],
+      incompleteLoading: incompleteLoading?.recordset || [],
+      completedToday: completedToday?.recordset || [],
+      deliveryTypeStats
+    };
+    setCache('dashboard:summary', responseData, 12000); // 12s cache
+    res.json({ success: true, data: responseData });
   } catch (err) {
     console.error('Dashboard error:', err);
     res.status(500).json({ success: false, message: err.message });
@@ -299,6 +305,8 @@ router.get('/monthly-report', authenticate, async (req, res) => {
 
 // GET /api/dashboard/live - Live trip monitor
 router.get('/live', authenticate, async (req, res) => {
+  const cached = getCache('dashboard:live');
+  if (cached) return res.json({ success: true, data: cached });
   try {
     const pool = getPool();
     const result = await pool.request().query(`
@@ -341,6 +349,7 @@ router.get('/live', authenticate, async (req, res) => {
       AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
       ORDER BY t.CreatedAt DESC
     `);
+    setCache('dashboard:live', result.recordset, 8000); // 8s cache
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -349,6 +349,108 @@ router.post('/customers/import', authenticate, requireAdmin, upload.single('file
   }
 });
 
+// ==================== LOCATION TYPES ====================
+router.get('/location-types', authenticate, async (req, res) => {
+  try {
+    const result = await getPool().request()
+      .query('SELECT * FROM WMS_LocationTypes WHERE IsActive=1 ORDER BY SortOrder, TypeName');
+    res.json({ success: true, data: result.recordset });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.post('/location-types', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { typeCode, typeName, sortOrder } = req.body;
+    if (!typeCode || !typeName) return res.status(400).json({ success: false, message: 'กรุณาระบุรหัสและชื่อประเภท' });
+    await getPool().request()
+      .input('TypeCode', sql.NVarChar, typeCode.trim())
+      .input('TypeName', sql.NVarChar, typeName.trim())
+      .input('SortOrder', sql.Int, parseInt(sortOrder) || 0)
+      .query('INSERT INTO WMS_LocationTypes (TypeCode,TypeName,SortOrder) VALUES (@TypeCode,@TypeName,@SortOrder)');
+    res.json({ success: true, message: `เพิ่มประเภท "${typeName}" สำเร็จ` });
+  } catch (err) {
+    if (err.number === 2627) return res.status(400).json({ success: false, message: 'รหัสประเภทนี้มีในระบบแล้ว' });
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/location-types/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { typeName, sortOrder, isActive } = req.body;
+    await getPool().request()
+      .input('TypeID', sql.Int, req.params.id)
+      .input('TypeName', sql.NVarChar, typeName)
+      .input('SortOrder', sql.Int, parseInt(sortOrder) || 0)
+      .input('IsActive', sql.Bit, isActive !== undefined ? isActive : 1)
+      .query('UPDATE WMS_LocationTypes SET TypeName=@TypeName,SortOrder=@SortOrder,IsActive=@IsActive WHERE TypeID=@TypeID');
+    res.json({ success: true, message: 'แก้ไขสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.delete('/location-types/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const inUse = await getPool().request().input('TypeID', sql.Int, req.params.id)
+      .query('SELECT TOP 1 LocationID FROM WMS_Locations WHERE LocationTypeID=@TypeID AND IsActive=1');
+    if (inUse.recordset.length > 0) return res.status(400).json({ success: false, message: 'ไม่สามารถลบได้ — มี Location ที่ใช้ประเภทนี้อยู่' });
+    await getPool().request().input('TypeID', sql.Int, req.params.id)
+      .query('UPDATE WMS_LocationTypes SET IsActive=0 WHERE TypeID=@TypeID');
+    res.json({ success: true, message: 'ลบสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+// ==================== LOCATIONS ====================
+router.get('/locations', authenticate, async (req, res) => {
+  try {
+    const { warehouseId } = req.query;
+    const request = getPool().request();
+    let where = 'WHERE l.IsActive=1';
+    if (warehouseId) { where += ' AND l.WarehouseID=@wid'; request.input('wid', sql.Int, warehouseId); }
+    const result = await request.query(`
+      SELECT l.*, w.WarehouseName, lt.TypeName as LocationTypeName, lt.TypeCode as LocationTypeCode
+      FROM WMS_Locations l
+      LEFT JOIN WMS_Warehouses w ON l.WarehouseID=w.WarehouseID
+      LEFT JOIN WMS_LocationTypes lt ON l.LocationTypeID=lt.TypeID
+      ${where} ORDER BY l.LocationCode`);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.post('/locations', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { locationCode, locationName, warehouseId, locationTypeId } = req.body;
+    if (!locationCode || !locationName) return res.status(400).json({ success: false, message: 'กรุณาระบุรหัสและชื่อ Location' });
+    await getPool().request()
+      .input('LocationCode', sql.NVarChar, locationCode.trim())
+      .input('LocationName', sql.NVarChar, locationName.trim())
+      .input('WarehouseID', sql.Int, warehouseId || null)
+      .input('LocationTypeID', sql.Int, locationTypeId || null)
+      .query('INSERT INTO WMS_Locations (LocationCode,LocationName,WarehouseID,LocationTypeID) VALUES (@LocationCode,@LocationName,@WarehouseID,@LocationTypeID)');
+    res.json({ success: true, message: `เพิ่ม Location "${locationCode}" สำเร็จ` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.put('/locations/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { locationName, warehouseId, locationTypeId, isActive } = req.body;
+    await getPool().request()
+      .input('LocationID', sql.Int, req.params.id)
+      .input('LocationName', sql.NVarChar, locationName)
+      .input('WarehouseID', sql.Int, warehouseId || null)
+      .input('LocationTypeID', sql.Int, locationTypeId || null)
+      .input('IsActive', sql.Bit, isActive !== undefined ? isActive : 1)
+      .query('UPDATE WMS_Locations SET LocationName=@LocationName,WarehouseID=@WarehouseID,LocationTypeID=@LocationTypeID,IsActive=@IsActive WHERE LocationID=@LocationID');
+    res.json({ success: true, message: 'แก้ไขสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.delete('/locations/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    await getPool().request().input('LocationID', sql.Int, req.params.id)
+      .query('UPDATE WMS_Locations SET IsActive=0 WHERE LocationID=@LocationID');
+    res.json({ success: true, message: 'ลบสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 // ==================== PRODUCTS ====================
 router.get('/products', authenticate, async (req, res) => {
   try {
