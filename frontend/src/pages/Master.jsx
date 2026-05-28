@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, ShoppingBag } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import DraggableMap from '../components/DraggableMap';
+
+const SKU_TYPES = ['ขายดี','ขายน้อยขายต่อเนื่อง','ขายน้อยขายไม่ต่อเนื่อง','สต็อค','NewItem','สินค้าโป๊ว','ไม่ควบคุมสต็อค','เหล็กอื่น (เกรด B)','เหล็กเกรด C','อื่นๆ'];
 
 const tabs = [
   { key: 'warehouses', label: 'คลังสินค้า', icon: Warehouse },
   { key: 'customers', label: 'ลูกค้า', icon: Users },
   { key: 'vehicleTypes', label: 'ประเภทรถ', icon: Truck },
-  { key: 'loadingStations', label: 'สถานีขึ้นสินค้า', icon: Package }
+  { key: 'loadingStations', label: 'สถานีขึ้นสินค้า', icon: Package },
+  { key: 'products', label: 'สินค้า', icon: ShoppingBag }
 ];
 
 export default function Master() {
@@ -20,6 +23,9 @@ export default function Master() {
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
+  const [productSearch, setProductSearch] = useState('');
+  const [productSKUFilter, setProductSKUFilter] = useState('');
+  const productImportRef = useRef(null);
   const [selected, setSelected] = useState(new Set());
   // Location search state
   const [locQuery, setLocQuery] = useState('');
@@ -104,8 +110,7 @@ export default function Master() {
   useEffect(() => { fetchData(tab); setSelected(new Set()); }, [tab]);
   useEffect(() => {
     fetchWarehouses();
-    // Pre-fetch all counts for summary
-    ['warehouses', 'customers', 'vehicleTypes', 'loadingStations'].forEach(t => fetchData(t));
+    ['warehouses', 'customers', 'vehicleTypes', 'loadingStations', 'products'].forEach(t => fetchData(t));
   }, []);
 
   const fetchWarehouses = async () => {
@@ -121,11 +126,36 @@ export default function Master() {
         warehouses: '/master/warehouses',
         customers: '/master/customers',
         vehicleTypes: '/master/vehicle-types',
-        loadingStations: '/master/loading-stations'
+        loadingStations: '/master/loading-stations',
+        products: '/master/products'
       };
       const res = await api.get(endpoints[type]);
       setData(p => ({ ...p, [type]: res.data.data || [] }));
     } catch {}
+  };
+
+  const handleProductImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    e.target.value = '';
+    setImporting(true);
+    try {
+      const res = await api.post('/master/products/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
+      if (res.data.success) { toast.success(res.data.message); fetchData('products'); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
+    } finally { setImporting(false); }
+  };
+
+  const handleDownloadProductTemplate = async () => {
+    try {
+      const res = await api.get('/master/products/template', { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a'); a.href = url; a.download = 'product_template.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
   };
 
   const openCreate = () => {
@@ -156,13 +186,15 @@ export default function Master() {
         warehouses: '/master/warehouses',
         customers: '/master/customers',
         vehicleTypes: '/master/vehicle-types',
-        loadingStations: '/master/loading-stations'
+        loadingStations: '/master/loading-stations',
+        products: '/master/products'
       };
       const idFields = {
         warehouses: 'WarehouseID',
         customers: 'CustomerID',
         vehicleTypes: 'TypeID',
-        loadingStations: 'StationID'
+        loadingStations: 'StationID',
+        products: 'ProductID'
       };
       const endpoint = endpoints[tab];
       const payload = getFormPayload();
@@ -187,10 +219,10 @@ export default function Master() {
   };
 
   const handleDelete = async (item) => {
-    const labels = { warehouses: 'คลังสินค้า', customers: 'ลูกค้า', vehicleTypes: 'ประเภทรถ', loadingStations: 'สถานีขึ้นสินค้า' };
-    const idFields = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID' };
-    const endpoints = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations' };
-    const name = item.TypeName || item.WarehouseName || item.CustomerName || item.StationName || '';
+    const labels = { warehouses: 'คลังสินค้า', customers: 'ลูกค้า', vehicleTypes: 'ประเภทรถ', loadingStations: 'สถานีขึ้นสินค้า', products: 'สินค้า' };
+    const idFields = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID', products: 'ProductID' };
+    const endpoints = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations', products: '/master/products' };
+    const name = item.TypeName || item.WarehouseName || item.CustomerName || item.StationName || item.ProductName || '';
     if (!window.confirm(`ยืนยันลบ${labels[tab]} "${name}" ?`)) return;
     try {
       const res = await api.delete(`${endpoints[tab]}/${item[idFields[tab]]}`);
@@ -204,8 +236,8 @@ export default function Master() {
     }
   };
 
-  const idField = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID' };
-  const endpointMap = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations' };
+  const idField = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', loadingStations: 'StationID', products: 'ProductID' };
+  const endpointMap = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', loadingStations: '/master/loading-stations', products: '/master/products' };
 
   const toggleSelect = (id) => setSelected(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; });
   const toggleSelectAll = () => {
@@ -241,6 +273,7 @@ export default function Master() {
         cutoffMinute: parseInt(form.CutoffMinute ?? form.cutoffMinute ?? 0),
       };
       case 'loadingStations': return { stationCode: form.StationCode || form.stationCode, stationName: form.StationName || form.stationName, warehouseId: form.WarehouseID || form.warehouseId, sortOrder: form.SortOrder || form.sortOrder || 0, isActive: form.IsActive ?? 1 };
+      case 'products': return { productCode: form.ProductCode, productName: form.ProductName, skuType: form.SKUType || null, categoryCode: form.CategoryCode || null, categoryName: form.CategoryName || null, materialType: form.MaterialType || null, formCode: form.FormCode || null, sizeCode: form.SizeCode || null, thickness: form.Thickness || null, targetGroup: form.TargetGroup || null, unitNetWeight: form.UnitNetWeight || null, isActive: form.IsActive ?? 1 };
       default: return form;
     }
   };
@@ -396,6 +429,56 @@ export default function Master() {
           </div>
         </div>
       );
+      case 'products': {
+        const skuColor = { 'ขายดี':'bg-emerald-50 text-emerald-700','ขายน้อยขายต่อเนื่อง':'bg-amber-50 text-amber-700','ขายน้อยขายไม่ต่อเนื่อง':'bg-orange-50 text-orange-700','สินค้าโป๊ว':'bg-red-50 text-red-500' };
+        const filtered = items.filter(i => {
+          const q = productSearch.toLowerCase();
+          const matchSearch = !q || i.ProductCode?.toLowerCase().includes(q) || i.ProductName?.toLowerCase().includes(q) || i.CategoryName?.toLowerCase().includes(q);
+          const matchSKU = !productSKUFilter || i.SKUType === productSKUFilter;
+          return matchSearch && matchSKU;
+        });
+        return (
+          <div>
+            <div className="flex flex-wrap gap-2 mb-3">
+              <div className="relative flex-1 min-w-48">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input value={productSearch} onChange={e => setProductSearch(e.target.value)} placeholder="ค้นหารหัส / ชื่อ / หมวด..." className="input-field pl-8 py-1.5 text-sm" />
+              </div>
+              <select value={productSKUFilter} onChange={e => setProductSKUFilter(e.target.value)} className="input-field py-1.5 text-sm w-auto">
+                <option value="">ทุก TypeSKU</option>
+                {SKU_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+              <span className="text-xs text-gray-400 self-center">{filtered.length} รายการ</span>
+            </div>
+            <div className="rounded-xl overflow-hidden border border-gray-100">
+              <div className="space-y-0">
+                {filtered.map(i => (
+                  <div key={i.ProductID} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 transition-all group hover:bg-gray-50">
+                    <div className="w-32 flex-shrink-0">
+                      <span className="text-xs font-mono font-bold text-blue-600 truncate block">{i.ProductCode}</span>
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-gray-900 truncate">{i.ProductName}</p>
+                      <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-2 flex-wrap">
+                        {i.CategoryName && <span>{i.CategoryName}</span>}
+                        {i.SizeCode && <span className="font-mono">{i.SizeCode}</span>}
+                        {i.Thickness > 0 && <span>{i.Thickness}mm</span>}
+                        {i.UnitNetWeight > 0 && <span>{i.UnitNetWeight} กก./ชิ้น</span>}
+                      </p>
+                    </div>
+                    {i.SKUType && <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${skuColor[i.SKUType] || 'bg-slate-100 text-slate-500'}`}>{i.SKUType}</span>}
+                    <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
+                      <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
+                    </div>
+                  </div>
+                ))}
+                {!filtered.length && <p className="text-center text-slate-400 py-8 text-sm">ไม่พบสินค้า</p>}
+              </div>
+            </div>
+          </div>
+        );
+      }
     }
   };
 
@@ -541,6 +624,30 @@ export default function Master() {
           <div><label className="label">ลำดับการแสดง</label><input type="number" value={form.SortOrder || form.sortOrder || 0} onChange={e => setForm(p => ({ ...p, SortOrder: e.target.value }))} className="input-field" /></div>
         </div>
       </>);
+      case 'products': return (<>
+        <div className="grid grid-cols-2 gap-3">
+          <div><label className="label">รหัสสินค้า *</label><input value={form.ProductCode || ''} onChange={e => setForm(p => ({ ...p, ProductCode: e.target.value }))} className="input-field font-mono" placeholder="06-GQ0190190100CSS" disabled={!!editing} /></div>
+          <div><label className="label">TypeSKU</label>
+            <select value={form.SKUType || ''} onChange={e => setForm(p => ({ ...p, SKUType: e.target.value }))} className="input-field">
+              <option value="">-- ไม่ระบุ --</option>
+              {SKU_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+          </div>
+          <div className="col-span-2"><label className="label">ชื่อสินค้า *</label><input value={form.ProductName || ''} onChange={e => setForm(p => ({ ...p, ProductName: e.target.value }))} className="input-field" placeholder="ท่อเหลี่ยม GQ 19x19 (1.00mm.) CSS" /></div>
+          <div><label className="label">รหัสหมวด</label><input value={form.CategoryCode || ''} onChange={e => setForm(p => ({ ...p, CategoryCode: e.target.value }))} className="input-field" placeholder="06" /></div>
+          <div><label className="label">ชื่อหมวด</label><input value={form.CategoryName || ''} onChange={e => setForm(p => ({ ...p, CategoryName: e.target.value }))} className="input-field" placeholder="แป๊ปเหลี่ยม" /></div>
+          <div><label className="label">ประเภทวัสดุ</label><input value={form.MaterialType || ''} onChange={e => setForm(p => ({ ...p, MaterialType: e.target.value }))} className="input-field" placeholder="GQ, HR, AL" /></div>
+          <div><label className="label">รูปแบบ (Form)</label><input value={form.FormCode || ''} onChange={e => setForm(p => ({ ...p, FormCode: e.target.value }))} className="input-field" placeholder="CSS, CWM" /></div>
+          <div><label className="label">ขนาด (Size)</label><input value={form.SizeCode || ''} onChange={e => setForm(p => ({ ...p, SizeCode: e.target.value }))} className="input-field font-mono" placeholder="19X19" /></div>
+          <div><label className="label">ความหนา (mm)</label><input type="number" step="0.01" value={form.Thickness || ''} onChange={e => setForm(p => ({ ...p, Thickness: e.target.value }))} className="input-field" placeholder="1.00" /></div>
+          <div><label className="label">กลุ่มเป้าหมาย</label><input value={form.TargetGroup || ''} onChange={e => setForm(p => ({ ...p, TargetGroup: e.target.value }))} className="input-field" placeholder="ท่อขนาดเล็ก" /></div>
+          <div><label className="label">น้ำหนัก/ชิ้น (กก.)</label><input type="number" step="0.001" value={form.UnitNetWeight || ''} onChange={e => setForm(p => ({ ...p, UnitNetWeight: e.target.value }))} className="input-field" placeholder="3.490" /></div>
+          {editing && <div className="col-span-2 flex items-center gap-2">
+            <input type="checkbox" id="pActive" checked={form.IsActive ?? 1} onChange={e => setForm(p => ({ ...p, IsActive: e.target.checked ? 1 : 0 }))} />
+            <label htmlFor="pActive" className="text-sm text-slate-600 cursor-pointer">ใช้งาน</label>
+          </div>}
+        </div>
+      </>);
     }
   };
 
@@ -549,12 +656,13 @@ export default function Master() {
     { key: 'customers', label: 'ลูกค้า', unit: 'ราย', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
     { key: 'vehicleTypes', label: 'ประเภทรถ', unit: 'ประเภท', icon: Truck, color: 'text-amber-600', bg: 'bg-amber-50' },
     { key: 'loadingStations', label: 'สถานีขึ้นสินค้า', unit: 'สถานี', icon: Package, color: 'text-red-600', bg: 'bg-red-50' },
+    { key: 'products', label: 'สินค้า', unit: 'รายการ', icon: ShoppingBag, color: 'text-purple-600', bg: 'bg-purple-50' },
   ];
 
   return (
     <div className="space-y-6">
       {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         {summaryItems.map(s => (
           <button key={s.key} onClick={() => setTab(s.key)}
             className={`card flex items-center gap-3 py-2.5 px-3 transition-all hover:shadow-md ${tab === s.key ? 'ring-2 ring-red-400' : ''}`}>
@@ -586,12 +694,17 @@ export default function Master() {
               <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
               <button onClick={() => !importing && importRef.current?.click()} disabled={importing}
                 className="btn-secondary text-sm flex items-center gap-1.5">
-                {importing
-                  ? <><span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />กำลังนำเข้า...</>
-                  : <><Upload size={14} />นำเข้าข้อมูล</>
-                }
+                {importing ? <><span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />กำลังนำเข้า...</> : <><Upload size={14} />นำเข้าข้อมูล</>}
               </button>
               <button onClick={handleDownloadTemplate} className="btn-secondary text-sm"><Download size={14} />Template</button>
+            </>)}
+            {tab === 'products' && (<>
+              <input ref={productImportRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleProductImport} />
+              <button onClick={() => !importing && productImportRef.current?.click()} disabled={importing}
+                className="btn-secondary text-sm flex items-center gap-1.5">
+                {importing ? <><span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />กำลังนำเข้า...</> : <><Upload size={14} />Import Excel</>}
+              </button>
+              <button onClick={handleDownloadProductTemplate} className="btn-secondary text-sm"><Download size={14} />Template</button>
             </>)}
             <button onClick={openCreate} className="btn-primary text-sm">
               <Plus size={14} />เพิ่ม

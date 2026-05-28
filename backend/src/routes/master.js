@@ -349,4 +349,136 @@ router.post('/customers/import', authenticate, requireAdmin, upload.single('file
   }
 });
 
+// ==================== PRODUCTS ====================
+router.get('/products', authenticate, async (req, res) => {
+  try {
+    const pool = getPool();
+    const { search, skuType, categoryCode } = req.query;
+    let where = 'WHERE IsActive = 1';
+    const request = pool.request();
+    if (search) { where += ' AND (ProductCode LIKE @s OR ProductName LIKE @s OR CategoryName LIKE @s)'; request.input('s', sql.NVarChar, `%${search}%`); }
+    if (skuType) { where += ' AND SKUType = @skuType'; request.input('skuType', sql.NVarChar, skuType); }
+    if (categoryCode) { where += ' AND CategoryCode = @catCode'; request.input('catCode', sql.NVarChar, categoryCode); }
+    const result = await request.query(`SELECT * FROM WMS_Products ${where} ORDER BY ProductCode`);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.post('/products', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { productCode, productName, skuType, categoryCode, categoryName, materialType, formCode, sizeCode, thickness, targetGroup, unitNetWeight } = req.body;
+    if (!productCode || !productName) return res.status(400).json({ success: false, message: 'กรุณาระบุรหัสและชื่อสินค้า' });
+    const pool = getPool();
+    await pool.request()
+      .input('ProductCode', sql.NVarChar, productCode.trim())
+      .input('ProductName', sql.NVarChar, productName.trim())
+      .input('SKUType', sql.NVarChar, skuType || null)
+      .input('CategoryCode', sql.NVarChar, categoryCode || null)
+      .input('CategoryName', sql.NVarChar, categoryName || null)
+      .input('MaterialType', sql.NVarChar, materialType || null)
+      .input('FormCode', sql.NVarChar, formCode || null)
+      .input('SizeCode', sql.NVarChar, sizeCode || null)
+      .input('Thickness', sql.Decimal(8, 2), thickness ? parseFloat(thickness) : null)
+      .input('TargetGroup', sql.NVarChar, targetGroup || null)
+      .input('UnitNetWeight', sql.Decimal(10, 3), unitNetWeight ? parseFloat(unitNetWeight) : null)
+      .query(`INSERT INTO WMS_Products (ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight)
+              VALUES (@ProductCode,@ProductName,@SKUType,@CategoryCode,@CategoryName,@MaterialType,@FormCode,@SizeCode,@Thickness,@TargetGroup,@UnitNetWeight)`);
+    res.json({ success: true, message: `เพิ่มสินค้า "${productCode}" สำเร็จ` });
+  } catch (err) {
+    if (err.number === 2627) return res.status(400).json({ success: false, message: 'รหัสสินค้านี้มีในระบบแล้ว' });
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/products/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const { productName, skuType, categoryCode, categoryName, materialType, formCode, sizeCode, thickness, targetGroup, unitNetWeight, isActive } = req.body;
+    const pool = getPool();
+    await pool.request()
+      .input('ProductID', sql.Int, req.params.id)
+      .input('ProductName', sql.NVarChar, productName)
+      .input('SKUType', sql.NVarChar, skuType || null)
+      .input('CategoryCode', sql.NVarChar, categoryCode || null)
+      .input('CategoryName', sql.NVarChar, categoryName || null)
+      .input('MaterialType', sql.NVarChar, materialType || null)
+      .input('FormCode', sql.NVarChar, formCode || null)
+      .input('SizeCode', sql.NVarChar, sizeCode || null)
+      .input('Thickness', sql.Decimal(8, 2), thickness ? parseFloat(thickness) : null)
+      .input('TargetGroup', sql.NVarChar, targetGroup || null)
+      .input('UnitNetWeight', sql.Decimal(10, 3), unitNetWeight ? parseFloat(unitNetWeight) : null)
+      .input('IsActive', sql.Bit, isActive !== undefined ? isActive : 1)
+      .query(`UPDATE WMS_Products SET ProductName=@ProductName,SKUType=@SKUType,CategoryCode=@CategoryCode,
+              CategoryName=@CategoryName,MaterialType=@MaterialType,FormCode=@FormCode,SizeCode=@SizeCode,
+              Thickness=@Thickness,TargetGroup=@TargetGroup,UnitNetWeight=@UnitNetWeight,IsActive=@IsActive,
+              UpdatedAt=GETDATE() WHERE ProductID=@ProductID`);
+    res.json({ success: true, message: 'แก้ไขสินค้าสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.delete('/products/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request().input('ProductID', sql.Int, req.params.id)
+      .query('UPDATE WMS_Products SET IsActive=0 WHERE ProductID=@ProductID');
+    res.json({ success: true, message: 'ลบสินค้าสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.get('/products/template', authenticate, (req, res) => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['Itemcode*', 'ItemName*', 'TypeSKU', 'GategoryCode', 'Gname', 'TypeCode', 'FormCode', 'SizeCode', 'Thickness', 'TargetName', 'UnitNetWeight'],
+    ['06-GQ0190190100CSS', 'ท่อเหลี่ยม GQ 19x19 (1.00mm.) CSS', 'ขายดี', '06', 'แป๊ปเหลี่ยม', 'GQ', 'CSS', '19X19', '1.00', 'ท่อขนาดเล็ก', '3.49'],
+  ]);
+  ws['!cols'] = [16,30,20,10,15,10,10,15,8,20,12].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'สินค้า');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="product_template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+router.post('/products/import', authenticate, requireAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'ไม่พบไฟล์' });
+  try {
+    const pool = getPool();
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+    const existing = await pool.request().query('SELECT ProductCode FROM WMS_Products');
+    const existingCodes = new Set(existing.recordset.map(r => r.ProductCode));
+    const toInsert = [], toUpdate = [];
+    for (let i = 1; i < rows.length; i++) {
+      const [code, name, skuType, catCode, catName, matType, formCode, sizeCode, thickness, target, weight] = rows[i];
+      if (!code || !name) continue;
+      const c = String(code).trim();
+      const row = { c, name: String(name).trim(), skuType: skuType || null, catCode: catCode ? String(catCode).trim() : null, catName: catName ? String(catName).trim() : null, matType: matType ? String(matType).trim() : null, formCode: formCode ? String(formCode).trim() : null, sizeCode: sizeCode ? String(sizeCode).trim() : null, thickness: thickness ? parseFloat(thickness) : null, target: target ? String(target).trim() : null, weight: weight ? parseFloat(weight) : null };
+      if (existingCodes.has(c)) toUpdate.push(row); else { toInsert.push(row); existingCodes.add(c); }
+    }
+    const BATCH = 50;
+    for (let b = 0; b < toInsert.length; b += BATCH) {
+      const batch = toInsert.slice(b, b + BATCH);
+      const r2 = pool.request();
+      const vals = batch.map((row, idx) => {
+        r2.input(`c${idx}`,sql.NVarChar,row.c); r2.input(`n${idx}`,sql.NVarChar,row.name);
+        r2.input(`s${idx}`,sql.NVarChar,row.skuType); r2.input(`cc${idx}`,sql.NVarChar,row.catCode);
+        r2.input(`cn${idx}`,sql.NVarChar,row.catName); r2.input(`m${idx}`,sql.NVarChar,row.matType);
+        r2.input(`f${idx}`,sql.NVarChar,row.formCode); r2.input(`sz${idx}`,sql.NVarChar,row.sizeCode);
+        r2.input(`t${idx}`,sql.Decimal(8,2),row.thickness); r2.input(`tg${idx}`,sql.NVarChar,row.target);
+        r2.input(`w${idx}`,sql.Decimal(10,3),row.weight);
+        return `(@c${idx},@n${idx},@s${idx},@cc${idx},@cn${idx},@m${idx},@f${idx},@sz${idx},@t${idx},@tg${idx},@w${idx})`;
+      });
+      await r2.query(`INSERT INTO WMS_Products (ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight) VALUES ${vals.join(',')}`);
+    }
+    for (const row of toUpdate) {
+      await pool.request()
+        .input('c',sql.NVarChar,row.c).input('n',sql.NVarChar,row.name).input('s',sql.NVarChar,row.skuType)
+        .input('cc',sql.NVarChar,row.catCode).input('cn',sql.NVarChar,row.catName).input('m',sql.NVarChar,row.matType)
+        .input('f',sql.NVarChar,row.formCode).input('sz',sql.NVarChar,row.sizeCode).input('t',sql.Decimal(8,2),row.thickness)
+        .input('tg',sql.NVarChar,row.target).input('w',sql.Decimal(10,3),row.weight)
+        .query(`UPDATE WMS_Products SET ProductName=@n,SKUType=@s,CategoryCode=@cc,CategoryName=@cn,MaterialType=@m,FormCode=@f,SizeCode=@sz,Thickness=@t,TargetGroup=@tg,UnitNetWeight=@w,UpdatedAt=GETDATE() WHERE ProductCode=@c`);
+    }
+    res.json({ success: true, message: `นำเข้าสำเร็จ: เพิ่ม ${toInsert.length} รายการ, อัปเดต ${toUpdate.length} รายการ` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 module.exports = router;

@@ -279,6 +279,32 @@ const runMigrations = async () => {
     console.warn('⚠ SessionDurationHours migration:', e.message);
   }
 
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name='WMS_Products')
+        CREATE TABLE WMS_Products (
+          ProductID       INT IDENTITY(1,1) PRIMARY KEY,
+          ProductCode     NVARCHAR(50)  NOT NULL UNIQUE,
+          ProductName     NVARCHAR(200) NOT NULL,
+          SKUType         NVARCHAR(50)  NULL,
+          CategoryCode    NVARCHAR(10)  NULL,
+          CategoryName    NVARCHAR(100) NULL,
+          MaterialType    NVARCHAR(20)  NULL,
+          FormCode        NVARCHAR(20)  NULL,
+          SizeCode        NVARCHAR(50)  NULL,
+          Thickness       DECIMAL(8,2)  NULL,
+          TargetGroup     NVARCHAR(100) NULL,
+          UnitNetWeight   DECIMAL(10,3) NULL,
+          IsActive        BIT DEFAULT 1,
+          CreatedAt       DATETIME DEFAULT GETDATE(),
+          UpdatedAt       DATETIME NULL
+        );
+    `);
+    console.log('✅ WMS_Products table ready');
+  } catch (e) {
+    console.warn('⚠ WMS_Products migration:', e.message);
+  }
+
   // Performance indexes
   const indexes = [
     [`IX_Trips_TripDate_Status`, `WMS_Trips`, `TripDate, Status`],
