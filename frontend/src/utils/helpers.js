@@ -62,8 +62,8 @@ export const getEffectiveStatusConfig = (trip) => {
   }
   if (Status === 'WaitPick') {
     if (HasLoadingRecord) return getStatusConfig('LoadingBetween');
-    if (SOWaitStartedAt) return getStatusConfig('SOWait');
     if (HasDataStationTargets) return getStatusConfig('LoadingAssigned');
+    if (SOWaitStartedAt) return getStatusConfig('SOWait');
   }
   return getStatusConfig(Status);
 };
