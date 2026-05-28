@@ -99,6 +99,9 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         WHERE t.Status IN ('Data', 'WaitPick')
+        AND NOT EXISTS (
+          SELECT 1 FROM WMS_LoadingRecord lr WHERE lr.TripID = t.TripID
+        )
         AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
