@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { FileText, Check, Clock, HourglassIcon, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -14,19 +14,35 @@ export default function DataStation() {
   const [loading, setLoading] = useState(false);
   const [waitLoading, setWaitLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
+  const [nowMs, setNowMs] = useState(Date.now());
+  const fetchedAtRef = useRef(Date.now());
 
   useEffect(() => {
     fetchPending();
     fetchStations();
-    const interval = setInterval(fetchPending, 15000);
-    return () => clearInterval(interval);
+    const pollInterval = setInterval(fetchPending, 15000);
+    const tickInterval = setInterval(() => setNowMs(Date.now()), 30000);
+    return () => { clearInterval(pollInterval); clearInterval(tickInterval); };
   }, []);
 
   const fetchPending = async () => {
     try {
       const res = await api.get('/data-station/pending');
       setPending(res.data.data || []);
+      fetchedAtRef.current = Date.now();
     } catch {} finally { setPageLoading(false); }
+  };
+
+  const liveSOWaitMinutes = (trip) => {
+    if (!trip.SOWaitStartedAt) return null;
+    const extraMs = nowMs - fetchedAtRef.current;
+    return Math.max(0, (trip.SOWaitMinutes || 0) + Math.floor(extraMs / 60000));
+  };
+
+  const fmtWait = (mins) => {
+    if (mins === null) return null;
+    if (mins < 60) return `${mins} นาที`;
+    return `${Math.floor(mins / 60)} ชม. ${mins % 60} นาที`;
   };
 
   const fetchStations = async () => {
@@ -114,6 +130,11 @@ export default function DataStation() {
                       <PriorityBadge priority={trip.Priority} />
                       {trip.Status === 'WaitPick' && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
+                      )}
+                      {trip.Status === 'WaitPick' && liveSOWaitMinutes(trip) !== null && (
+                        <span className="text-xs font-semibold text-rose-500">
+                          ⏱ {fmtWait(liveSOWaitMinutes(trip))}
+                        </span>
                       )}
                     </div>
                     <div className="text-slate-500 text-xs mt-1">

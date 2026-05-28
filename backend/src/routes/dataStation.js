@@ -84,18 +84,21 @@ router.get('/pending', authenticate, async (req, res) => {
     const result = await pool.request()
       .query(`
         SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-               t.DeliveryType, t.Priority,
+               t.DeliveryType, t.Priority, t.SOWaitStartedAt,
                vt.TypeName as VehicleType,
                w.WarehouseName,
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime,
-               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as WaitMinutes
+               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as WaitMinutes,
+               CASE WHEN t.SOWaitStartedAt IS NOT NULL
+                    THEN DATEDIFF(MINUTE, t.SOWaitStartedAt, GETUTCDATE())
+                    ELSE NULL END as SOWaitMinutes
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-        WHERE t.Status = 'Data'
+        WHERE t.Status IN ('Data', 'WaitPick')
         AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
@@ -130,7 +133,8 @@ router.put('/:tripId/wait-pick', authenticate, async (req, res) => {
     const pool = getPool();
     await pool.request()
       .input('TripID', sql.Int, req.params.tripId)
-      .query(`UPDATE WMS_Trips SET Status = 'WaitPick' WHERE TripID = @TripID AND Status IN ('Data', 'WaitPick')`);
+      .query(`UPDATE WMS_Trips SET Status = 'WaitPick', SOWaitStartedAt = GETDATE()
+              WHERE TripID = @TripID AND Status IN ('Data', 'WaitPick')`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
