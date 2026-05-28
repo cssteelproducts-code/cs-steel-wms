@@ -1,8 +1,11 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
+import {
   TruckIcon, CheckCircle, Clock, Scale, Activity,
-  Calendar, Package, Search, ChevronDown, ChevronUp, X, RefreshCw
+  Calendar, Package, Search, ChevronDown, ChevronUp, X, RefreshCw, BarChart2
 } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
@@ -359,6 +362,30 @@ export default function Dashboard() {
             )}
           </div>
         </div>}
+      </div>
+
+      {/* Weekly bar chart */}
+      <div className="card">
+        <SectionHeader title="ปริมาณรถย้อนหลัง 7 วัน" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection}
+          icon={BarChart2} iconColor="text-blue-500" />
+        {!collapsed.chart && (
+          <ResponsiveContainer width="100%" height={220}>
+            <BarChart data={data?.weeklyTrend || []} margin={{ top: 4, right: 4, left: -20, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="TripDate" tick={{ fill: '#64748b', fontSize: 11 }}
+                tickFormatter={v => v ? dayjs(v).format('DD/MM') : ''} />
+              <YAxis tick={{ fill: '#64748b', fontSize: 11 }} allowDecimals={false} />
+              <Tooltip
+                contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
+                labelFormatter={v => v ? dayjs(v).format('DD MMM YYYY') : ''}
+                formatter={(value, name) => [value, name === 'TotalTrips' ? 'รถทั้งหมด' : 'เสร็จสิ้น']}
+              />
+              <Legend formatter={v => v === 'TotalTrips' ? 'รถทั้งหมด' : 'เสร็จสิ้น'} />
+              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="Completed" fill="#10b981" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
 
       {/* Recent activity */}
