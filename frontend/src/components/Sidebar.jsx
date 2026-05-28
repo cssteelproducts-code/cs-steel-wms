@@ -56,7 +56,7 @@ export default function Sidebar({ isOpen, onClose }) {
       }}>
 
         {/* Logo */}
-        <div className="flex items-center justify-between px-4 py-4 flex-shrink-0"
+        <div className="flex items-center justify-between px-4 py-2 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="flex-1 flex justify-center">
             <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 80 }} />
