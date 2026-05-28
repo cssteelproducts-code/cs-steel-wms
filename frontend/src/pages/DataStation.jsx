@@ -21,7 +21,7 @@ export default function DataStation() {
     fetchPending();
     fetchStations();
     const pollInterval = setInterval(fetchPending, 15000);
-    const tickInterval = setInterval(() => setNowMs(Date.now()), 30000);
+    const tickInterval = setInterval(() => setNowMs(Date.now()), 60000);
     return () => { clearInterval(pollInterval); clearInterval(tickInterval); };
   }, []);
 
@@ -35,8 +35,8 @@ export default function DataStation() {
 
   const liveSOWaitMinutes = (trip) => {
     if (!trip.SOWaitStartedAt) return null;
-    const extraMs = nowMs - fetchedAtRef.current;
-    return Math.max(0, (trip.SOWaitMinutes || 0) + Math.floor(extraMs / 60000));
+    const elapsedMs = nowMs - new Date(trip.SOWaitStartedAt).getTime();
+    return Math.max(0, Math.floor(elapsedMs / 60000));
   };
 
   const fmtWait = (mins) => {
