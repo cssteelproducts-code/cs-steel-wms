@@ -209,7 +209,7 @@ export default function Records() {
           </div>
           <div>
             <label className="label">สถานะ</label>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field h-9 text-sm">
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field h-9 text-sm min-w-[110px]">
               {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
