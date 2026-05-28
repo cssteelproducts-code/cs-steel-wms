@@ -56,15 +56,18 @@ const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKe
         transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)'
       }}>
         <div style={cardFace}>
-          <div className="flex items-center justify-between h-full">
-            <div>
-              <p className="text-slate-500 text-xs">{title}</p>
-              <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value ?? 0}</p>
-              <p className="text-slate-400 text-xs mt-1">คัน · กดดูประเภทขนส่ง</p>
+          <div className="flex flex-col h-full">
+            <div className="flex items-start justify-between flex-1">
+              <div>
+                <p className="text-slate-500 text-xs">{title}</p>
+                <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value ?? 0}</p>
+                <p className="text-slate-400 text-xs mt-0.5">คัน</p>
+              </div>
+              <div className={`p-2.5 rounded-xl ${colorBg[color] || 'bg-slate-100'}`}>
+                <Icon size={20} className={color} />
+              </div>
             </div>
-            <div className={`p-2.5 rounded-xl ${colorBg[color] || 'bg-slate-100'}`}>
-              <Icon size={20} className={color} />
-            </div>
+            <p className="text-slate-400 text-xs text-right">กดดูประเภทขนส่ง</p>
           </div>
         </div>
         <div style={{ ...cardFace, transform: 'rotateY(180deg)' }}>
