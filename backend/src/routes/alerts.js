@@ -129,6 +129,48 @@ router.post('/check', async (req, res) => {
         }
       }
 
+      if (cfg.AlertType === 'OVERTIME_ENTRY') {
+        const trips = await pool.request().query(`
+          SELECT t.TripID, t.LicensePlate, t.WarehouseID,
+            ISNULL(vt.TypeName, 'ไม่ระบุ') as TypeName,
+            ISNULL(vt.StartHour, 8) as StartHour, ISNULL(vt.StartMinute, 0) as StartMinute,
+            ISNULL(vt.CutoffHour, 16) as CutoffHour, ISNULL(vt.CutoffMinute, 0) as CutoffMinute,
+            DATEPART(HOUR, DATEADD(MINUTE,420,wi.WeighDateTime))*60 +
+              DATEPART(MINUTE, DATEADD(MINUTE,420,wi.WeighDateTime)) as LocalMin
+          FROM WMS_Trips t
+          JOIN WMS_WeighIn wi ON wi.TripID = t.TripID
+          LEFT JOIN WMS_VehicleTypes vt ON vt.TypeID = t.VehicleTypeID
+          WHERE t.TripDate >= DATEADD(DAY,-1, CAST(GETUTCDATE() AS DATE))
+            AND t.Status NOT IN ('Cancelled')
+            AND NOT EXISTS (
+              SELECT 1 FROM WMS_Alerts a
+              WHERE a.TripID = t.TripID AND a.AlertType = 'OVERTIME_ENTRY'
+                AND a.CreatedAt >= CAST(GETUTCDATE() AS DATE)
+            )
+        `);
+        const overtime = trips.recordset.filter(r => {
+          const start = r.StartHour * 60 + r.StartMinute;
+          const cutoff = r.CutoffHour * 60 + r.CutoffMinute;
+          return r.LocalMin < start || r.LocalMin > cutoff;
+        });
+        if (overtime.length > 0) {
+          const batchReq = pool.request();
+          const vals = overtime.map((trip, i) => {
+            const h = String(Math.floor(trip.LocalMin / 60)).padStart(2, '0');
+            const m = String(trip.LocalMin % 60).padStart(2, '0');
+            const s = `${String(trip.StartHour).padStart(2,'0')}:${String(trip.StartMinute).padStart(2,'0')}`;
+            const c = `${String(trip.CutoffHour).padStart(2,'0')}:${String(trip.CutoffMinute).padStart(2,'0')}`;
+            const msg = `ทะเบียน ${trip.LicensePlate} (${trip.TypeName}) เข้าคลังนอกเวลา ${h}:${m} น. (กำหนด ${s}–${c} น.)`;
+            batchReq.input(`ti${i}`, sql.Int, trip.TripID);
+            batchReq.input(`wi${i}`, sql.Int, trip.WarehouseID);
+            batchReq.input(`ms${i}`, sql.NVarChar, msg);
+            newAlerts.push(msg);
+            return `('OVERTIME_ENTRY', 'WARNING', @ti${i}, @wi${i}, @ms${i})`;
+          });
+          await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message) VALUES ${vals.join(', ')}`);
+        }
+      }
+
       if (cfg.AlertType === 'OVERWEIGHT') {
         const trips = await pool.request()
           .input('threshold', sql.Decimal(10, 2), cfg.ThresholdValue)

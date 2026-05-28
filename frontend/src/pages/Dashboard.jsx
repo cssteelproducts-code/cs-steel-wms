@@ -306,7 +306,7 @@ export default function Dashboard() {
           {/* วันนี้ */}
           <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">วันนี้</p>
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 mb-2">
               <div className="flex items-center gap-1.5">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 flex-shrink-0" />
                 <span className="text-sm text-slate-600">ในเวลา</span>
@@ -318,6 +318,13 @@ export default function Dashboard() {
                 <span className="text-base font-bold text-amber-600 ml-1">{ot.TodayOvertime ?? 0}</span>
               </div>
             </div>
+            {data?.vehicleTypesToday?.length > 0 && (
+              <div className="flex flex-wrap gap-1 mt-1">
+                {data.vehicleTypesToday.map(vt => (
+                  <TypeTag key={vt.TypeName} name={vt.TypeName} count={vt.Count} color="bg-blue-50 text-blue-700" />
+                ))}
+              </div>
+            )}
           </div>
 
           {/* เดือนนี้ */}

@@ -12,7 +12,8 @@ const SEVERITY_STYLE = {
 
 const TYPE_LABEL = {
   OVERSTAY: 'รถอยู่นานเกิน',
-  OVERWEIGHT: 'น้ำหนักเกินพิกัด'
+  OVERWEIGHT: 'น้ำหนักเกินพิกัด',
+  OVERTIME_ENTRY: 'เข้าคลังนอกเวลา'
 };
 
 export default function Alerts() {
@@ -243,8 +244,10 @@ export default function Alerts() {
                     className="input-field" disabled={!!editingConfig}>
                     <option value="OVERSTAY">รถอยู่นานเกิน (นาที)</option>
                     <option value="OVERWEIGHT">น้ำหนักเกินพิกัด (กก.)</option>
+                    <option value="OVERTIME_ENTRY">เข้าคลังนอกเวลา (ใช้เวลาจากประเภทรถ)</option>
                   </select>
                 </div>
+                {cfgForm.alertType !== 'OVERTIME_ENTRY' && (
                 <div>
                   <label className="label">
                     {cfgForm.alertType === 'OVERSTAY' ? 'เกณฑ์ (นาที)' : 'เกณฑ์ (กิโลกรัม)'}
@@ -253,6 +256,12 @@ export default function Alerts() {
                     onChange={e => setCfgForm(p => ({ ...p, thresholdValue: e.target.value }))}
                     className="input-field" />
                 </div>
+                )}
+                {cfgForm.alertType === 'OVERTIME_ENTRY' && (
+                  <div className="col-span-1 flex items-center">
+                    <p className="text-xs text-slate-500 mt-4">ตรวจสอบอัตโนมัติจากเวลาที่ตั้งไว้ในแต่ละประเภทรถ</p>
+                  </div>
+                )}
                 {cfgForm.alertType === 'OVERSTAY' && (
                   <div>
                     <label className="label">ประเภทรถ (ว่าง = ทุกประเภท)</label>
@@ -320,8 +329,9 @@ export default function Alerts() {
 
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-500 space-y-1">
             <div className="font-semibold text-slate-700 mb-1">หมายเหตุ</div>
-            <div>• <b>รถอยู่นานเกิน</b>: ระบบจะแจ้งเตือนเมื่อรถที่ยังอยู่ในคลังเกินเวลาที่กำหนด (หน่วย: นาที)</div>
-            <div>• <b>น้ำหนักเกินพิกัด</b>: แจ้งเตือนเมื่อน้ำหนักสุทธิของรถที่ชั่งออกเกินค่าที่กำหนด (หน่วย: กิโลกรัม)</div>
+            <div>• <b>รถอยู่นานเกิน</b>: แจ้งเตือนเมื่อรถอยู่ในคลังเกินเวลาที่กำหนด (หน่วย: นาที)</div>
+            <div>• <b>น้ำหนักเกินพิกัด</b>: แจ้งเตือนเมื่อน้ำหนักสุทธิเกินค่าที่กำหนด (หน่วย: กิโลกรัม)</div>
+            <div>• <b>เข้าคลังนอกเวลา</b>: แจ้งเตือนเมื่อรถชั่งเข้านอกช่วงเวลาที่กำหนดในประเภทรถ</div>
             <div>• กด "ตรวจสอบตอนนี้" หรือระบบจะตรวจอัตโนมัติทุก 30 วินาที</div>
           </div>
         </div>
