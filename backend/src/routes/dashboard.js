@@ -48,7 +48,10 @@ router.get('/summary', authenticate, async (req, res) => {
         SELECT TOP 10 t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
                t.SOWaitStartedAt,
                c.CustomerName, w.WarehouseName,
-               vt.TypeName as VehicleType
+               vt.TypeName as VehicleType,
+               CASE WHEN EXISTS(SELECT 1 FROM WMS_LoadingRecord lr WHERE lr.TripID=t.TripID) THEN 1 ELSE 0 END as HasLoadingRecord,
+               CASE WHEN EXISTS(SELECT 1 FROM WMS_DataStationTargets dst WHERE dst.TripID=t.TripID) THEN 1 ELSE 0 END as HasDataStationTargets,
+               (SELECT TOP 1 ls2.StationName FROM WMS_LoadingRecord lr2 JOIN WMS_LoadingStations ls2 ON lr2.StationID=ls2.StationID WHERE lr2.TripID=t.TripID AND lr2.ExitTime IS NULL) as CurrentStation
         FROM WMS_Trips t
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
@@ -299,6 +302,8 @@ router.get('/live', authenticate, async (req, res) => {
              wi.TareWeight, wi.WeighDateTime as WeighInTime,
              ds.PickDocumentNo,
              DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse,
+             CASE WHEN EXISTS(SELECT 1 FROM WMS_LoadingRecord lr WHERE lr.TripID=t.TripID) THEN 1 ELSE 0 END as HasLoadingRecord,
+             CASE WHEN EXISTS(SELECT 1 FROM WMS_DataStationTargets dst WHERE dst.TripID=t.TripID) THEN 1 ELSE 0 END as HasDataStationTargets,
              (SELECT TOP 1 ls2.StationName
               FROM WMS_LoadingRecord lr2
               JOIN WMS_LoadingStations ls2 ON lr2.StationID = ls2.StationID

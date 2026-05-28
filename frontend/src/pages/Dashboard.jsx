@@ -418,7 +418,7 @@ export default function Dashboard() {
                   </td>
                   <td className="table-cell hide-mobile">{trip.CustomerName || '-'}</td>
                   <td className="table-cell hide-mobile">{trip.WarehouseName || '-'}</td>
-                  <td className="table-cell"><StatusBadge status={trip.Status} soWait={!!trip.SOWaitStartedAt} /></td>
+                  <td className="table-cell"><StatusBadge trip={trip} /></td>
                   <td className="table-cell hide-mobile">{formatDateTime(trip.CreatedAt)}</td>
                 </tr>
               ))}
