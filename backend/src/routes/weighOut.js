@@ -109,9 +109,7 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
         WHERE t.Status NOT IN ('Complete', 'Cancelled', 'Checker')
         AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
-        ORDER BY
-          CASE WHEN t.Status = 'WeighOut' THEN 0 ELSE 1 END,
-          t.CreatedAt ASC
+        ORDER BY t.CreatedAt ASC
       `);
     res.json({ success: true, data: result.recordset });
   } catch (err) {

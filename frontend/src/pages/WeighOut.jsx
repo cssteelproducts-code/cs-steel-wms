@@ -35,7 +35,12 @@ export default function WeighOut() {
   };
 
   const fetchPending = async () => {
-    try { const res = await api.get('/weigh-out/pending'); setPending(res.data.data || []); } catch {} finally { setPageLoading(false); }
+    try {
+      const res = await api.get('/weigh-out/pending');
+      setPending(res.data.data || []);
+    } catch (err) {
+      toast.error('โหลดรายการชั่งออกไม่สำเร็จ: ' + (err.response?.data?.message || err.message));
+    } finally { setPageLoading(false); }
   };
 
   const fetchCompleted = async () => {
