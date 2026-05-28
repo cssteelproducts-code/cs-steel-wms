@@ -67,7 +67,8 @@ export default function DataStation() {
       const res = await api.put(`/data-station/${selected.TripID}/wait-pick`);
       if (res.data.success) {
         toast.success(`${selected.LicensePlate} — รอเอกสาร SO แล้ว`);
-        setSelected(null);
+        const updated = { ...selected, Status: 'WaitPick', SOWaitStartedAt: new Date().toISOString(), SOWaitMinutes: 0 };
+        setSelected(updated);
         fetchPending();
       }
     } catch {
@@ -128,13 +129,14 @@ export default function DataStation() {
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
                       <span className="text-slate-400 text-xs">#{trip.TripID}</span>
                       <PriorityBadge priority={trip.Priority} />
+                      {trip.Status === 'Data' && (
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-medium">รอเอกสาร Pick</span>
+                      )}
                       {trip.Status === 'WaitPick' && (
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
                       )}
                       {trip.Status === 'WaitPick' && liveSOWaitMinutes(trip) !== null && (
-                        <span className="text-xs font-semibold text-rose-500">
-                          ⏱ {fmtWait(liveSOWaitMinutes(trip))}
-                        </span>
+                        <span className="text-xs font-semibold text-rose-500">⏱ {fmtWait(liveSOWaitMinutes(trip))}</span>
                       )}
                     </div>
                     <div className="text-slate-500 text-xs mt-1">
