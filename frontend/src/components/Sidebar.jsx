@@ -59,7 +59,7 @@ export default function Sidebar({ isOpen, onClose }) {
         <div className="flex items-center justify-between px-4 py-4 flex-shrink-0"
           style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
           <div className="flex-1 flex justify-center">
-            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 52 }} />
+            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 80 }} />
           </div>
           <button onClick={onClose}
             className="lg:hidden p-1.5 rounded-lg transition-colors flex-shrink-0"
