@@ -37,7 +37,6 @@ router.post('/', authenticate, async (req, res) => {
     await transaction.begin();
 
     try {
-      // Apply inline edits to source records if overrides provided
       if (overrideLicensePlate || overrideCustomerId != null || overrideEntryTime) {
         const upd = transaction.request().input('TripID', sql.Int, tripId);
         let setClauses = [];
@@ -46,12 +45,11 @@ router.post('/', authenticate, async (req, res) => {
         if (setClauses.length) await upd.query(`UPDATE WMS_Trips SET ${setClauses.join(',')} WHERE TripID=@TripID`);
       }
 
-      if (overrideTareWeight != null || overrideEntryTime) {
-        const wUpd = transaction.request().input('WTID', sql.Int, tripId);
-        let wSet = [];
-        if (overrideTareWeight != null) { wUpd.input('TW', sql.Decimal(10, 2), tareWeight); wSet.push('TareWeight=@TW'); }
-        if (overrideEntryTime) { wUpd.input('ET', sql.NVarChar, overrideEntryTime); wSet.push('EntryTime=@ET'); }
-        if (wSet.length) await wUpd.query(`UPDATE WMS_WeighIn SET ${wSet.join(',')} WHERE TripID=@WTID`);
+      if (overrideTareWeight != null) {
+        await transaction.request()
+          .input('WTID', sql.Int, tripId)
+          .input('TW', sql.Decimal(10, 2), tareWeight)
+          .query(`UPDATE WMS_WeighIn SET TareWeight=@TW WHERE TripID=@WTID`);
       }
 
       await transaction.request()
@@ -86,19 +84,18 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/weigh-out/pending - Get all weighed-in vehicles not yet weighed-out
+// GET /api/weigh-out/pending - All trips with WeighIn record, not yet Complete/Cancelled
 router.get('/pending', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
       .query(`
-        SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+        SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt, t.TripDate,
                t.DeliveryType, t.Priority, t.CustomerID,
                vt.TypeName as VehicleType,
                w.WarehouseName,
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
-               wi.EntryTime,
                ds.PickDocumentNo,
                DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse
         FROM WMS_Trips t
@@ -107,17 +104,20 @@ router.get('/pending', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        WHERE t.Status NOT IN ('Complete', 'Cancelled', 'Checker')
-        AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
-        ORDER BY t.CreatedAt ASC
+        WHERE t.Status NOT IN ('Complete', 'Cancelled')
+        ORDER BY
+          CASE t.Status WHEN 'WeighOut' THEN 0 WHEN 'Loading' THEN 1 WHEN 'WaitPick' THEN 2 WHEN 'Data' THEN 3 ELSE 4 END,
+          t.CreatedAt DESC
       `);
+    console.log(`[WeighOut/pending] found ${result.recordset.length} trips`);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
+    console.error('[WeighOut/pending] error:', err);
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// GET /api/weigh-out/today - Today's completed trips
+// GET /api/weigh-out/today - Trips weighed-out today (Checker/Complete with WeighOut record)
 router.get('/today', authenticate, async (req, res) => {
   try {
     const pool = getPool();
@@ -138,7 +138,7 @@ router.get('/today', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_Users u ON wo.OperatorID = u.UserID
-        WHERE CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        WHERE CAST(wo.WeighDateTime AS DATE) >= CAST(DATEADD(DAY,-1,GETUTCDATE()) AS DATE)
         ORDER BY wo.WeighDateTime DESC
       `);
     res.json({ success: true, data: result.recordset });

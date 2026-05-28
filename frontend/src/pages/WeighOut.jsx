@@ -10,7 +10,7 @@ export default function WeighOut() {
   const [pending, setPending] = useState([]);
   const [selected, setSelected] = useState(null);
   const [form, setForm] = useState({ grossWeight: '', notes: '' });
-  const [editForm, setEditForm] = useState({ licensePlate: '', tareWeight: '', entryTime: '', custQuery: '', custName: '', customerId: null });
+  const [editForm, setEditForm] = useState({ licensePlate: '', tareWeight: '', custQuery: '', custName: '', customerId: null });
   const [submitting, setSubmitting] = useState(false);
   const [completed, setCompleted] = useState([]);
   const [tab, setTab] = useState('weigh');
@@ -53,7 +53,6 @@ export default function WeighOut() {
     setEditForm({
       licensePlate: trip.LicensePlate || '',
       tareWeight: trip.TareWeight != null ? String(trip.TareWeight) : '',
-      entryTime: trip.EntryTime || '',
       custQuery: trip.CustomerName || '',
       custName: trip.CustomerName || '',
       customerId: trip.CustomerID || null,
@@ -99,7 +98,6 @@ export default function WeighOut() {
       if (editForm.licensePlate !== selected.LicensePlate) payload.overrideLicensePlate = editForm.licensePlate;
       if (String(editForm.tareWeight) !== String(selected.TareWeight ?? '')) payload.overrideTareWeight = editForm.tareWeight;
       if (editForm.customerId != null && editForm.customerId !== selected.CustomerID) payload.overrideCustomerId = editForm.customerId;
-      if (editForm.entryTime !== (selected.EntryTime || '')) payload.overrideEntryTime = editForm.entryTime;
 
       const res = await api.post('/weigh-out', payload);
       if (res.data.success) {
@@ -212,14 +210,6 @@ export default function WeighOut() {
                         onChange={e => setEditForm(p => ({ ...p, tareWeight: e.target.value }))}
                         className="input-field h-9 text-sm" placeholder="0.00" />
                     </div>
-                  </div>
-
-                  {/* Entry time */}
-                  <div>
-                    <label className="label text-xs">เวลาเข้า (ชั่งเข้า)</label>
-                    <input type="time" value={editForm.entryTime}
-                      onChange={e => setEditForm(p => ({ ...p, entryTime: e.target.value }))}
-                      className="input-field h-9 text-sm w-full" />
                   </div>
 
                   {/* Customer */}
