@@ -18,7 +18,7 @@ router.post('/login', async (req, res) => {
       .input('Username', sql.NVarChar, username)
       .query(`
         SELECT u.UserID, u.Username, u.Password, u.FullName, u.RoleID, u.WarehouseID, u.IsActive,
-               r.RoleName, w.WarehouseName
+               u.SessionDurationHours, r.RoleName, w.WarehouseName
         FROM WMS_Users u
         LEFT JOIN WMS_Roles r ON u.RoleID = r.RoleID
         LEFT JOIN WMS_Warehouses w ON u.WarehouseID = w.WarehouseID
@@ -63,10 +63,11 @@ router.post('/login', async (req, res) => {
       };
     });
 
+    const sessionHours = user.SessionDurationHours || parseInt(process.env.JWT_EXPIRES_HOURS || '24');
     const token = jwt.sign(
       { userId: user.UserID, username: user.Username, roleId: user.RoleID },
       process.env.JWT_SECRET || 'cs_steel_wms_secret',
-      { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+      { expiresIn: `${sessionHours}h` }
     );
 
     res.json({

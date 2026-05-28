@@ -42,6 +42,7 @@ export const getStatusConfig = (status) => {
     WeighIn: { label: 'ชั่งเข้า', color: 'bg-blue-50 text-blue-600 border-blue-200', dot: 'bg-blue-500', step: 1 },
     Data:     { label: 'รอเอกสาร Pick', color: 'bg-purple-50 text-purple-600 border-purple-200', dot: 'bg-purple-500', step: 2 },
     WaitPick: { label: 'รอเอกสาร Pick', color: 'bg-rose-50 text-rose-600 border-rose-200',     dot: 'bg-rose-500',   step: 2 },
+    SOWait:   { label: 'รอเอกสาร SO',   color: 'bg-orange-50 text-orange-600 border-orange-200', dot: 'bg-orange-500', step: 2 },
     Loading: { label: 'ขึ้นสินค้า', color: 'bg-amber-50 text-amber-600 border-amber-200', dot: 'bg-amber-500', step: 3 },
     WeighOut: { label: 'รอชั่งออก', color: 'bg-cyan-50 text-cyan-600 border-cyan-200', dot: 'bg-cyan-500', step: 4 },
     Checker: { label: 'เช็คเกอร์', color: 'bg-orange-50 text-orange-600 border-orange-200', dot: 'bg-orange-500', step: 5 },

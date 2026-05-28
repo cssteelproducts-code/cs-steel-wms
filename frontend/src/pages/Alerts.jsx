@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, AlertCircle, CheckCircle, Settings, RefreshCw, CheckCheck, X } from 'lucide-react';
+import { Bell, AlertTriangle, AlertCircle, CheckCircle, Settings, RefreshCw, CheckCheck, X, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -101,6 +101,15 @@ export default function Alerts() {
       setEditingConfig(null);
       fetchConfigs();
     } catch { toast.error('บันทึกไม่สำเร็จ'); } finally { setSavingConfig(false); }
+  };
+
+  const deleteConfig = async (cfg) => {
+    if (!confirm(`ลบเกณฑ์ "${TYPE_LABEL[cfg.AlertType] || cfg.AlertType}" ?`)) return;
+    try {
+      await api.delete(`/alerts/config/${cfg.ConfigID}`);
+      toast.success('ลบเกณฑ์แล้ว');
+      fetchConfigs();
+    } catch { toast.error('ลบไม่สำเร็จ'); }
   };
 
   const startEdit = (cfg) => {
@@ -297,6 +306,9 @@ export default function Alerts() {
                   </span>
                   <button onClick={() => startEdit(cfg)} className="text-slate-400 hover:text-slate-700 transition-colors p-1">
                     <Settings size={14} />
+                  </button>
+                  <button onClick={() => deleteConfig(cfg)} className="text-slate-400 hover:text-red-500 transition-colors p-1">
+                    <Trash2 size={14} />
                   </button>
                 </div>
               </div>

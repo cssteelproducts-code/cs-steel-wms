@@ -166,6 +166,19 @@ router.post('/check', async (req, res) => {
   }
 });
 
+// DELETE /api/alerts/config/:id
+router.delete('/config/:id', async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('DELETE FROM WMS_AlertConfig WHERE ConfigID = @id');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // GET /api/alerts/config
 router.get('/config', async (req, res) => {
   try {

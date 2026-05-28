@@ -62,13 +62,13 @@ export default function Users() {
   };
 
   const openCreate = () => {
-    setForm({ username: '', password: '', fullName: '', email: '', roleId: '', warehouseId: '', isActive: 1 });
+    setForm({ username: '', password: '', fullName: '', email: '', roleId: '', warehouseId: '', isActive: 1, sessionDurationHours: '' });
     setSelectedUser(null);
     setModal('create');
   };
 
   const openEdit = (user) => {
-    setForm({ ...user, password: '', roleId: user.RoleID, warehouseId: user.WarehouseID, isActive: user.IsActive, fullName: user.FullName, email: user.Email || '', username: user.Username });
+    setForm({ ...user, password: '', roleId: user.RoleID, warehouseId: user.WarehouseID, isActive: user.IsActive, fullName: user.FullName, email: user.Email || '', username: user.Username, sessionDurationHours: user.SessionDurationHours || '' });
     setSelectedUser(user);
     setModal('edit');
   };
@@ -351,6 +351,12 @@ export default function Users() {
                     {warehouses.map(w => <option key={w.WarehouseID} value={w.WarehouseID}>{w.WarehouseName}</option>)}
                   </select>
                 </div>
+              </div>
+              <div>
+                <label className="label">เวลา Session (ชม.) — ว่างไว้ = ค่าระบบ (24 ชม.)</label>
+                <input type="number" min="1" max="720" value={form.sessionDurationHours}
+                  onChange={e => setForm(p => ({ ...p, sessionDurationHours: e.target.value }))}
+                  className="input-field" placeholder="เช่น 1, 8, 24" />
               </div>
               {modal === 'edit' && (
                 <div className="flex items-center gap-2">

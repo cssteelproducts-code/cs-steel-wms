@@ -64,7 +64,7 @@ export default function Transfer() {
 
   const loadStations = useCallback(async () => {
     try {
-      const res = await api.get('/transfer/stations');
+      const res = await api.get('/master/loading-stations');
       if (res.data.success) setStations(res.data.data);
     } catch {}
   }, []);

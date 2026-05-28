@@ -110,7 +110,7 @@ export default function TripMonitor() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 flex-wrap">
                       <span className="text-slate-900 font-bold text-xl">{trip.LicensePlate}</span>
-                      <StatusBadge status={trip.Status} />
+                      <StatusBadge status={trip.Status} soWait={!!trip.SOWaitStartedAt} />
                       {trip.CurrentStation && (
                         <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">
                           📍 {trip.CurrentStation}

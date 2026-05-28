@@ -46,6 +46,7 @@ router.get('/summary', authenticate, async (req, res) => {
       `),
       pool.request().query(`
         SELECT TOP 10 t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+               t.SOWaitStartedAt,
                c.CustomerName, w.WarehouseName,
                vt.TypeName as VehicleType
         FROM WMS_Trips t
@@ -291,7 +292,7 @@ router.get('/live', authenticate, async (req, res) => {
     const pool = getPool();
     const result = await pool.request().query(`
       SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-             t.DeliveryType, t.Priority,
+             t.DeliveryType, t.Priority, t.SOWaitStartedAt,
              vt.TypeName as VehicleType,
              w.WarehouseName,
              c.CustomerName,
