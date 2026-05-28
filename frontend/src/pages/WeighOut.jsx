@@ -5,6 +5,7 @@ import toast from 'react-hot-toast';
 import { formatDateTime, formatWeight } from '../utils/helpers';
 import LoadingSpinner from '../components/LoadingSpinner';
 import PriorityBadge from '../components/PriorityBadge';
+import StatusBadge from '../components/StatusBadge';
 
 export default function WeighOut() {
   const [pending, setPending] = useState([]);
@@ -168,27 +169,29 @@ export default function WeighOut() {
                   onClick={() => selectTrip(trip)}
                   className={`p-3 rounded-lg border cursor-pointer transition-all ${selected?.TripID === trip.TripID
                     ? 'border-cyan-400 bg-cyan-50' : 'border-slate-200 hover:border-slate-300 bg-white hover:bg-slate-50'}`}>
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
-                      <span className="text-slate-400 text-xs ml-2">#{trip.TripID}</span>
-                      <span className="ml-1"><PriorityBadge priority={trip.Priority} /></span>
-                      {trip.Status && trip.Status !== 'WeighOut' && (
-                        <span className="ml-2 text-xs bg-amber-100 text-amber-700 border border-amber-200 px-1.5 py-0.5 rounded-full">{trip.Status}</span>
-                      )}
+                  <div className="flex items-center justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
+                        <span className="text-slate-400 text-xs">#{trip.TripID}</span>
+                        <PriorityBadge priority={trip.Priority} />
+                      </div>
                       <div className="text-slate-500 text-xs mt-1">
                         {trip.VehicleType}{trip.DeliveryType ? ` | ${trip.DeliveryType}` : ''}{trip.WarehouseName ? ` | ${trip.WarehouseName}` : ''}
                       </div>
                       {trip.CustomerName && <div className="text-blue-500 text-xs">{trip.CustomerName}</div>}
                       {trip.PickDocumentNo && <div className="text-purple-500 text-xs font-mono">{trip.PickDocumentNo}</div>}
                     </div>
-                    <div className="flex flex-col items-end gap-1">
-                      <button
-                        onClick={e => { e.stopPropagation(); setDeleteConfirm(trip); }}
-                        className="p-1 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                        title="ลบรายการนี้">
-                        <Trash2 size={14} />
-                      </button>
+                    <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+                      <div className="flex items-center gap-1.5">
+                        <StatusBadge status={trip.Status} />
+                        <button
+                          onClick={e => { e.stopPropagation(); setDeleteConfirm(trip); }}
+                          className="p-1 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                          title="ลบรายการนี้">
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                       <div className="text-right">
                         <div className="text-cyan-500 text-sm">{formatWeight(trip.TareWeight)}</div>
                         <div className="text-slate-400 text-xs">น้ำหนักเบา</div>

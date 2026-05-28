@@ -3,7 +3,7 @@ import { Activity, RefreshCw, TruckIcon, Clock, ChevronRight } from 'lucide-reac
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import PriorityBadge from '../components/PriorityBadge';
-import { formatDateTime, formatDuration, getStatusConfig } from '../utils/helpers';
+import { formatDateTime, formatDuration, getStatusConfig, getEffectiveStatusConfig } from '../utils/helpers';
 import toast from 'react-hot-toast';
 
 const FLOW_STEPS = [
@@ -21,6 +21,7 @@ export default function TripMonitor() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [filter, setFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchTrips = async () => {
     try {
@@ -42,8 +43,16 @@ export default function TripMonitor() {
     return () => clearInterval(interval);
   }, []);
 
-  const filtered = filter === 'all' ? trips :
-    trips.filter(t => t.Status === filter);
+  const filtered = trips.filter(t => {
+    if (filter !== 'all' && t.Status !== filter) return false;
+    if (statusFilter !== 'all') {
+      const label = getEffectiveStatusConfig(t).label;
+      if (label !== statusFilter) return false;
+    }
+    return true;
+  });
+
+  const effectiveStatusOptions = [...new Set(trips.map(t => getEffectiveStatusConfig(t).label))].sort();
 
   const statusCounts = FLOW_STEPS.slice(0, 6).reduce((acc, step) => {
     acc[step.key] = trips.filter(t => t.Status === step.key).length;
@@ -66,6 +75,25 @@ export default function TripMonitor() {
         <button onClick={fetchTrips} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white self-start">
           <RefreshCw size={15} />
         </button>
+      </div>
+
+      {/* Status filter dropdown */}
+      <div className="flex items-center gap-3 flex-wrap">
+        <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">กรองสถานะ:</label>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="input-field py-1.5 text-sm w-auto min-w-48">
+          <option value="all">— ทั้งหมด ({trips.length} คัน) —</option>
+          {effectiveStatusOptions.map(label => {
+            const count = trips.filter(t => getEffectiveStatusConfig(t).label === label).length;
+            return <option key={label} value={label}>{label} ({count})</option>;
+          })}
+        </select>
+        {statusFilter !== 'all' && (
+          <button onClick={() => setStatusFilter('all')}
+            className="text-xs text-slate-400 hover:text-red-500 transition-colors underline">
+            ล้างตัวกรอง
+          </button>
+        )}
       </div>
 
       {/* Flow summary */}
