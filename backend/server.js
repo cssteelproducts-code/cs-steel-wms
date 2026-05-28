@@ -22,6 +22,7 @@ app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 50 }));
 
 // Logging & parsing
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+app.use(require('compression')());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
 
@@ -227,6 +228,14 @@ const runMigrations = async () => {
     await pool.request().query(`
       IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_DataStation_TripID' AND object_id=OBJECT_ID('WMS_DataStation'))
         CREATE INDEX IX_DataStation_TripID ON WMS_DataStation (TripID);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Trips_LicensePlate' AND object_id=OBJECT_ID('WMS_Trips'))
+        CREATE INDEX IX_Trips_LicensePlate ON WMS_Trips (LicensePlate) INCLUDE (Status, TripDate, CreatedAt);
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_Customers_Search' AND object_id=OBJECT_ID('WMS_Customers'))
+        CREATE INDEX IX_Customers_Search ON WMS_Customers (CustomerName, CustomerCode) WHERE IsActive = 1;
     `);
     // Add VehicleTypeID to WMS_AlertConfig for per-vehicle-type OVERSTAY thresholds
     await pool.request().query(`

@@ -1,28 +1,34 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Suspense, lazy } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import MainLayout from './layouts/MainLayout';
 import LoadingSpinner from './components/LoadingSpinner';
 
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import TripMonitor from './pages/TripMonitor';
-import WeighIn from './pages/WeighIn';
-import DataStation from './pages/DataStation';
-import LoadingStation from './pages/LoadingStation';
-import Checker from './pages/Checker';
-import WeighOut from './pages/WeighOut';
-import ETA from './pages/ETA';
-import Users from './pages/Users';
-import Master from './pages/Master';
-import Profile from './pages/Profile';
-import Alerts from './pages/Alerts';
-import Stock from './pages/Stock';
-import DeliveryPlan from './pages/DeliveryPlan';
-import Transfer from './pages/Transfer';
-import TransferDriver from './pages/TransferDriver';
-import Records from './pages/Records';
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const TripMonitor = lazy(() => import('./pages/TripMonitor'));
+const WeighIn = lazy(() => import('./pages/WeighIn'));
+const DataStation = lazy(() => import('./pages/DataStation'));
+const LoadingStation = lazy(() => import('./pages/LoadingStation'));
+const Checker = lazy(() => import('./pages/Checker'));
+const WeighOut = lazy(() => import('./pages/WeighOut'));
+const ETA = lazy(() => import('./pages/ETA'));
+const Users = lazy(() => import('./pages/Users'));
+const Master = lazy(() => import('./pages/Master'));
+const Profile = lazy(() => import('./pages/Profile'));
+const Alerts = lazy(() => import('./pages/Alerts'));
+const Stock = lazy(() => import('./pages/Stock'));
+const DeliveryPlan = lazy(() => import('./pages/DeliveryPlan'));
+const Transfer = lazy(() => import('./pages/Transfer'));
+const TransferDriver = lazy(() => import('./pages/TransferDriver'));
+const Records = lazy(() => import('./pages/Records'));
+
+const PageLoader = () => (
+  <div className="flex items-center justify-center h-64">
+    <LoadingSpinner size="lg" text="กำลังโหลด..." />
+  </div>
+);
 
 const ProtectedRoute = ({ children, menuCode }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -55,6 +61,7 @@ const PublicRoute = ({ children }) => {
 
 function AppRoutes() {
   return (
+    <Suspense fallback={<PageLoader />}>
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
@@ -78,6 +85,7 @@ function AppRoutes() {
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
+    </Suspense>
   );
 }
 

@@ -1,11 +1,11 @@
 const sql = require('mssql');
 
 const dbConfig = {
-  server: process.env.DB_SERVER || '180.183.246.215',
-  port: parseInt(process.env.DB_PORT) || 54321,
-  database: process.env.DB_NAME || 'WMS',
-  user: process.env.DB_USER || 'css_transport',
-  password: process.env.DB_PASSWORD || 'C$$_Tr0n$port',
+  server: process.env.DB_SERVER || process.env.MSSQL_SERVER,
+  port: parseInt(process.env.DB_PORT || process.env.MSSQL_PORT) || 54321,
+  database: process.env.DB_NAME || process.env.MSSQL_DB || 'WMS',
+  user: process.env.DB_USER || process.env.MSSQL_USER,
+  password: process.env.DB_PASSWORD || process.env.MSSQL_PASS,
   options: {
     encrypt: false,
     trustServerCertificate: true,
@@ -14,7 +14,7 @@ const dbConfig = {
     requestTimeout: 30000
   },
   pool: {
-    max: 25,
+    max: 30,
     min: 2,
     idleTimeoutMillis: 30000,
     acquireTimeoutMillis: 15000
