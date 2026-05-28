@@ -213,8 +213,6 @@ export default function Dashboard() {
   const counts = data?.tripCounts || {};
   const wh = data?.weightHistory || {};
   const ot = data?.onTimeStats || {};
-  const completedTodayList = data?.completedToday || [];
-
   const fmtKg = (v) => v ? `${parseFloat(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} กก.` : '-';
 
   return (
@@ -399,76 +397,6 @@ export default function Dashboard() {
             )}
           </div>
         </div>}
-      </div>
-
-      {/* ปริมาณรถสะสมที่สถานี */}
-      <div className="card">
-        <SectionHeader title="ปริมาณรถสะสมที่สถานี" sectionKey="station" collapsed={collapsed.station} onToggle={toggleSection}
-          extra={<span className="text-xs text-slate-500">{data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length || 0} สถานี</span>} />
-        {!collapsed.station && (
-          data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length ? (
-            <div className="space-y-2">
-              {[...data.stationLoad].filter(s => s.ActiveTrucks > 0).sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(st => {
-                const pct = Math.min(st.ActiveTrucks * 20, 100);
-                return (
-                  <div key={st.StationName}
-                    className={st.ActiveTrucks > 0 ? 'cursor-pointer hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors' : ''}
-                    onClick={() => st.ActiveTrucks > 0 && openStationPopup(st.StationName)}
-                  >
-                    <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-sm text-slate-700">{st.StationName}</span>
-                      <span className={`text-sm font-semibold ${st.ActiveTrucks > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
-                        {st.ActiveTrucks > 0 ? `${st.ActiveTrucks} คัน` : '✓ ว่าง'}
-                      </span>
-                    </div>
-                    <div className="w-full h-2 rounded-full bg-slate-100">
-                      <div
-                        className={`h-2 rounded-full transition-all ${st.ActiveTrucks > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`}
-                        style={{ width: `${st.ActiveTrucks > 0 ? Math.max(pct, 8) : 100}%` }}
-                      />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          ) : (
-            <p className="text-sm text-slate-400">ยังไม่มีรถที่ถูก assign สถานีจากเมนู Pick</p>
-          )
-        )}
-      </div>
-
-      {/* รถที่ดำเนินการเสร็จแล้ว */}
-      <div className="card">
-        <SectionHeader title="รถที่ดำเนินการเสร็จแล้ว" sectionKey="done" collapsed={collapsed.done} onToggle={toggleSection}
-          icon={CheckCircle} iconColor="text-emerald-500" />
-        {!collapsed.done && completedTodayList.length ? (
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b border-slate-100">
-                  <th className="table-header text-left px-3 py-2">ทะเบียน</th>
-                  <th className="table-header text-left px-3 py-2 hide-mobile">ประเภท</th>
-                  <th className="table-header text-left px-3 py-2 hide-mobile">น้ำหนักสุทธิ</th>
-                  <th className="table-header text-left px-3 py-2 hide-mobile">ใช้เวลา</th>
-                  <th className="table-header text-left px-3 py-2">เสร็จเมื่อ</th>
-                </tr>
-              </thead>
-              <tbody>
-                {completedTodayList.map(trip => (
-                  <tr key={trip.TripID} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
-                    <td className="table-cell font-medium">{trip.LicensePlate}</td>
-                    <td className="table-cell hide-mobile text-slate-500">{trip.TypeName}</td>
-                    <td className="table-cell hide-mobile">{trip.NetWeight ? fmtKg(trip.NetWeight) : '-'}</td>
-                    <td className="table-cell hide-mobile text-slate-500">{trip.Minutes ? `${trip.Minutes} นาที` : '-'}</td>
-                    <td className="table-cell text-slate-500">{formatDateTime(trip.CompletedAt)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          !collapsed.done && <p className="text-sm text-slate-400">ยังไม่มีการดำเนินการเสร็จสิ้นวันนี้</p>
-        )}
       </div>
 
       {/* Flow status + weekly chart */}
