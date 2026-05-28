@@ -153,18 +153,12 @@ router.post('/fail-rework', authenticate, async (req, res) => {
                 VALUES (@TripID, 0, @Remarks, @OperatorID, @CheckDurationMinutes, @CheckStartTime)`);
     }
 
-    // Insert new loading records for rework stations (reset for re-entry)
-    for (const stationId of reworkStationIds) {
-      // Delete any pending (ExitTime IS NULL) record for this station to allow re-entry
-      await pool.request()
-        .input('TripID', sql.Int, tripId)
-        .input('StationID', sql.Int, stationId)
-        .query(`DELETE FROM WMS_LoadingRecord WHERE TripID=@TripID AND StationID=@StationID AND ExitTime IS NULL`);
-      // Remove completed record so RemainingStations counts it again
-      await pool.request()
-        .input('TripID', sql.Int, tripId)
-        .input('StationID', sql.Int, stationId)
-        .query(`DELETE FROM WMS_LoadingRecord WHERE TripID=@TripID AND StationID=@StationID AND ExitTime IS NOT NULL`);
+    // Batch delete all loading records for rework stations
+    if (reworkStationIds.length > 0) {
+      const delReq = pool.request().input('TripID', sql.Int, tripId);
+      reworkStationIds.forEach((sid, i) => delReq.input(`SID${i}`, sql.Int, sid));
+      const inClause = reworkStationIds.map((_, i) => `@SID${i}`).join(',');
+      await delReq.query(`DELETE FROM WMS_LoadingRecord WHERE TripID=@TripID AND StationID IN (${inClause})`);
     }
 
     // Return trip to WaitPick so loading station sees it

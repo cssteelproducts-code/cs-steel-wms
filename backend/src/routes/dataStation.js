@@ -49,16 +49,16 @@ router.post('/', authenticate, async (req, res) => {
                 VALUES (@TripID, @TargetStationID, NULL, @Notes, @OperatorID)`);
     }
 
-    // Store all target stations in WMS_DataStationTargets
+    // Store all target stations in WMS_DataStationTargets (batch insert)
     if (Array.isArray(stationIds) && stationIds.length > 0) {
       await pool.request().input('TripID', sql.Int, tripId)
         .query('DELETE FROM WMS_DataStationTargets WHERE TripID = @TripID');
-      for (const sid of stationIds) {
-        await pool.request()
-          .input('TripID', sql.Int, tripId)
-          .input('StationID', sql.Int, sid)
-          .query('INSERT INTO WMS_DataStationTargets (TripID, StationID) VALUES (@TripID, @StationID)');
-      }
+      const batchReq = pool.request().input('TripID', sql.Int, tripId);
+      const vals = stationIds.map((sid, i) => {
+        batchReq.input(`SID${i}`, sql.Int, sid);
+        return `(@TripID, @SID${i})`;
+      });
+      await batchReq.query(`INSERT INTO WMS_DataStationTargets (TripID, StationID) VALUES ${vals.join(',')}`);
     }
 
     // Update trip status to WaitPick (waiting for Pick document before loading)

@@ -278,6 +278,30 @@ const runMigrations = async () => {
   } catch (e) {
     console.warn('⚠ SessionDurationHours migration:', e.message);
   }
+
+  // Performance indexes
+  const indexes = [
+    [`IX_Trips_TripDate_Status`, `WMS_Trips`, `TripDate, Status`],
+    [`IX_Trips_Status_TripDate`, `WMS_Trips`, `Status, TripDate`],
+    [`IX_LoadingRecord_TripID_ExitTime`, `WMS_LoadingRecord`, `TripID, ExitTime`],
+    [`IX_LoadingRecord_StationID_Exit`, `WMS_LoadingRecord`, `StationID, ExitTime`],
+    [`IX_DataStationTargets_TripID`, `WMS_DataStationTargets`, `TripID`],
+    [`IX_WeighIn_TripID`, `WMS_WeighIn`, `TripID`],
+    [`IX_WeighOut_TripID`, `WMS_WeighOut`, `TripID`],
+    [`IX_Alerts_IsRead_IsResolved`, `WMS_Alerts`, `IsRead, IsResolved`],
+    [`IX_CheckerRecord_TripID`, `WMS_CheckerRecord`, `TripID`],
+  ];
+  for (const [name, table, cols] of indexes) {
+    try {
+      await pool.request().query(
+        `IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='${name}' AND object_id=OBJECT_ID('${table}'))
+           CREATE INDEX ${name} ON ${table}(${cols});`
+      );
+    } catch (e) {
+      console.warn(`⚠ Index ${name}:`, e.message);
+    }
+  }
+  console.log('✅ Performance indexes ready');
 };
 
 const startServer = () => {

@@ -99,17 +99,9 @@ router.get('/active', authenticate, async (req, res) => {
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
                ds.DataStationID, ds.PickDocumentNo, ds.TargetStationID,
                ls_target.StationName as TargetStation,
-               (SELECT COUNT(*) FROM WMS_DataStationTargets dst2
-                WHERE dst2.TripID = t.TripID
-                AND NOT EXISTS (
-                  SELECT 1 FROM WMS_LoadingRecord lr2
-                  WHERE lr2.TripID = dst2.TripID AND lr2.StationID = dst2.StationID
-                  AND lr2.ExitTime IS NOT NULL
-                )) as RemainingStations,
+               ISNULL(rem.RemainingStations, 0) as RemainingStations,
                DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) as MinutesInWarehouse,
-               (SELECT TOP 1 StationName FROM WMS_LoadingStations ls
-                JOIN WMS_LoadingRecord lr ON ls.StationID = lr.StationID
-                WHERE lr.TripID = t.TripID AND lr.ExitTime IS NULL) as CurrentStation
+               cur.StationName as CurrentStation
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
@@ -117,8 +109,23 @@ router.get('/active', authenticate, async (req, res) => {
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
         LEFT JOIN WMS_LoadingStations ls_target ON ds.TargetStationID = ls_target.StationID
+        LEFT JOIN (
+          SELECT dst.TripID,
+            SUM(CASE WHEN lrc.RecordID IS NULL THEN 1 ELSE 0 END) as RemainingStations
+          FROM WMS_DataStationTargets dst
+          LEFT JOIN WMS_LoadingRecord lrc ON lrc.TripID = dst.TripID
+            AND lrc.StationID = dst.StationID AND lrc.ExitTime IS NOT NULL
+          GROUP BY dst.TripID
+        ) rem ON rem.TripID = t.TripID
+        LEFT JOIN (
+          SELECT lr.TripID, ls.StationName,
+            ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
+          FROM WMS_LoadingRecord lr
+          JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+          WHERE lr.ExitTime IS NULL
+        ) cur ON cur.TripID = t.TripID AND cur.rn = 1
         WHERE t.Status NOT IN ('Complete', 'Cancelled')
-        AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
+        AND t.TripDate >= DATEADD(DAY, -1, CAST(GETUTCDATE() AS DATE))
         ORDER BY t.CreatedAt DESC
       `);
     res.json({ success: true, data: result.recordset });

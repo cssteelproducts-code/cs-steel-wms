@@ -49,14 +49,22 @@ router.get('/summary', authenticate, async (req, res) => {
                t.SOWaitStartedAt,
                c.CustomerName, w.WarehouseName,
                vt.TypeName as VehicleType,
-               CASE WHEN EXISTS(SELECT 1 FROM WMS_LoadingRecord lr WHERE lr.TripID=t.TripID) THEN 1 ELSE 0 END as HasLoadingRecord,
-               CASE WHEN EXISTS(SELECT 1 FROM WMS_DataStationTargets dst WHERE dst.TripID=t.TripID) THEN 1 ELSE 0 END as HasDataStationTargets,
-               (SELECT TOP 1 ls2.StationName FROM WMS_LoadingRecord lr2 JOIN WMS_LoadingStations ls2 ON lr2.StationID=ls2.StationID WHERE lr2.TripID=t.TripID AND lr2.ExitTime IS NULL) as CurrentStation
+               ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
+               ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
+               cur.StationName as CurrentStation
         FROM WMS_Trips t
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        WHERE CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
+        LEFT JOIN (
+          SELECT lr.TripID, ls.StationName,
+            ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
+          FROM WMS_LoadingRecord lr JOIN WMS_LoadingStations ls ON lr.StationID=ls.StationID
+          WHERE lr.ExitTime IS NULL
+        ) cur ON cur.TripID = t.TripID AND cur.rn = 1
+        WHERE t.TripDate >= CAST(GETUTCDATE() AS DATE)
         ORDER BY t.CreatedAt DESC
       `),
       pool.request().query(`
@@ -302,12 +310,9 @@ router.get('/live', authenticate, async (req, res) => {
              wi.TareWeight, wi.WeighDateTime as WeighInTime,
              ds.PickDocumentNo,
              DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse,
-             CASE WHEN EXISTS(SELECT 1 FROM WMS_LoadingRecord lr WHERE lr.TripID=t.TripID) THEN 1 ELSE 0 END as HasLoadingRecord,
-             CASE WHEN EXISTS(SELECT 1 FROM WMS_DataStationTargets dst WHERE dst.TripID=t.TripID) THEN 1 ELSE 0 END as HasDataStationTargets,
-             (SELECT TOP 1 ls2.StationName
-              FROM WMS_LoadingRecord lr2
-              JOIN WMS_LoadingStations ls2 ON lr2.StationID = ls2.StationID
-              WHERE lr2.TripID = t.TripID AND lr2.ExitTime IS NULL) as CurrentStation,
+             ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
+             ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
+             cur.StationName as CurrentStation,
              STUFF((
                SELECT ',' + ls3.StationName + ':' +
                  CAST(CASE WHEN EXISTS(
@@ -324,6 +329,14 @@ router.get('/live', authenticate, async (req, res) => {
       LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
       LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
       LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
+      LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
+      LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
+      LEFT JOIN (
+        SELECT lr.TripID, ls2.StationName,
+          ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
+        FROM WMS_LoadingRecord lr JOIN WMS_LoadingStations ls2 ON lr.StationID=ls2.StationID
+        WHERE lr.ExitTime IS NULL
+      ) cur ON cur.TripID = t.TripID AND cur.rn = 1
       WHERE t.Status NOT IN ('Complete','Cancelled')
       AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
       ORDER BY t.CreatedAt DESC

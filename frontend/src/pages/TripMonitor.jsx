@@ -38,7 +38,7 @@ export default function TripMonitor() {
 
   useEffect(() => {
     fetchTrips();
-    const interval = setInterval(fetchTrips, 15000);
+    const interval = setInterval(fetchTrips, 30000);
     return () => clearInterval(interval);
   }, []);
 
