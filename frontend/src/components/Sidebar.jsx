@@ -41,53 +41,40 @@ export default function Sidebar({ isOpen, onClose }) {
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/30 z-40 lg:hidden backdrop-blur-sm" onClick={onClose} />
       )}
 
       <aside className={`
-        fixed top-0 left-0 h-full w-64 z-50
-        flex flex-col transition-transform duration-300 ease-out
+        fixed top-0 left-0 h-full w-60 z-50
+        flex flex-col transition-transform duration-250 ease-out
         lg:translate-x-0 lg:static lg:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `} style={{
         background: '#ffffff',
-        borderRight: '1px solid #e8eaed',
-        boxShadow: '2px 0 16px rgba(0,0,0,0.06)',
+        borderRight: '1px solid #e8edf3',
+        boxShadow: '1px 0 12px rgba(0,0,0,0.05)',
       }}>
 
         {/* Logo */}
-        <div className="flex items-center justify-between px-5 py-4 flex-shrink-0"
-          style={{ borderBottom: '1px solid #f0f2f5' }}>
+        <div className="flex items-center justify-between px-4 py-4 flex-shrink-0"
+          style={{ borderBottom: '1px solid #f1f5f9' }}>
           <div className="flex-1 flex justify-center">
-            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 58 }} />
+            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 52 }} />
           </div>
-          <button onClick={onClose} className="lg:hidden p-1.5 rounded-xl hover:bg-red-50 transition-colors flex-shrink-0"
-            style={{ color: '#9ca3af' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#dc2626'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#9ca3af'; }}>
+          <button onClick={onClose} className="lg:hidden p-1.5 rounded-lg hover:bg-slate-100 transition-colors flex-shrink-0 text-slate-400 hover:text-slate-600">
             <X size={15} />
           </button>
         </div>
 
-        {/* Red brand accent line */}
-        <div style={{
-          height: 2,
-          background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)',
-          flexShrink: 0,
-        }} />
-
         {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-0.5">
+        <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
           {visibleItems.map((item, idx) => {
             if (item.divider) {
               return (
-                <div key={idx} className="px-2 pt-5 pb-2 flex items-center gap-2">
-                  <div style={{ flex: 1, height: 1, background: '#f0f2f5' }} />
-                  <span className="text-[10px] font-black uppercase tracking-[0.14em]"
-                    style={{ color: '#b0b8c8' }}>
+                <div key={idx} className="px-2 pt-4 pb-1.5">
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-slate-400">
                     {t(item.key)}
                   </span>
-                  <div style={{ flex: 1, height: 1, background: '#f0f2f5' }} />
                 </div>
               );
             }
@@ -97,43 +84,28 @@ export default function Sidebar({ isOpen, onClose }) {
                 to={item.path}
                 end={item.path === '/'}
                 onClick={onClose}
-                className="group flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-semibold transition-all duration-150 relative"
-                style={({ isActive }) => isActive
-                  ? {
-                      background: 'linear-gradient(135deg, #dc2626 0%, #b91c1c 100%)',
-                      color: '#ffffff',
-                      boxShadow: '0 4px 14px rgba(185,28,28,0.30), inset 0 1px 0 rgba(255,255,255,0.15)',
-                    }
-                  : { color: '#64748b' }
+                className={({ isActive }) =>
+                  `flex items-center gap-2.5 px-3 py-2 rounded-lg text-[13px] font-medium transition-all duration-150 ` +
+                  (isActive
+                    ? 'bg-red-50 text-red-600 font-semibold'
+                    : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900')
                 }
-                onMouseEnter={e => {
-                  if (!e.currentTarget.style.background.includes('dc2626')) {
-                    e.currentTarget.style.background = '#fef2f2';
-                    e.currentTarget.style.color = '#dc2626';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!e.currentTarget.style.background.includes('dc2626')) {
-                    e.currentTarget.style.background = '';
-                    e.currentTarget.style.color = '#64748b';
-                  }
-                }}
+                style={({ isActive }) => isActive
+                  ? { borderLeft: '3px solid #dc2626', paddingLeft: '9px' }
+                  : { borderLeft: '3px solid transparent', paddingLeft: '9px' }
+                }
               >
-                <item.icon size={16} className="flex-shrink-0" />
-                <span className="flex-1 text-[13px]">{t(item.key)}</span>
+                <item.icon size={15} className="flex-shrink-0" />
+                <span className="flex-1 leading-tight">{t(item.key)}</span>
               </NavLink>
             );
           })}
         </nav>
 
         {/* Footer */}
-        <div className="px-5 py-3 flex-shrink-0" style={{ borderTop: '1px solid #f0f2f5' }}>
-          <div className="text-[11px] font-black uppercase tracking-[0.1em]" style={{ color: '#94a3b8' }}>
-            CS Steel Products Co., Ltd.
-          </div>
-          <div className="text-[10px] mt-0.5" style={{ color: '#cbd5e1' }}>
-            WMS v1.0 © 2026
-          </div>
+        <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid #f1f5f9' }}>
+          <div className="text-[11px] font-semibold text-slate-400">CS Steel Products Co., Ltd.</div>
+          <div className="text-[10px] text-slate-300 mt-0.5">WMS v1.0 © 2026</div>
         </div>
       </aside>
     </>
