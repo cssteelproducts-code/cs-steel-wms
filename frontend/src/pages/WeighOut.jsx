@@ -253,22 +253,21 @@ export default function WeighOut() {
                 </div>
 
                 {/* Weight calculation */}
-                <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
-                  <div className="grid grid-cols-3 gap-4 text-center">
+                <div className="bg-slate-50 border border-slate-200 rounded-lg px-3 py-2">
+                  <div className="grid grid-cols-3 gap-2 text-center">
                     <div>
-                      <div className="text-slate-500 text-xs mb-1">น้ำหนักหนัก</div>
-                      <div className="text-slate-900 font-bold">{form.grossWeight ? grossWeight.toFixed(2) : '-'}</div>
+                      <div className="text-slate-400 text-[10px]">น้ำหนักหนัก</div>
+                      <div className="text-slate-900 text-sm font-bold">{form.grossWeight ? grossWeight.toFixed(2) : '-'}</div>
                     </div>
                     <div>
-                      <div className="text-slate-500 text-xs mb-1">น้ำหนักเบา</div>
-                      <div className="text-cyan-500 font-bold">{tareWeight > 0 ? tareWeight.toFixed(2) : '-'}</div>
+                      <div className="text-slate-400 text-[10px]">น้ำหนักเบา</div>
+                      <div className="text-cyan-500 text-sm font-bold">{tareWeight > 0 ? tareWeight.toFixed(2) : '-'}</div>
                     </div>
                     <div>
-                      <div className="text-slate-500 text-xs mb-1">น้ำหนักสุทธิ</div>
-                      <div className={`text-2xl font-bold ${form.grossWeight ? (netWeight >= 0 ? 'text-emerald-500' : 'text-red-500') : 'text-slate-300'}`}>
-                        {form.grossWeight ? netWeight.toFixed(2) : '-'}
+                      <div className="text-slate-400 text-[10px]">น้ำหนักสุทธิ</div>
+                      <div className={`text-base font-bold ${form.grossWeight ? (netWeight >= 0 ? 'text-emerald-500' : 'text-red-500') : 'text-slate-300'}`}>
+                        {form.grossWeight ? netWeight.toFixed(2) : '-'} <span className="text-[10px] font-normal">กก.</span>
                       </div>
-                      <div className="text-slate-400 text-xs">กก.</div>
                     </div>
                   </div>
                 </div>
