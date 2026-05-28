@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
 } from 'recharts';
 import {
   TruckIcon, CheckCircle, Clock, Scale, Activity,
@@ -46,14 +46,15 @@ const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKe
   const face = {
     background: '#ffffff', border: '1px solid #e2e8f0',
     boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04)',
-    borderRadius: '1rem', padding: '1.25rem',
+    borderRadius: '1rem', padding: '1rem',
     backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-    position: 'absolute', inset: 0, overflow: 'hidden'
+    position: 'absolute', inset: 0, overflow: 'hidden',
+    boxSizing: 'border-box'
   };
   return (
-    <div style={{ perspective: '1000px', minHeight: 130, cursor: 'pointer' }} onClick={() => setFlipped(f => !f)}>
+    <div style={{ perspective: '1000px', minHeight: 150, cursor: 'pointer', overflow: 'hidden', borderRadius: '1rem' }} onClick={() => setFlipped(f => !f)}>
       <div style={{
-        position: 'relative', minHeight: 130,
+        position: 'relative', minHeight: 150,
         transformStyle: 'preserve-3d',
         transition: 'transform 0.4s ease',
         transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)'
@@ -383,11 +384,9 @@ export default function Dashboard() {
               <Tooltip
                 contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                 labelFormatter={v => v ? dayjs(v).format('DD MMM YYYY') : ''}
-                formatter={(value, name) => [value, name === 'TotalTrips' ? 'รถทั้งหมด' : 'เสร็จสิ้น']}
+                formatter={(value) => [value, 'รถทั้งหมด']}
               />
-              <Legend formatter={v => v === 'TotalTrips' ? 'รถทั้งหมด' : 'เสร็จสิ้น'} />
-              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} />
-              <Bar dataKey="Completed" fill="#10b981" radius={[4, 4, 0, 0]} />
+              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} name="รถทั้งหมด" />
             </BarChart>
           </ResponsiveContainer>
         )}
