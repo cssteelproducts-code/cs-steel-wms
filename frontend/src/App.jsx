@@ -62,7 +62,7 @@ const PublicRoute = ({ children }) => {
 
 function AppRoutes() {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense fallback={null}>
     <Routes>
       <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
       <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
