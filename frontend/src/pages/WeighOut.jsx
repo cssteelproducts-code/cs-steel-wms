@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Scale, CheckCircle, RefreshCw, Search, Edit2 } from 'lucide-react';
+import { Scale, CheckCircle, RefreshCw, Search, Edit2, Trash2, X } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime, formatWeight } from '../utils/helpers';
@@ -15,6 +15,8 @@ export default function WeighOut() {
   const [completed, setCompleted] = useState([]);
   const [tab, setTab] = useState('weigh');
   const [pageLoading, setPageLoading] = useState(true);
+  const [deleteConfirm, setDeleteConfirm] = useState(null);
+  const [deleting, setDeleting] = useState(false);
 
   // Customer search
   const [custResults, setCustResults] = useState([]);
@@ -78,6 +80,22 @@ export default function WeighOut() {
   const pickCustomer = (c) => {
     setEditForm(p => ({ ...p, custQuery: c.ARCode || '', custName: c.CustomerName, customerId: c.CustomerID }));
     setShowCustDrop(false);
+  };
+
+  const handleDelete = async () => {
+    if (!deleteConfirm) return;
+    setDeleting(true);
+    try {
+      await api.delete(`/records/${deleteConfirm.TripID}`);
+      toast.success(`ลบ Trip #${deleteConfirm.TripID} (${deleteConfirm.LicensePlate}) สำเร็จ`);
+      if (selected?.TripID === deleteConfirm.TripID) setSelected(null);
+      setDeleteConfirm(null);
+      fetchPending();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -164,13 +182,21 @@ export default function WeighOut() {
                       {trip.CustomerName && <div className="text-blue-500 text-xs">{trip.CustomerName}</div>}
                       {trip.PickDocumentNo && <div className="text-purple-500 text-xs font-mono">{trip.PickDocumentNo}</div>}
                     </div>
-                    <div className="text-right">
-                      <div className="text-cyan-500 text-sm">{formatWeight(trip.TareWeight)}</div>
-                      <div className="text-slate-400 text-xs">น้ำหนักเบา</div>
-                      <div className="text-amber-500 text-xs mt-1">
-                        {trip.MinutesInWarehouse <= 0 ? 'เพิ่งเข้า'
-                          : trip.MinutesInWarehouse < 60 ? `รอ ${trip.MinutesInWarehouse} นาที`
-                          : `รอ ${Math.floor(trip.MinutesInWarehouse / 60)} ชั่วโมง ${trip.MinutesInWarehouse % 60} นาที`}
+                    <div className="flex flex-col items-end gap-1">
+                      <button
+                        onClick={e => { e.stopPropagation(); setDeleteConfirm(trip); }}
+                        className="p-1 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                        title="ลบรายการนี้">
+                        <Trash2 size={14} />
+                      </button>
+                      <div className="text-right">
+                        <div className="text-cyan-500 text-sm">{formatWeight(trip.TareWeight)}</div>
+                        <div className="text-slate-400 text-xs">น้ำหนักเบา</div>
+                        <div className="text-amber-500 text-xs mt-1">
+                          {trip.MinutesInWarehouse <= 0 ? 'เพิ่งเข้า'
+                            : trip.MinutesInWarehouse < 60 ? `รอ ${trip.MinutesInWarehouse} นาที`
+                            : `รอ ${Math.floor(trip.MinutesInWarehouse / 60)} ชั่วโมง ${trip.MinutesInWarehouse % 60} นาที`}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -349,6 +375,37 @@ export default function WeighOut() {
                 </tfoot>
               )}
             </table>
+          </div>
+        </div>
+      )}
+
+      {/* Delete confirm dialog */}
+      {deleteConfirm && (
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
+            <div className="px-6 pt-6 pb-4">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center flex-shrink-0">
+                  <Trash2 size={18} className="text-red-600" />
+                </div>
+                <div>
+                  <h3 className="font-bold text-slate-800">ยืนยันการลบ</h3>
+                  <p className="text-sm text-slate-500">Trip #{deleteConfirm.TripID} — {deleteConfirm.LicensePlate}</p>
+                </div>
+              </div>
+              <p className="text-sm text-slate-600 bg-red-50 border border-red-100 rounded-lg px-3 py-2">
+                การลบจะลบข้อมูลทั้งหมดของ Trip นี้อย่างถาวร
+              </p>
+            </div>
+            <div className="px-6 pb-6 flex gap-3">
+              <button onClick={handleDelete} disabled={deleting}
+                className="btn-danger flex-1 py-2.5 flex items-center justify-center gap-2">
+                {deleting ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Trash2 size={14} />ลบถาวร</>}
+              </button>
+              <button onClick={() => setDeleteConfirm(null)} className="btn-secondary px-5">
+                <X size={14} />
+              </button>
+            </div>
           </div>
         </div>
       )}
