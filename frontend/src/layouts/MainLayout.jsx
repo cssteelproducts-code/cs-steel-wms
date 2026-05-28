@@ -29,7 +29,7 @@ export default function MainLayout() {
   const title = titleKey ? t(titleKey) : 'CS.Smart';
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: '#f0f4f8' }}>
+    <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} title={title} />

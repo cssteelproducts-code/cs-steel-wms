@@ -36,7 +36,7 @@ export default function Header({ onMenuClick, title }) {
     return () => document.removeEventListener('mousedown', handler);
   }, []);
 
-  const handleLogout = () => { logout(); navigate('/login'); };
+  const handleLogout = () => { logout(); window.location.href = '/login'; };
   const ActiveFlag = FLAGS[lang];
 
   return (
