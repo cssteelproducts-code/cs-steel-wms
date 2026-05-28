@@ -5,7 +5,7 @@ import {
 } from 'recharts';
 import {
   TruckIcon, CheckCircle, Clock, Scale, Activity, ArrowRight,
-  Calendar, Package, AlertTriangle, Search, ChevronDown, ChevronUp, X, RefreshCw
+  Calendar, Package, Search, ChevronDown, ChevronUp, X, RefreshCw
 } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
@@ -38,7 +38,7 @@ const cardFace = {
   boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04)',
   borderRadius: '1.5rem', padding: '1.25rem',
   backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-  position: 'absolute', inset: 0
+  position: 'absolute', inset: 0, overflow: 'hidden'
 };
 
 const DELIVERY_TYPES = [
@@ -213,7 +213,6 @@ export default function Dashboard() {
   const counts = data?.tripCounts || {};
   const wh = data?.weightHistory || {};
   const ot = data?.onTimeStats || {};
-  const incomplete = data?.incompleteLoading || [];
   const completedTodayList = data?.completedToday || [];
 
   const fmtKg = (v) => v ? `${parseFloat(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} กก.` : '-';
@@ -303,47 +302,6 @@ export default function Dashboard() {
           ) : (
             <p className="text-sm text-slate-400">ยังไม่มีรถที่ถูก assign สถานีจากเมนู Pick</p>
           )
-        )}
-      </div>
-
-      {/* รถที่กำลังดำเนินการ — row 4 */}
-      <div className="card">
-        <SectionHeader title="รถที่กำลังดำเนินการ" sectionKey="inprog" collapsed={collapsed.inprog} onToggle={toggleSection}
-          icon={AlertTriangle} iconColor="text-amber-500"
-          extra={incomplete.length > 0 ? (
-            <button onClick={() => navigate('/monitor')} className="text-blue-500 text-xs flex items-center gap-1 hover:underline">
-              ดูรายละเอียด <ArrowRight size={12} />
-            </button>
-          ) : null} />
-        {!collapsed.inprog && incomplete.length ? (
-          <>
-            <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
-              <span className="text-slate-600">
-                รับสินค้าค้างอยู่ทั้งหมด <span className="font-bold text-amber-600">{incomplete.length} คัน</span>
-              </span>
-              {incomplete.filter(r => r.IsOvertime).length > 0 && (
-                <span className="text-red-600 font-medium">
-                  นอกเวลา {incomplete.filter(r => r.IsOvertime).length} คัน
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {Object.entries(incomplete.reduce((acc, r) => {
-                const key = `${r.TypeName}|${r.HoursIn}`;
-                acc[key] = (acc[key] || 0) + 1;
-                return acc;
-              }, {})).map(([key, cnt]) => {
-                const [type, hrs] = key.split('|');
-                return (
-                  <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                    {type} · {hrs} ชม. · {cnt} คัน
-                  </span>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          !collapsed.inprog && <p className="text-sm text-slate-400">ไม่มีรถกำลังดำเนินการ</p>
         )}
       </div>
 
@@ -476,47 +434,6 @@ export default function Dashboard() {
           ) : (
             <p className="text-sm text-slate-400">ยังไม่มีรถที่ถูก assign สถานีจากเมนู Pick</p>
           )
-        )}
-      </div>
-
-      {/* รถที่กำลังดำเนินการ */}
-      <div className="card">
-        <SectionHeader title="รถที่กำลังดำเนินการ" sectionKey="inprog" collapsed={collapsed.inprog} onToggle={toggleSection}
-          icon={AlertTriangle} iconColor="text-amber-500"
-          extra={incomplete.length > 0 ? (
-            <button onClick={() => navigate('/monitor')} className="text-blue-500 text-xs flex items-center gap-1 hover:underline">
-              ดูรายละเอียด <ArrowRight size={12} />
-            </button>
-          ) : null} />
-        {!collapsed.inprog && incomplete.length ? (
-          <>
-            <div className="flex flex-wrap items-center gap-3 mb-3 text-sm">
-              <span className="text-slate-600">
-                รับสินค้าค้างอยู่ทั้งหมด <span className="font-bold text-amber-600">{incomplete.length} คัน</span>
-              </span>
-              {incomplete.filter(r => r.IsOvertime).length > 0 && (
-                <span className="text-red-600 font-medium">
-                  นอกเวลา {incomplete.filter(r => r.IsOvertime).length} คัน
-                </span>
-              )}
-            </div>
-            <div className="flex flex-wrap gap-1.5">
-              {Object.entries(incomplete.reduce((acc, r) => {
-                const key = `${r.TypeName}|${r.HoursIn}`;
-                acc[key] = (acc[key] || 0) + 1;
-                return acc;
-              }, {})).map(([key, cnt]) => {
-                const [type, hrs] = key.split('|');
-                return (
-                  <span key={key} className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-50 text-amber-700 border border-amber-100">
-                    {type} · {hrs} ชม. · {cnt} คัน
-                  </span>
-                );
-              })}
-            </div>
-          </>
-        ) : (
-          !collapsed.inprog && <p className="text-sm text-slate-400">ไม่มีรถกำลังดำเนินการ</p>
         )}
       </div>
 

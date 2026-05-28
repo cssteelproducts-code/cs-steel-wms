@@ -22,6 +22,7 @@ import Stock from './pages/Stock';
 import DeliveryPlan from './pages/DeliveryPlan';
 import Transfer from './pages/Transfer';
 import TransferDriver from './pages/TransferDriver';
+import Records from './pages/Records';
 
 const ProtectedRoute = ({ children, menuCode }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -73,6 +74,7 @@ function AppRoutes() {
         <Route path="delivery" element={<ProtectedRoute menuCode="DELIVERY_PLAN"><DeliveryPlan /></ProtectedRoute>} />
         <Route path="transfer" element={<ProtectedRoute menuCode="TRANSFER"><Transfer /></ProtectedRoute>} />
         <Route path="transfer/driver" element={<ProtectedRoute menuCode="TRANSFER"><TransferDriver /></ProtectedRoute>} />
+        <Route path="records" element={<ProtectedRoute menuCode="RECORDS"><Records /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

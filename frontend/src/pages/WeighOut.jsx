@@ -144,7 +144,7 @@ export default function WeighOut() {
           {/* Pending list */}
           <div className="card">
             <h3 className="card-header">รอชั่งออก ({pending.length})</h3>
-            <div className="space-y-2 max-h-96 overflow-y-auto">
+            <div className="space-y-2 max-h-[700px] overflow-y-auto">
               {pending.map(trip => (
                 <div key={trip.TripID}
                   onClick={() => selectTrip(trip)}

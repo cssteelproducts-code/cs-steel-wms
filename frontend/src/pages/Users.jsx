@@ -13,6 +13,7 @@ const MENUS = [
   { code: 'LOADING_STATION', name: 'สถานีขึ้นสินค้า' },
   { code: 'WEIGH_OUT', name: 'สถานีชั่งออก' },
   { code: 'CHECKER', name: 'เช็คเกอร์' },
+  { code: 'RECORDS', name: 'บันทึกการขึ้นสินค้า' },
   { code: 'ETA', name: 'ETA / GPS' },
   { code: 'USERS', name: 'จัดการผู้ใช้' },
   { code: 'MASTER', name: 'ข้อมูลหลัก' },

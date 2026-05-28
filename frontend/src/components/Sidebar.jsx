@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Boxes, Route, ArrowLeftRight
+  Bell, Boxes, Route, ArrowLeftRight, ClipboardList
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -17,6 +17,7 @@ const menuItems = [
   { path: '/loading-station', icon: Package, key: 'nav.loadingStation', code: 'LOADING_STATION' },
   { path: '/weigh-out', icon: TruckIcon, key: 'nav.weighOut', code: 'WEIGH_OUT' },
   { path: '/checker', icon: CheckSquare, key: 'nav.checker', code: 'CHECKER' },
+  { path: '/records', icon: ClipboardList, key: 'nav.records', code: 'RECORDS' },
   { key: 'section.warehouse', divider: true },
   { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },

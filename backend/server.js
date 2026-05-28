@@ -47,6 +47,7 @@ app.use('/api/stock', require('./src/routes/stock'));
 app.use('/api/delivery', require('./src/routes/deliveryPlan'));
 app.use('/api/transfer', require('./src/routes/transfer'));
 app.use('/api/search', require('./src/routes/search'));
+app.use('/api/records', require('./src/routes/records'));
 
 // Serve React frontend (production build)
 const publicPath = path.join(__dirname, 'public');
@@ -188,6 +189,17 @@ const runMigrations = async () => {
       )
       INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
       SELECT r.RoleID, 'TRANSFER', N'ย้ายสินค้าภายใน', 1, 1, 1, 1
+      FROM WMS_Roles r WHERE r.RoleName='Admin';
+    `);
+    // Ensure RECORDS permission exists for Admin role
+    await pool.request().query(`
+      IF NOT EXISTS (
+        SELECT 1 FROM WMS_MenuPermissions mp
+        JOIN WMS_Roles r ON mp.RoleID=r.RoleID
+        WHERE r.RoleName='Admin' AND mp.MenuCode='RECORDS'
+      )
+      INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
+      SELECT r.RoleID, 'RECORDS', N'บันทึกการขึ้นสินค้า', 1, 1, 1, 1
       FROM WMS_Roles r WHERE r.RoleName='Admin';
     `);
     console.log('✅ Migrations applied');
