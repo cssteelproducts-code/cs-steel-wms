@@ -33,71 +33,6 @@ const StatCard = ({ title, value, sub, icon: Icon, color, onClick }) => (
   </div>
 );
 
-const cardFace = {
-  background: '#ffffff', border: '1px solid rgba(0,0,0,0.06)',
-  boxShadow: '0 1px 3px rgba(0,0,0,0.04), 0 6px 24px rgba(0,0,0,0.04)',
-  borderRadius: '1.5rem', padding: '1.25rem',
-  backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-  position: 'absolute', inset: 0, overflow: 'hidden'
-};
-
-const DELIVERY_TYPES = [
-  { key: 'CSS',      label: 'CSS.',  color: 'text-red-600',     bar: 'bg-red-400' },
-  { key: 'Customer', label: 'Cust.', color: 'text-blue-600',    bar: 'bg-blue-400' },
-  { key: 'Supplier', label: 'Sup.',  color: 'text-emerald-600', bar: 'bg-emerald-400' },
-];
-
-const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKey }) => {
-  const [flipped, setFlipped] = useState(false);
-  const total = (deliveryStats || []).reduce((s, r) => s + (r[periodKey] || 0), 0);
-  return (
-    <div style={{ perspective: '1000px', minHeight: 140, cursor: 'pointer' }} onClick={() => setFlipped(f => !f)}>
-      <div style={{
-        position: 'relative', minHeight: 140,
-        transformStyle: 'preserve-3d',
-        transition: 'transform 0.4s ease',
-        transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)'
-      }}>
-        <div style={cardFace}>
-          <div className="flex flex-col h-full">
-            <div className="flex items-start justify-between flex-1">
-              <div>
-                <p className="text-slate-500 text-xs">{title}</p>
-                <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value ?? 0}</p>
-                <p className="text-slate-400 text-xs mt-0.5">คัน</p>
-              </div>
-              <div className={`p-2.5 rounded-xl ${colorBg[color] || 'bg-slate-100'}`}>
-                <Icon size={20} className={color} />
-              </div>
-            </div>
-            <p className="text-slate-400 text-xs text-right">กดดูประเภทขนส่ง</p>
-          </div>
-        </div>
-        <div style={{ ...cardFace, transform: 'rotateY(180deg)' }}>
-          <p className="text-xs font-semibold text-slate-500 mb-2">{title} — ประเภทขนส่ง</p>
-          <div className="space-y-1.5">
-            {DELIVERY_TYPES.map(t => {
-              const row = (deliveryStats || []).find(r => r.DeliveryType === t.key);
-              const count = row?.[periodKey] || 0;
-              const pct = total > 0 ? Math.round((count / total) * 100) : 0;
-              return (
-                <div key={t.key}>
-                  <div className="flex items-center justify-between mb-0.5">
-                    <span className={`text-xs font-semibold ${t.color}`}>{t.label}</span>
-                    <span className={`text-xs font-bold ${t.color}`}>{count}<span className="text-slate-400 font-normal ml-1">/{pct}%</span></span>
-                  </div>
-                  <div className="w-full h-1 rounded-full bg-slate-200">
-                    <div className={`h-1 rounded-full transition-all ${t.bar}`} style={{ width: `${pct}%` }} />
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </div>
-    </div>
-  );
-};
 
 const SectionHeader = ({ title, sectionKey, collapsed, onToggle, icon: Icon, iconColor, extra }) => (
   <div className="flex items-center justify-between mb-3">
@@ -191,11 +126,11 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Stat cards: today / month / year (flip to show type breakdown) */}
+      {/* Stat cards: today / month / year */}
       <div className="grid grid-cols-3 gap-4">
-        <FlipStatCard title="วันนี้" value={counts.TodayTotal ?? 0} icon={Calendar} color="text-blue-500" deliveryStats={data?.deliveryTypeStats} periodKey="TodayCount" />
-        <FlipStatCard title="เดือนนี้" value={counts.MonthTotal ?? 0} icon={TruckIcon} color="text-emerald-500" deliveryStats={data?.deliveryTypeStats} periodKey="MonthCount" />
-        <FlipStatCard title="ปีนี้" value={counts.YearTotal ?? 0} icon={Package} color="text-violet-500" deliveryStats={data?.deliveryTypeStats} periodKey="YearCount" />
+        <StatCard title="รถทั้งหมดวันนี้" value={counts.TodayTotal ?? 0} sub="คัน" icon={Calendar} color="text-blue-500" />
+        <StatCard title="รถทั้งหมดเดือนนี้" value={counts.MonthTotal ?? 0} sub="คัน" icon={TruckIcon} color="text-emerald-500" />
+        <StatCard title="รถทั้งหมดปีนี้" value={counts.YearTotal ?? 0} sub="คัน" icon={Package} color="text-violet-500" />
       </div>
 
       {/* 4 stat cards — row 2 */}
