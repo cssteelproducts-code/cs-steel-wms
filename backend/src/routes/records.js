@@ -106,6 +106,60 @@ router.get('/:tripId/loading', authenticate, async (req, res) => {
   }
 });
 
+// GET /api/records/:tripId/timeline - Full timing breakdown
+router.get('/:tripId/timeline', authenticate, async (req, res) => {
+  try {
+    const pool = getPool();
+    const tripId = parseInt(req.params.tripId);
+
+    // Trip-level timing
+    const tripData = await pool.request().input('TripID', sql.Int, tripId).query(`
+      SELECT t.SOWaitStartedAt,
+             wi.WeighDateTime as WeighInTime,
+             ds.ReceivedTime as DataStationTime,
+             (SELECT MIN(lr2.EntryTime) FROM WMS_LoadingRecord lr2 WHERE lr2.TripID = t.TripID) as FirstLoadEntry
+      FROM WMS_Trips t
+      LEFT JOIN WMS_WeighIn wi ON wi.TripID = t.TripID
+      LEFT JOIN WMS_DataStation ds ON ds.TripID = t.TripID
+      WHERE t.TripID = @TripID
+    `);
+
+    // Loading station records
+    const loadingData = await pool.request().input('TripID', sql.Int, tripId).query(`
+      SELECT ls.StationName, lr.EntryTime, lr.ExitTime, lr.DurationMinutes, lr.Round
+      FROM WMS_LoadingRecord lr
+      JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+      WHERE lr.TripID = @TripID
+      ORDER BY lr.EntryTime
+    `);
+
+    const t = tripData.recordset[0] || {};
+
+    // Calculate DataStation wait phases
+    const pickWaitMinutes = t.SOWaitStartedAt && t.WeighInTime
+      ? Math.max(0, Math.round((new Date(t.SOWaitStartedAt) - new Date(t.WeighInTime)) / 60000))
+      : t.WeighInTime && (t.DataStationTime || t.FirstLoadEntry)
+        ? Math.max(0, Math.round((new Date(t.DataStationTime || t.FirstLoadEntry) - new Date(t.WeighInTime)) / 60000))
+        : null;
+
+    const soWaitMinutes = t.SOWaitStartedAt && (t.DataStationTime || t.FirstLoadEntry)
+      ? Math.max(0, Math.round((new Date(t.DataStationTime || t.FirstLoadEntry) - new Date(t.SOWaitStartedAt)) / 60000))
+      : null;
+
+    res.json({
+      success: true,
+      data: {
+        pickWaitMinutes,
+        soWaitMinutes,
+        hasSOWait: !!t.SOWaitStartedAt,
+        stations: loadingData.recordset
+      }
+    });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // PUT /api/records/:tripId - Update trip record
 router.put('/:tripId', authenticate, async (req, res) => {
   try {

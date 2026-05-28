@@ -48,9 +48,10 @@ export default function Records() {
   const [deleteRow, setDeleteRow] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
-  // Expand loading history
+  // Expand / flip timeline
   const [expandedTripId, setExpandedTripId] = useState(null);
   const [loadingHistory, setLoadingHistory] = useState({});
+  const [timeline, setTimeline] = useState({});
 
   useEffect(() => {
     fetchVehicleTypes();
@@ -164,12 +165,18 @@ export default function Records() {
   const toggleExpand = async (tripId) => {
     if (expandedTripId === tripId) { setExpandedTripId(null); return; }
     setExpandedTripId(tripId);
-    if (!loadingHistory[tripId]) {
+    if (!timeline[tripId]) {
       try {
-        const res = await api.get(`/records/${tripId}/loading`);
-        setLoadingHistory(h => ({ ...h, [tripId]: res.data.data || [] }));
+        const res = await api.get(`/records/${tripId}/timeline`);
+        if (res.data.success) setTimeline(t => ({ ...t, [tripId]: res.data.data }));
       } catch {}
     }
+  };
+
+  const fmtMin = (m) => {
+    if (m == null || m < 0) return null;
+    if (m < 60) return `${m} นาที`;
+    return `${Math.floor(m / 60)} ชม. ${m % 60} นาที`;
   };
 
   const netWeight = editForm.grossWeight !== '' && editForm.tareWeight !== ''
@@ -300,31 +307,68 @@ export default function Records() {
                         </div>
                       </td>
                     </tr>
-                    {expandedTripId === row.TripID && (
-                      <tr key={`exp-${row.TripID}`} className="bg-slate-50">
-                        <td colSpan={11} className="px-8 py-3">
-                          <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-2">ประวัติสถานีขึ้นสินค้า</p>
-                          {(loadingHistory[row.TripID] || []).length === 0 ? (
-                            <p className="text-xs text-slate-400">ไม่มีข้อมูลสถานี</p>
-                          ) : (
-                            <div className="flex flex-wrap gap-2">
-                              {(loadingHistory[row.TripID] || []).map(lr => (
-                                <div key={lr.RecordID} className="bg-white border border-slate-200 rounded-lg px-3 py-2 text-xs">
-                                  <div className="font-semibold text-slate-800">{lr.StationName}</div>
-                                  <div className="text-slate-500 mt-0.5">เข้า: {formatDateTime(lr.EntryTime)}</div>
-                                  {lr.ExitTime
-                                    ? <div className="text-emerald-600">ออก: {formatDateTime(lr.ExitTime)} ({lr.DurationMinutes} นาที)</div>
-                                    : <div className="text-amber-500">กำลังขึ้นสินค้า...</div>}
-                                </div>
-                              ))}
+                    {expandedTripId === row.TripID && (() => {
+                      const tl = timeline[row.TripID];
+                      return (
+                        <tr key={`exp-${row.TripID}`}>
+                          <td colSpan={11} className="p-0">
+                            <div className="mx-2 mb-2 rounded-xl border-2 border-blue-100 overflow-hidden"
+                              style={{ background: 'linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%)', animation: 'fadeIn 0.25s ease-out' }}>
+                              <div className="px-5 py-3">
+                                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
+                                  ⏱ สรุปเวลาแต่ละขั้นตอน
+                                </p>
+                                {!tl ? (
+                                  <p className="text-xs text-slate-400">กำลังโหลด...</p>
+                                ) : (
+                                  <div className="flex flex-wrap gap-3">
+                                    {/* DataStation */}
+                                    <div className="bg-white rounded-xl border border-purple-100 px-4 py-2.5 min-w-44">
+                                      <p className="text-xs font-bold text-purple-600 mb-1.5">สถานี Data</p>
+                                      {tl.pickWaitMinutes != null && (
+                                        <div className="flex items-center justify-between gap-4 text-xs">
+                                          <span className="text-slate-500">รอเอกสาร Pick</span>
+                                          <span className="font-semibold text-slate-700">{fmtMin(tl.pickWaitMinutes)}</span>
+                                        </div>
+                                      )}
+                                      {tl.hasSOWait && tl.soWaitMinutes != null && (
+                                        <div className="flex items-center justify-between gap-4 text-xs mt-1">
+                                          <span className="text-rose-500">รอเอกสาร SO</span>
+                                          <span className="font-semibold text-rose-600">{fmtMin(tl.soWaitMinutes)}</span>
+                                        </div>
+                                      )}
+                                      {tl.pickWaitMinutes == null && !tl.hasSOWait && (
+                                        <p className="text-xs text-slate-400">ไม่มีข้อมูล</p>
+                                      )}
+                                    </div>
+                                    {/* Loading stations */}
+                                    {(tl.stations || []).map((s, i) => (
+                                      <div key={i} className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
+                                        <p className="text-xs font-bold text-amber-600 mb-1.5">สถานี {s.StationName}</p>
+                                        <div className="flex items-center justify-between gap-4 text-xs">
+                                          <span className="text-slate-500">ขึ้นสินค้า</span>
+                                          <span className="font-semibold text-amber-700">
+                                            {s.DurationMinutes != null ? fmtMin(s.DurationMinutes) : <span className="text-amber-500">กำลังขึ้น...</span>}
+                                          </span>
+                                        </div>
+                                      </div>
+                                    ))}
+                                    {tl.stations?.length === 0 && (
+                                      <p className="text-xs text-slate-400 self-center">ยังไม่มีข้อมูลสถานีขึ้นสินค้า</p>
+                                    )}
+                                  </div>
+                                )}
+                                {row.CheckerRemarks && (
+                                  <p className="text-xs text-slate-500 mt-2.5 border-t border-blue-100 pt-2">
+                                    หมายเหตุเช็คเกอร์: <span className="text-slate-700">{row.CheckerRemarks}</span>
+                                  </p>
+                                )}
+                              </div>
                             </div>
-                          )}
-                          {row.CheckerRemarks && (
-                            <p className="text-xs text-slate-500 mt-2">หมายเหตุเช็คเกอร์: <span className="text-slate-700">{row.CheckerRemarks}</span></p>
-                          )}
-                        </td>
-                      </tr>
-                    )}
+                          </td>
+                        </tr>
+                      );
+                    })()}
                   </>
                 ))}
               </tbody>

@@ -212,7 +212,6 @@ export default function Dashboard() {
           sub="เที่ยวรถ"
           icon={TruckIcon}
           color="text-blue-500"
-          onClick={() => navigate('/monitor')}
         />
         <StatCard
           title="เสร็จสิ้นแล้ว"
@@ -227,7 +226,6 @@ export default function Dashboard() {
           sub="รถในคลัง"
           icon={Clock}
           color="text-amber-500"
-          onClick={() => navigate('/monitor')}
         />
         <StatCard
           title="น้ำหนักรวม"
