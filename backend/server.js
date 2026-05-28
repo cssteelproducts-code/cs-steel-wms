@@ -271,6 +271,16 @@ const runMigrations = async () => {
 
   try {
     await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_LoadingRecord') AND name='Round')
+        ALTER TABLE WMS_LoadingRecord ADD Round INT NULL DEFAULT 1;
+    `);
+    console.log('✅ LoadingRecord.Round column ready');
+  } catch (e) {
+    console.warn('⚠ Round migration:', e.message);
+  }
+
+  try {
+    await pool.request().query(`
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Users') AND name='SessionDurationHours')
         ALTER TABLE WMS_Users ADD SessionDurationHours INT NULL;
     `);
