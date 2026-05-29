@@ -3,6 +3,24 @@ import { Users, Clock, Plus, Trash2, BarChart2, RefreshCw, Download } from 'luci
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
+
+function InputTime({ label, value, onChange }) {
+  return (
+    <div>
+      <label className="label text-xs">{label}</label>
+      <input type="time" value={value} onChange={e => onChange(e.target.value)} className="input-field text-sm" />
+    </div>
+  );
+}
+
+function InputNum({ label, value, onChange, placeholder }) {
+  return (
+    <div>
+      <label className="label text-xs">{label}</label>
+      <input type="number" min="0" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="input-field text-sm" />
+    </div>
+  );
+}
 const toHrs = (min) => min <= 0 ? 0 : +(min / 60).toFixed(2);
 const fmtHr = (h) => h <= 0 ? '-' : `${h.toFixed(1)} ชม.`;
 
@@ -91,19 +109,6 @@ export default function ShiftPlanning() {
     const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿' + csv);
     a.download = 'shift_ot_compare.csv'; a.click();
   };
-
-  const InputTime = ({ label, value, onChange }) => (
-    <div>
-      <label className="label text-xs">{label}</label>
-      <input type="time" value={value} onChange={e => onChange(e.target.value)} className="input-field text-sm" />
-    </div>
-  );
-  const InputNum = ({ label, value, onChange, placeholder }) => (
-    <div>
-      <label className="label text-xs">{label}</label>
-      <input type="number" min="0" value={value} onChange={e => onChange(e.target.value)} placeholder={placeholder} className="input-field text-sm" />
-    </div>
-  );
 
   return (
     <div className="space-y-5">
