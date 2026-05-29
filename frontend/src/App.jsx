@@ -9,6 +9,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import TripMonitor from './pages/TripMonitor';
 import Forecast from './pages/Forecast';
+import ShiftPlanning from './pages/ShiftPlanning';
 import WeighIn from './pages/WeighIn';
 import DataStation from './pages/DataStation';
 import LoadingStation from './pages/LoadingStation';
@@ -62,6 +63,7 @@ function AppRoutes() {
         <Route index element={<ProtectedRoute menuCode="DASHBOARD"><Dashboard /></ProtectedRoute>} />
         <Route path="monitor" element={<ProtectedRoute menuCode="TRIP_MONITOR"><TripMonitor /></ProtectedRoute>} />
         <Route path="forecast" element={<ProtectedRoute menuCode="FORECAST"><Forecast /></ProtectedRoute>} />
+        <Route path="shift-planning" element={<ProtectedRoute menuCode="SHIFT_PLANNING"><ShiftPlanning /></ProtectedRoute>} />
         <Route path="weigh-in" element={<ProtectedRoute menuCode="WEIGH_IN"><WeighIn /></ProtectedRoute>} />
         <Route path="data-station" element={<ProtectedRoute menuCode="DATA_STATION"><DataStation /></ProtectedRoute>} />
         <Route path="loading-station" element={<ProtectedRoute menuCode="LOADING_STATION"><LoadingStation /></ProtectedRoute>} />

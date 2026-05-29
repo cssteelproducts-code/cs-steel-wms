@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit
+  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit, CalendarClock
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -27,7 +27,9 @@ const menuItems = [
   { key: 'section.system', divider: true },
   { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
   { path: '/users', icon: Users, key: 'nav.users', code: 'USERS' },
-  { path: '/master', icon: Settings, key: 'nav.master', code: 'MASTER' }
+  { path: '/master', icon: Settings, key: 'nav.master', code: 'MASTER' },
+  { key: 'section.tools', divider: true },
+  { path: '/shift-planning', icon: CalendarClock, key: 'nav.shiftPlanning', code: 'SHIFT_PLANNING' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

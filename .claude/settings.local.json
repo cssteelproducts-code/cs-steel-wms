@@ -63,7 +63,10 @@
       "Bash(railway deployment *)",
       "Bash(Get-ChildItem *)",
       "Bash(xargs grep -l \"migrate\\\\|initDb\\\\|CREATE TABLE\")",
-      "Bash(npm update *)"
+      "Bash(npm update *)",
+      "Bash(Remove-Item *)",
+      "Bash(findstr /n \"recentActivity กิจกรรม\" \"C:\\\\Users\\\\l3o.oK\\\\OneDrive\\\\Desktop\\\\CS.Smart\\\\frontend\\\\src\\\\pages\\\\Dashboard.jsx\")",
+      "Bash(findstr /n \"handleImport\\\\|handleDownloadTemplate\\\\|importRef\\\\|productImportRef\\\\|Upload\\\\|Download\\\\|template\\\\|import\" \"C:\\\\Users\\\\l3o.oK\\\\OneDrive\\\\Desktop\\\\CS.Smart\\\\frontend\\\\src\\\\pages\\\\Master.jsx\")"
     ]
   }
 }
