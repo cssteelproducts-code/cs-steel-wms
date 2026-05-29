@@ -465,6 +465,16 @@ const runMigrations = async () => {
     }
   }
   console.log('✅ Performance indexes ready');
+
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Roles') AND name='SortOrder')
+        ALTER TABLE WMS_Roles ADD SortOrder INT NOT NULL DEFAULT 0;
+    `);
+    console.log('✅ WMS_Roles.SortOrder column ready');
+  } catch (e) {
+    console.warn('⚠ WMS_Roles.SortOrder migration:', e.message);
+  }
 };
 
 const startServer = () => {

@@ -47,14 +47,14 @@ export default function Users() {
 
   const fetchAll = async () => {
     try {
-      const [uRes, rRes, wRes] = await Promise.all([
+      const [uRes, rRes, wRes] = await Promise.allSettled([
         api.get('/users'),
         api.get('/users/roles'),
         api.get('/master/warehouses')
       ]);
-      setUsers(uRes.data.data || []);
-      setRoles(rRes.data.data || []);
-      setWarehouses(wRes.data.data || []);
+      if (uRes.status === 'fulfilled') setUsers(uRes.value.data.data || []);
+      if (rRes.status === 'fulfilled') setRoles(rRes.value.data.data || []);
+      if (wRes.status === 'fulfilled') setWarehouses(wRes.value.data.data || []);
     } catch {} finally { setPageLoading(false); }
   };
 
