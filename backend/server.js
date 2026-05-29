@@ -437,6 +437,13 @@ const startServer = () => {
   // Connect to DB after server is listening so healthcheck doesn't time out
   connectDB()
     .then(runMigrations)
+    .then(() => {
+      const { runAlertCheck } = require('./src/jobs/alertJob');
+      const ALERT_INTERVAL_MS = 5 * 60 * 1000; // ทุก 5 นาที
+      runAlertCheck().catch(() => {});
+      setInterval(() => runAlertCheck().catch(() => {}), ALERT_INTERVAL_MS);
+      console.log('⏰ Alert auto-check started (every 5 min)');
+    })
     .catch(err => {
       console.error('❌ Database connection failed:', err.message);
       process.exit(1);
