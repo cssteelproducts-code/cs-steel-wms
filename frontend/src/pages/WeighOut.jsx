@@ -173,18 +173,17 @@ export default function WeighOut() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
-                        <span className="text-slate-400 text-xs">#{trip.TripID}</span>
                         <PriorityBadge priority={trip.Priority} />
                       </div>
                       <div className="text-slate-500 text-xs mt-1">
-                        {trip.VehicleType}{trip.DeliveryType ? ` | ${trip.DeliveryType}` : ''}{trip.WarehouseName ? ` | ${trip.WarehouseName}` : ''}
+                        {[trip.VehicleType, trip.DeliveryType, trip.WarehouseName, `#${trip.TripID}`].filter(Boolean).join(' / ')}
                       </div>
                       {trip.CustomerName && <div className="text-blue-500 text-xs">{trip.CustomerName}</div>}
                       {trip.PickDocumentNo && <div className="text-purple-500 text-xs font-mono">{trip.PickDocumentNo}</div>}
                     </div>
                     <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
                       <div className="flex items-center gap-1.5">
-                        <StatusBadge status={trip.Status} />
+                        <StatusBadge trip={trip} />
                         <button
                           onClick={e => { e.stopPropagation(); setDeleteConfirm(trip); }}
                           className="p-1 rounded-md text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
