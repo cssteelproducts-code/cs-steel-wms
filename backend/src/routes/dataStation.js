@@ -36,7 +36,7 @@ router.post('/', authenticate, async (req, res) => {
         .input('Notes', sql.NVarChar, notes || '')
         .input('OperatorID', sql.Int, req.user.UserID)
         .query(`UPDATE WMS_DataStation SET TargetStationID=@TargetStationID,
-                PickDocumentNo=NULL, ReceivedTime=GETDATE(),
+                PickDocumentNo=NULL, ReceivedTime=GETUTCDATE(),
                 Notes=@Notes, OperatorID=@OperatorID
                 WHERE TripID=@TripID`);
     } else {
@@ -45,8 +45,8 @@ router.post('/', authenticate, async (req, res) => {
         .input('TargetStationID', sql.Int, primaryStation || null)
         .input('Notes', sql.NVarChar, notes || '')
         .input('OperatorID', sql.Int, req.user.UserID)
-        .query(`INSERT INTO WMS_DataStation (TripID, TargetStationID, PickDocumentNo, Notes, OperatorID)
-                VALUES (@TripID, @TargetStationID, NULL, @Notes, @OperatorID)`);
+        .query(`INSERT INTO WMS_DataStation (TripID, TargetStationID, PickDocumentNo, ReceivedTime, Notes, OperatorID)
+                VALUES (@TripID, @TargetStationID, NULL, GETUTCDATE(), @Notes, @OperatorID)`);
     }
 
     // Store all target stations in WMS_DataStationTargets (batch insert)
@@ -135,7 +135,7 @@ router.put('/:tripId/wait-pick', authenticate, async (req, res) => {
     const pool = getPool();
     await pool.request()
       .input('TripID', sql.Int, req.params.tripId)
-      .query(`UPDATE WMS_Trips SET Status = 'WaitPick', SOWaitStartedAt = GETDATE()
+      .query(`UPDATE WMS_Trips SET Status = 'WaitPick', SOWaitStartedAt = GETUTCDATE()
               WHERE TripID = @TripID AND Status IN ('Data', 'WaitPick')`);
     res.json({ success: true });
   } catch (err) {
