@@ -74,6 +74,7 @@ router.get('/summary', authenticate, async (req, res) => {
           WHERE lr.ExitTime IS NULL
         ) cur ON cur.TripID = t.TripID AND cur.rn = 1
         WHERE t.TripDate >= CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+          AND t.Status NOT IN ('Complete','Cancelled')
         ORDER BY t.CreatedAt DESC
       `),
       pool.request().query(`
