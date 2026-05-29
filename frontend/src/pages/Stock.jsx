@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Boxes, ArrowDownToLine, ArrowUpFromLine, ClipboardList, Package, Plus, RefreshCw, CheckCircle, X, Edit2 } from 'lucide-react';
+
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -19,6 +20,7 @@ export default function Stock() {
   const [countDetail, setCountDetail] = useState(null);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [saving, setSaving] = useState(false);
   const [filterWh, setFilterWh] = useState('');
 
@@ -48,7 +50,7 @@ export default function Stock() {
   };
   const fetchBalance = async () => {
     setLoading(true);
-    try { const r = await api.get(`/stock/balance${filterWh ? '?warehouseId=' + filterWh : ''}`); setBalance(r.data.data || []); } catch {}
+    try { const r = await api.get(`/stock/balance${filterWh ? '?warehouseId=' + filterWh : ''}`); setBalance(r.data.data || []); setLastUpdate(new Date()); } catch {}
     finally { setLoading(false); }
   };
   const fetchProducts = async () => {
@@ -137,6 +139,21 @@ export default function Stock() {
 
   return (
     <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="page-title flex items-center gap-2">
+            <Boxes size={20} className="text-blue-500 flex-shrink-0" />
+            สต๊อกสินค้า
+          </h2>
+          <p className="text-slate-500 text-xs mt-0.5">
+            {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
+          </p>
+        </div>
+        <button onClick={fetchBalance} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white flex-shrink-0">
+          <RefreshCw size={15} />
+        </button>
+      </div>
       {/* Tabs */}
       <div className="flex gap-2 flex-wrap">
         {[

@@ -17,6 +17,7 @@ const PLAN_STATUS_LABEL = { DRAFT: 'ร่าง', CONFIRMED: 'ยืนยั�
 
 export default function DeliveryPlan() {
   const [tab, setTab] = useState('orders');
+  const [lastUpdate, setLastUpdate] = useState(null);
   const [orders, setOrders] = useState([]);
   const [plans, setPlans] = useState([]);
   const [planDetail, setPlanDetail] = useState(null);
@@ -74,6 +75,7 @@ export default function DeliveryPlan() {
       const q = filterDate ? `?date=${filterDate}` : '';
       const r = await api.get(`/delivery/orders${q}`);
       setOrders(r.data.data || []);
+      setLastUpdate(new Date());
     } catch {} finally { setLoading(false); }
   };
   const fetchPlans = async () => {
@@ -248,6 +250,22 @@ export default function DeliveryPlan() {
 
   return (
     <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="page-title flex items-center gap-2">
+            <Route size={20} className="text-blue-500 flex-shrink-0" />
+            แผนจัดส่ง
+          </h2>
+          <p className="text-slate-500 text-xs mt-0.5">
+            {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
+          </p>
+        </div>
+        <button onClick={() => { fetchOrders(); fetchPlans(); }}
+          className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white flex-shrink-0">
+          <RefreshCw size={15} />
+        </button>
+      </div>
       {/* Tabs */}
       <div className="flex gap-2 items-center">
         <button onClick={() => setTab('orders')}
@@ -257,10 +275,6 @@ export default function DeliveryPlan() {
         <button onClick={() => setTab('plans')}
           className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'plans' ? 'bg-blue-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <Route size={14} />แผนจัดส่ง (VRP)
-        </button>
-        <button onClick={() => { fetchOrders(); fetchPlans(); }}
-          className="ml-auto p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
-          <RefreshCw size={14} />
         </button>
       </div>
 

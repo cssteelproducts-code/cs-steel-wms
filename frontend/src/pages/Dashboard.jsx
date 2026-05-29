@@ -134,6 +134,7 @@ const TypeTag = ({ name, count, color = 'bg-slate-100 text-slate-600' }) => (
 export default function Dashboard() {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(null);
   const navigate = useNavigate();
   const [collapsed, setCollapsed] = useState(() => {
     try { return JSON.parse(localStorage.getItem('dash_collapsed') || '{}'); } catch { return {}; }
@@ -162,7 +163,7 @@ export default function Dashboard() {
   const fetchData = useCallback(async () => {
     try {
       const res = await api.get('/dashboard/summary');
-      if (res.data.success) setData(res.data.data);
+      if (res.data.success) { setData(res.data.data); setLastUpdate(new Date()); }
     } catch {
       toast.error('ไม่สามารถโหลด Dashboard ได้');
     } finally {
@@ -193,9 +194,18 @@ export default function Dashboard() {
     <>
     <div className="space-y-5 animate-fade-in">
 
-      {/* Refresh */}
-      <div className="flex justify-end">
-        <button onClick={fetchData} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
+      {/* Header */}
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="page-title flex items-center gap-2">
+            <BarChart2 size={20} className="text-blue-500 flex-shrink-0" />
+            Dashboard
+          </h2>
+          <p className="text-slate-500 text-xs mt-0.5">
+            {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
+          </p>
+        </div>
+        <button onClick={fetchData} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white flex-shrink-0">
           <RefreshCw size={15} />
         </button>
       </div>

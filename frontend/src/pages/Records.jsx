@@ -46,6 +46,7 @@ export default function Records() {
   const [editRow, setEditRow] = useState(null);
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState(null);
 
   // Customer search in edit modal
   const [custQuery, setCustQuery] = useState('');
@@ -85,6 +86,7 @@ export default function Records() {
       if (filterStatus) params.set('status', filterStatus);
       const res = await api.get(`/records?${params}`);
       setRecords(res.data.data || []);
+      setLastUpdate(new Date());
       setPagination(res.data.pagination || { total: 0, page: p, limit: 20, totalPages: 1 });
     } catch {
       toast.error('ไม่สามารถโหลดข้อมูลได้');
@@ -205,12 +207,17 @@ export default function Records() {
   return (
     <div className="space-y-5">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-          <ClipboardList size={22} className="text-emerald-500" />
-          บันทึกการขึ้นสินค้า
-        </h2>
-        <button onClick={() => fetchRecords(page)} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 border border-slate-200 bg-white transition-colors">
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h2 className="page-title flex items-center gap-2">
+            <ClipboardList size={20} className="text-emerald-500 flex-shrink-0" />
+            บันทึกการขึ้นสินค้า
+          </h2>
+          <p className="text-slate-500 text-xs mt-0.5">
+            {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
+          </p>
+        </div>
+        <button onClick={() => fetchRecords(page)} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 border border-slate-200 bg-white transition-colors flex-shrink-0">
           <RefreshCw size={15} />
         </button>
       </div>
