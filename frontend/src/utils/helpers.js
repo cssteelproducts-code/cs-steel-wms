@@ -43,7 +43,7 @@ export const getStatusConfig = (status) => {
     Data:           { label: 'รอเอกสาร Pick',                      color: 'bg-purple-50 text-purple-600 border-purple-200', dot: 'bg-purple-500', step: 2 },
     WaitPick:       { label: 'รอเอกสาร Pick',                      color: 'bg-rose-50 text-rose-600 border-rose-200',       dot: 'bg-rose-500',   step: 2 },
     SOWait:         { label: 'รอเอกสาร SO',                        color: 'bg-orange-50 text-orange-600 border-orange-200', dot: 'bg-orange-500', step: 2 },
-    LoadingAssigned:{ label: 'กำลังขึ้นสินค้า',                    color: 'bg-amber-50 text-amber-600 border-amber-200',    dot: 'bg-amber-500',  step: 3 },
+    LoadingAssigned:{ label: 'กำลังไปขึ้นสินค้า',                  color: 'bg-amber-50 text-amber-600 border-amber-200',    dot: 'bg-amber-500',  step: 3 },
     Loading:        { label: 'กำลังขึ้นสินค้า',                    color: 'bg-amber-50 text-amber-600 border-amber-200',    dot: 'bg-amber-500',  step: 3 },
     LoadingBetween: { label: 'กำลังไปขึ้นสินค้าสถานีถัดไป',        color: 'bg-amber-50 text-amber-700 border-amber-300',    dot: 'bg-amber-600',  step: 3 },
     WeighOut:       { label: 'กำลังชั่งออก',                       color: 'bg-cyan-50 text-cyan-600 border-cyan-200',       dot: 'bg-cyan-500',   step: 4 },
@@ -58,7 +58,8 @@ export const getEffectiveStatusConfig = (trip) => {
   const { Status, SOWaitStartedAt, CurrentStation, HasLoadingRecord, HasDataStationTargets } = trip;
   if (Status === 'Loading') {
     const base = getStatusConfig('Loading');
-    return CurrentStation ? { ...base, label: `กำลังขึ้นสินค้าสถานี ${CurrentStation}` } : base;
+    if (CurrentStation) return { ...base, label: `กำลังขึ้นสินค้าสถานี ${CurrentStation}` };
+    return { ...base, label: 'กำลังไปขึ้นสินค้า' };
   }
   if (Status === 'WaitPick') {
     if (HasLoadingRecord) return getStatusConfig('LoadingBetween');
