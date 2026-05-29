@@ -36,6 +36,8 @@ export default function ShiftPlanning() {
   const [records, setRecords] = useState(stored.records || []);
   const [tab, setTab] = useState('records');
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
+  const [addMode, setAddMode] = useState('single'); // 'single' | 'range'
+  const [batchForm, setBatchForm] = useState({ fromDate: new Date().toISOString().slice(0, 10), toDate: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ cfg, records }));
@@ -51,6 +53,24 @@ export default function ShiftPlanning() {
   };
 
   const removeRecord = (id) => setRecords(r => r.filter(x => x.id !== id));
+
+  const addBatchRecords = () => {
+    if (!batchForm.fromDate || !batchForm.toDate || !batchForm.endTime) return;
+    const start = new Date(batchForm.fromDate);
+    const end = new Date(batchForm.toDate);
+    if (end < start) { alert('วันสิ้นสุดต้องมากกว่าหรือเท่ากับวันเริ่มต้น'); return; }
+    const existDates = new Set(records.map(r => r.date));
+    const newRecs = [];
+    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+      const dateStr = d.toISOString().slice(0, 10);
+      if (existDates.has(dateStr)) continue;
+      const ot1 = calcOT1(batchForm.endTime, cfg);
+      const ot2 = parseFloat(batchForm.otHrs2) || calcOT2(batchForm.endTime, cfg);
+      newRecs.push({ id: Date.now() + newRecs.length, date: dateStr, endTime: batchForm.endTime, otEmp: parseInt(batchForm.otEmp) || 0, otHrs2: ot2, otHrs1: ot1 });
+    }
+    if (!newRecs.length) { alert('ไม่มีวันใหม่ (วันที่ซ้ำถูกข้ามแล้ว)'); return; }
+    setRecords(r => [...r, ...newRecs].sort((a, b) => a.date.localeCompare(b.date)));
+  };
 
   const summary = useMemo(() => {
     const totalOT1 = records.reduce((s, r) => s + (r.otHrs1 || 0), 0);
@@ -170,29 +190,76 @@ export default function ShiftPlanning() {
 
       {tab === 'records' && (
         <div className="card">
-          {/* Add row */}
-          <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 p-3 bg-slate-50 rounded-xl">
-            <div>
-              <label className="label text-xs">วันที่</label>
-              <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="input-field text-sm" />
-            </div>
-            <div>
-              <label className="label text-xs">เวลาเลิกงาน</label>
-              <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm" />
-            </div>
-            <InputNum label="OT พนักงาน (แบบ 2)" value={form.otEmp} onChange={v => setForm(f => ({ ...f, otEmp: v }))} placeholder="คน" />
-            <div>
-              <label className="label text-xs">OT ชม. (แบบ 2) — ว่างไว้=คำนวณเอง</label>
-              <input type="number" step="0.5" min="0" value={form.otHrs2} onChange={e => setForm(f => ({ ...f, otHrs2: e.target.value }))}
-                placeholder={`คำนวณ = ${calcOT2(form.endTime, cfg)} ชม.`}
-                className="input-field text-sm" />
-            </div>
-            <div className="flex items-end">
-              <button onClick={addRecord} className="btn-primary w-full text-sm flex items-center gap-1.5">
-                <Plus size={14} />เพิ่ม
+          {/* Mode toggle */}
+          <div className="flex gap-2 mb-3">
+            {[{ key: 'single', label: 'ทีละวัน' }, { key: 'range', label: 'ช่วงวันที่ (หลายวัน)' }].map(m => (
+              <button key={m.key} onClick={() => setAddMode(m.key)}
+                className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-colors ${addMode === m.key ? 'bg-indigo-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200'}`}>
+                {m.label}
               </button>
-            </div>
+            ))}
           </div>
+
+          {/* Add single */}
+          {addMode === 'single' && (
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 p-3 bg-slate-50 rounded-xl">
+              <div>
+                <label className="label text-xs">วันที่</label>
+                <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="input-field text-sm" />
+              </div>
+              <div>
+                <label className="label text-xs">เวลาเลิกงาน</label>
+                <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm" />
+              </div>
+              <InputNum label="OT พนักงาน (แบบ 2)" value={form.otEmp} onChange={v => setForm(f => ({ ...f, otEmp: v }))} placeholder="คน" />
+              <div>
+                <label className="label text-xs">OT ชม. (แบบ 2) — ว่างไว้=คำนวณ</label>
+                <input type="number" step="0.5" min="0" value={form.otHrs2} onChange={e => setForm(f => ({ ...f, otHrs2: e.target.value }))}
+                  placeholder={`≈ ${calcOT2(form.endTime, cfg)} ชม.`} className="input-field text-sm" />
+              </div>
+              <div className="flex items-end">
+                <button onClick={addRecord} className="btn-primary w-full text-sm flex items-center gap-1.5">
+                  <Plus size={14} />เพิ่ม
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Add range */}
+          {addMode === 'range' && (
+            <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl mb-4 space-y-3">
+              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+                <div>
+                  <label className="label text-xs">วันเริ่มต้น</label>
+                  <input type="date" value={batchForm.fromDate} onChange={e => setBatchForm(f => ({ ...f, fromDate: e.target.value }))} className="input-field text-sm" />
+                </div>
+                <div>
+                  <label className="label text-xs">วันสิ้นสุด</label>
+                  <input type="date" value={batchForm.toDate} onChange={e => setBatchForm(f => ({ ...f, toDate: e.target.value }))} className="input-field text-sm" />
+                </div>
+                <div>
+                  <label className="label text-xs">เวลาเลิกงาน (ทุกวัน)</label>
+                  <input type="time" value={batchForm.endTime} onChange={e => setBatchForm(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm" />
+                </div>
+                <InputNum label="OT พนักงาน (แบบ 2)" value={batchForm.otEmp} onChange={v => setBatchForm(f => ({ ...f, otEmp: v }))} placeholder="คน" />
+                <div>
+                  <label className="label text-xs">OT ชม. (แบบ 2) — ว่างไว้=คำนวณ</label>
+                  <input type="number" step="0.5" min="0" value={batchForm.otHrs2} onChange={e => setBatchForm(f => ({ ...f, otHrs2: e.target.value }))}
+                    placeholder={`≈ ${calcOT2(batchForm.endTime, cfg)} ชม.`} className="input-field text-sm" />
+                </div>
+              </div>
+              <div className="flex items-center gap-3">
+                <button onClick={addBatchRecords} className="btn-primary text-sm flex items-center gap-1.5">
+                  <Plus size={14} />เพิ่มทุกวันในช่วงนี้
+                </button>
+                {batchForm.fromDate && batchForm.toDate && (
+                  <span className="text-xs text-indigo-500">
+                    {Math.max(0, Math.round((new Date(batchForm.toDate) - new Date(batchForm.fromDate)) / 86400000) + 1)} วัน
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Table */}
           <div className="overflow-x-auto">
