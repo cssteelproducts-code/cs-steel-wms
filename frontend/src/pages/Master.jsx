@@ -28,6 +28,7 @@ export default function Master() {
   const [productSearch, setProductSearch] = useState('');
   const [productSKUFilter, setProductSKUFilter] = useState('');
   const productImportRef = useRef(null);
+  const locationsImportRef = useRef(null);
   const [locationTypes, setLocationTypes] = useState([]);
   const [selected, setSelected] = useState(new Set());
   // Location search state
@@ -157,6 +158,30 @@ export default function Master() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
     } finally { setImporting(false); }
+  };
+
+  const handleLocationsImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    e.target.value = '';
+    setImporting(true);
+    try {
+      const res = await api.post('/master/locations/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
+      if (res.data.success) { toast.success(res.data.message); fetchData('locations'); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
+    } finally { setImporting(false); }
+  };
+
+  const handleDownloadLocationsTemplate = async () => {
+    try {
+      const res = await api.get('/master/locations/template', { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a'); a.href = url; a.download = 'location_template.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
   };
 
   const handleDownloadProductTemplate = async () => {
@@ -798,6 +823,14 @@ export default function Master() {
                 {importing ? <><span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />กำลังนำเข้า...</> : <><Upload size={14} />Import Excel</>}
               </button>
               <button onClick={handleDownloadProductTemplate} className="btn-secondary text-sm"><Download size={14} />Template</button>
+            </>)}
+            {tab === 'locations' && (<>
+              <input ref={locationsImportRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleLocationsImport} />
+              <button onClick={() => !importing && locationsImportRef.current?.click()} disabled={importing}
+                className="btn-secondary text-sm flex items-center gap-1.5">
+                {importing ? <><span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />กำลังนำเข้า...</> : <><Upload size={14} />Import Excel</>}
+              </button>
+              <button onClick={handleDownloadLocationsTemplate} className="btn-secondary text-sm"><Download size={14} />Template</button>
             </>)}
             <button onClick={openCreate} className="btn-primary text-sm">
               <Plus size={14} />เพิ่ม

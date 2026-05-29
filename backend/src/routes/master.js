@@ -451,6 +451,74 @@ router.delete('/locations/:id', authenticate, requireAdmin, async (req, res) => 
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+// ==================== LOCATIONS EXCEL IMPORT/EXPORT ====================
+router.get('/locations/template', authenticate, (req, res) => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['รหัส Location*', 'ชื่อ Location*', 'รหัสคลังสินค้า', 'รหัสประเภท Location'],
+    ['A-01-01', 'ชั้น A แถว 1 ช่อง 1', 'WH01', 'TYPE01'],
+    ['A-01-02', 'ชั้น A แถว 1 ช่อง 2', 'WH01', ''],
+    ['B-02-01', 'ชั้น B แถว 2 ช่อง 1', '', ''],
+  ]);
+  ws['!cols'] = [{ wch: 16 }, { wch: 30 }, { wch: 16 }, { wch: 20 }];
+  XLSX.utils.book_append_sheet(wb, ws, 'Location');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="location_template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+router.post('/locations/import', authenticate, requireAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'ไม่พบไฟล์' });
+  try {
+    const pool = getPool();
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1 });
+
+    // Pre-load lookup maps
+    const whRes = await pool.request().query('SELECT WarehouseCode, WarehouseID FROM WMS_Warehouses WHERE IsActive=1');
+    const whMap = Object.fromEntries(whRes.recordset.map(r => [r.WarehouseCode.trim().toUpperCase(), r.WarehouseID]));
+
+    const ltRes = await pool.request().query('SELECT TypeCode, TypeID FROM WMS_LocationTypes WHERE IsActive=1');
+    const ltMap = Object.fromEntries(ltRes.recordset.map(r => [r.TypeCode.trim().toUpperCase(), r.TypeID]));
+
+    const existRes = await pool.request().query('SELECT LocationCode FROM WMS_Locations');
+    const existCodes = new Set(existRes.recordset.map(r => r.LocationCode.trim().toUpperCase()));
+
+    const newRows = [];
+    let skipped = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const [code, name, whCode, ltCode] = rows[i];
+      if (!code || !name) { skipped++; continue; }
+      const c = String(code).trim();
+      if (existCodes.has(c.toUpperCase())) { skipped++; continue; }
+      const warehouseId = whCode ? (whMap[String(whCode).trim().toUpperCase()] || null) : null;
+      const locationTypeId = ltCode ? (ltMap[String(ltCode).trim().toUpperCase()] || null) : null;
+      newRows.push([c, String(name).trim(), warehouseId, locationTypeId]);
+      existCodes.add(c.toUpperCase());
+    }
+
+    const BATCH = 100;
+    for (let b = 0; b < newRows.length; b += BATCH) {
+      const batch = newRows.slice(b, b + BATCH);
+      const r2 = pool.request();
+      const vals = batch.map((row, idx) => {
+        r2.input(`c${idx}`, sql.NVarChar, row[0]);
+        r2.input(`n${idx}`, sql.NVarChar, row[1]);
+        r2.input(`w${idx}`, sql.Int, row[2]);
+        r2.input(`t${idx}`, sql.Int, row[3]);
+        return `(@c${idx},@n${idx},@w${idx},@t${idx})`;
+      });
+      await r2.query(`INSERT INTO WMS_Locations (LocationCode,LocationName,WarehouseID,LocationTypeID) VALUES ${vals.join(',')}`);
+    }
+
+    res.json({ success: true, message: `นำเข้าสำเร็จ ${newRows.length} รายการ (ข้าม ${skipped} รายการ)` });
+  } catch (err) {
+    console.error('Locations import error:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // ==================== PRODUCTS ====================
 router.get('/products', authenticate, async (req, res) => {
   try {
