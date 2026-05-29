@@ -476,9 +476,9 @@ export default function Transfer() {
       {showCreateJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowCreateJob(false)}>
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowCreateJob(false); }}>
           <div className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
-            onClick={e => e.stopPropagation()}>
+            onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
               <h3 className="text-lg font-black" style={{ color: '#111827' }}>สร้างงานใหม่</h3>
               <button onClick={() => setShowCreateJob(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
@@ -589,9 +589,9 @@ export default function Transfer() {
       {showStationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
-          onClick={() => setShowStationModal(false)}>
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowStationModal(false); }}>
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
-            onClick={e => e.stopPropagation()}>
+            onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
               <h3 className="text-lg font-black" style={{ color: '#111827' }}>
                 {editStation ? 'แก้ไขสถานี' : 'เพิ่มสถานีใหม่'}
