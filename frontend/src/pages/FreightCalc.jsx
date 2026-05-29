@@ -192,14 +192,14 @@ export default function FreightCalc() {
     const othersCost = num(others);
     const extrasCost = (cfg.extras || []).reduce((s, e) => s + num(e.amount), 0);
     const total = fuelCost + laborCost + insuranceCost + maintenanceCost + gpsCost + tollCost + othersCost + extrasCost;
-    const perKg = cfg.capacity > 0 ? total / cfg.capacity : 0;
+    const perKm = dist > 0 ? total / (dist * 2) : 0;
     const perTon = cfg.capacity > 0 ? total / (cfg.capacity / 1000) : 0;
 
     setResult({
       vehType, origin, destination, distKm: dist, fuelPrice: fuel, hasOT,
       fuelCost, laborCost, insuranceCost, maintenanceCost, gpsCost,
       tollCost, othersCost, extrasCost, extras: cfg.extras || [],
-      total, perKg, perTon, capacity: cfg.capacity,
+      total, perKm, perTon, capacity: cfg.capacity,
       kmPerL: cfg.kmPerL, isOT: hasOT && cfg.laborOT > 0,
     });
   };
@@ -353,8 +353,8 @@ export default function FreightCalc() {
               {/* Per unit */}
               <div className="grid grid-cols-2 divide-x divide-slate-100 border-b border-slate-100">
                 <div className="px-4 py-3 text-center">
-                  <p className="text-xs text-slate-400">บาท / กก.</p>
-                  <p className="text-lg font-black text-blue-600">{fmt(result.perKg)}</p>
+                  <p className="text-xs text-slate-400">บาท / กม.</p>
+                  <p className="text-lg font-black text-blue-600">{result.perKm > 0 ? fmt(result.perKm) : '—'}</p>
                 </div>
                 <div className="px-4 py-3 text-center">
                   <p className="text-xs text-slate-400">บาท / ตัน</p>
