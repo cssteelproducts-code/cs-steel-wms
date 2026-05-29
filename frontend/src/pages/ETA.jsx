@@ -112,13 +112,13 @@ export default function ETA() {
   };
 
   const fmtEta = (v) => {
-    if (v.withinRadius) return <span className="inline-flex items-center gap-1 text-emerald-600 font-bold text-xs"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />อยู่ภายในคลัง</span>;
+    if (v.withinRadius) return <span className="inline-flex items-center gap-1 text-emerald-600 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />อยู่ภายในคลัง</span>;
     if (v.etaMinutes === null || v.etaMinutes === undefined) return '-';
-    if (v.etaMinutes <= 0) return <span className="text-emerald-600 font-bold text-xs">ถึงแล้ว</span>;
-    if (v.etaMinutes < 60) return <span className="font-bold text-amber-600 text-xs">{v.etaMinutes} นาที</span>;
+    if (v.etaMinutes <= 0) return <span className="text-emerald-600 font-bold">ถึงแล้ว</span>;
+    if (v.etaMinutes < 60) return <span className="font-bold text-amber-600">{v.etaMinutes} นาที</span>;
     const h = Math.floor(v.etaMinutes / 60);
     const m = v.etaMinutes % 60;
-    return <span className="font-bold text-blue-600 text-xs">{h} ชั่วโมง{m > 0 ? ` ${m} นาที` : ''}</span>;
+    return <span className="font-bold text-blue-600">{h} ชั่วโมง{m > 0 ? ` ${m} นาที` : ''}</span>;
   };
 
   return (
@@ -130,7 +130,7 @@ export default function ETA() {
             <Navigation size={20} className="text-red-600 flex-shrink-0" />
             {t('page.eta')}
           </h2>
-          <p className="text-gray-400 text-[16px] mt-0.5">
+          <p className="text-gray-400 text-xs mt-0.5">
             {source === 'mock' && <span className="text-amber-500 mr-1">⚠ Mock ·</span>}
             {lastUpdate ? `อัพเดต ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
           </p>
@@ -271,7 +271,7 @@ export default function ETA() {
                     <div className="text-right flex-shrink-0">
                       <div>{fmtEta(v)}</div>
                       {v.lastUpdate && (
-                        <div className="text-gray-400 text-[16px] mt-0.5">{formatDateTime(v.lastUpdate)}</div>
+                        <div className="text-gray-400 text-xs mt-0.5">{formatDateTime(v.lastUpdate)}</div>
                       )}
                     </div>
                   </div>
