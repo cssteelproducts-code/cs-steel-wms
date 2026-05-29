@@ -5,6 +5,67 @@ const { authenticate } = require('../middleware/auth');
 
 router.use(authenticate);
 
+// --- VEHICLES ---
+
+router.get('/vehicles', async (req, res) => {
+  try {
+    const pool = getPool();
+    const result = await pool.request().query(
+      'SELECT * FROM WMS_TransferVehicles WHERE IsActive=1 ORDER BY VehiclePlate'
+    );
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.post('/vehicles', async (req, res) => {
+  try {
+    const { vehiclePlate, vehicleName } = req.body;
+    if (!vehiclePlate) return res.status(400).json({ success: false, message: 'กรุณากรอกทะเบียนรถ' });
+    const pool = getPool();
+    const result = await pool.request()
+      .input('plate', sql.NVarChar, vehiclePlate.trim())
+      .input('name', sql.NVarChar, vehicleName || null)
+      .query(`
+        INSERT INTO WMS_TransferVehicles (VehiclePlate, VehicleName)
+        OUTPUT INSERTED.VehicleID
+        VALUES (@plate, @name)
+      `);
+    res.json({ success: true, vehicleId: result.recordset[0].VehicleID });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/vehicles/:id', async (req, res) => {
+  try {
+    const { vehiclePlate, vehicleName, isActive } = req.body;
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('plate', sql.NVarChar, vehiclePlate)
+      .input('name', sql.NVarChar, vehicleName || null)
+      .input('active', sql.Bit, isActive !== false ? 1 : 0)
+      .query('UPDATE WMS_TransferVehicles SET VehiclePlate=@plate, VehicleName=@name, IsActive=@active WHERE VehicleID=@id');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/vehicles/:id', async (req, res) => {
+  try {
+    const pool = getPool();
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query('UPDATE WMS_TransferVehicles SET IsActive=0 WHERE VehicleID=@id');
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // --- STATIONS ---
 
 router.get('/stations', async (req, res) => {
@@ -139,9 +200,10 @@ router.get('/jobs/:id', async (req, res) => {
         WHERE j.JobID=@id
       `),
       pool.request().input('id', sql.Int, req.params.id).query(`
-        SELECT t.*, u.FullName AS OperatorName
+        SELECT t.*, u.FullName AS OperatorName, v.VehiclePlate
         FROM WMS_TransferTrips t
         LEFT JOIN WMS_Users u ON t.OperatorID=u.UserID
+        LEFT JOIN WMS_TransferVehicles v ON t.VehicleID=v.VehicleID
         WHERE t.JobID=@id
         ORDER BY t.TripNo
       `)
@@ -212,11 +274,13 @@ router.get('/trips/active', async (req, res) => {
       .query(`
         SELECT t.*, j.JobCode, j.ProductDesc, j.SourceStationID, j.DestStationID,
           ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
-          j.PlannedBundles, j.PlannedWeightKg
+          j.PlannedBundles, j.PlannedWeightKg,
+          v.VehiclePlate
         FROM WMS_TransferTrips t
         JOIN WMS_TransferJobs j ON t.JobID=j.JobID
         LEFT JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
         LEFT JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID
+        LEFT JOIN WMS_TransferVehicles v ON t.VehicleID=v.VehicleID
         WHERE t.OperatorID=@op AND t.Status NOT IN ('COMPLETE','CANCELLED')
         ORDER BY t.CreatedAt DESC
       `);
@@ -228,7 +292,11 @@ router.get('/trips/active', async (req, res) => {
 
 router.post('/trips', async (req, res) => {
   try {
-    const { jobId } = req.body;
+    const { jobId, operatorId, vehicleId } = req.body;
+    if (!jobId) return res.status(400).json({ success: false, message: 'กรุณาระบุ jobId' });
+    if (!operatorId) return res.status(400).json({ success: false, message: 'กรุณาเลือกพนักงานขับรถ' });
+    if (!vehicleId) return res.status(400).json({ success: false, message: 'กรุณาเลือกรถขนย้าย' });
+
     const pool = getPool();
     const seqResult = await pool.request()
       .input('jid', sql.Int, jobId)
@@ -238,11 +306,12 @@ router.post('/trips', async (req, res) => {
     const result = await pool.request()
       .input('jid', sql.Int, jobId)
       .input('no', sql.Int, tripNo)
-      .input('op', sql.Int, req.user.UserID)
+      .input('op', sql.Int, operatorId)
+      .input('vid', sql.Int, vehicleId)
       .query(`
-        INSERT INTO WMS_TransferTrips (JobID, TripNo, OperatorID, Status)
+        INSERT INTO WMS_TransferTrips (JobID, TripNo, OperatorID, VehicleID, Status)
         OUTPUT INSERTED.TripID
-        VALUES (@jid, @no, @op, 'PENDING')
+        VALUES (@jid, @no, @op, @vid, 'PENDING')
       `);
 
     await pool.request()

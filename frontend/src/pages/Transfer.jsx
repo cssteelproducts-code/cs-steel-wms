@@ -3,7 +3,7 @@ import api from '../services/api';
 import {
   ArrowRight, Package, CheckCircle2, Plus,
   ChevronDown, ChevronUp, X, Edit2, Trash2,
-  RefreshCw, Building2, Layers, Clock
+  RefreshCw, Building2, Layers, Clock, Truck, UserCheck
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -31,15 +31,25 @@ export default function Transfer() {
   const [activeTab, setActiveTab] = useState('jobs');
   const [jobs, setJobs] = useState([]);
   const [stations, setStations] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [expandedJob, setExpandedJob] = useState(null);
   const [jobDetail, setJobDetail] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateJob, setShowCreateJob] = useState(false);
   const [showStationModal, setShowStationModal] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assignJobId, setAssignJobId] = useState(null);
+  const [assignForm, setAssignForm] = useState({ operatorId: '', vehicleId: '' });
   const [editStation, setEditStation] = useState(null);
+  const [editVehicle, setEditVehicle] = useState(null);
   const [savingJob, setSavingJob] = useState(false);
   const [savingStation, setSavingStation] = useState(false);
+  const [savingVehicle, setSavingVehicle] = useState(false);
+  const [savingAssign, setSavingAssign] = useState(false);
+  const [vehicleForm, setVehicleForm] = useState({ vehiclePlate: '', vehicleName: '' });
 
   // Product search for job form
   const [prodQuery, setProdQuery] = useState('');
@@ -75,7 +85,21 @@ export default function Transfer() {
     } catch {}
   }, []);
 
-  useEffect(() => { loadJobs(); loadStations(); }, [loadJobs, loadStations]);
+  const loadVehicles = useCallback(async () => {
+    try {
+      const res = await api.get('/transfer/vehicles');
+      if (res.data.success) setVehicles(res.data.data);
+    } catch {}
+  }, []);
+
+  const loadUsers = useCallback(async () => {
+    try {
+      const res = await api.get('/users');
+      if (res.data.success) setUsers(res.data.data);
+    } catch {}
+  }, []);
+
+  useEffect(() => { loadJobs(); loadStations(); loadVehicles(); loadUsers(); }, [loadJobs, loadStations, loadVehicles, loadUsers]);
 
   const toggleJobDetail = async (jobId) => {
     if (expandedJob === jobId) {
@@ -170,6 +194,80 @@ export default function Transfer() {
     }
   };
 
+  const saveVehicle = async () => {
+    if (!vehicleForm.vehiclePlate.trim()) {
+      toast.error('กรุณากรอกทะเบียนรถ');
+      return;
+    }
+    setSavingVehicle(true);
+    try {
+      if (editVehicle) {
+        await api.put(`/transfer/vehicles/${editVehicle.VehicleID}`, vehicleForm);
+        toast.success('แก้ไขข้อมูลรถสำเร็จ');
+      } else {
+        await api.post('/transfer/vehicles', vehicleForm);
+        toast.success('เพิ่มรถสำเร็จ');
+      }
+      setShowVehicleModal(false);
+      setEditVehicle(null);
+      setVehicleForm({ vehiclePlate: '', vehicleName: '' });
+      loadVehicles();
+    } catch {
+      toast.error('เกิดข้อผิดพลาด');
+    } finally {
+      setSavingVehicle(false);
+    }
+  };
+
+  const openEditVehicle = (v) => {
+    setEditVehicle(v);
+    setVehicleForm({ vehiclePlate: v.VehiclePlate, vehicleName: v.VehicleName || '' });
+    setShowVehicleModal(true);
+  };
+
+  const deleteVehicle = async (id) => {
+    if (!confirm('ต้องการลบรถคันนี้?')) return;
+    try {
+      await api.delete(`/transfer/vehicles/${id}`);
+      toast.success('ลบรถสำเร็จ');
+      loadVehicles();
+    } catch {
+      toast.error('เกิดข้อผิดพลาด');
+    }
+  };
+
+  const openAssignModal = (jobId) => {
+    setAssignJobId(jobId);
+    setAssignForm({ operatorId: '', vehicleId: '' });
+    setShowAssignModal(true);
+  };
+
+  const submitAssign = async () => {
+    if (!assignForm.operatorId || !assignForm.vehicleId) {
+      toast.error('กรุณาเลือกพนักงานและรถ');
+      return;
+    }
+    setSavingAssign(true);
+    try {
+      const res = await api.post('/transfer/trips', {
+        jobId: assignJobId,
+        operatorId: parseInt(assignForm.operatorId),
+        vehicleId: parseInt(assignForm.vehicleId),
+      });
+      if (res.data.success) {
+        toast.success(`มอบหมายงานรอบที่ ${res.data.tripNo} สำเร็จ`);
+        setShowAssignModal(false);
+        const res2 = await api.get(`/transfer/jobs/${assignJobId}`);
+        if (res2.data.success) setJobDetail(res2.data);
+        loadJobs();
+      }
+    } catch {
+      toast.error('ไม่สามารถมอบหมายงานได้');
+    } finally {
+      setSavingAssign(false);
+    }
+  };
+
   const sortedStations = [...stations].sort((a, b) =>
     a.StationCode.localeCompare(b.StationCode, undefined, { numeric: true })
   );
@@ -224,6 +322,7 @@ export default function Transfer() {
         {[
           { key: 'jobs', label: 'งาน', icon: Layers },
           { key: 'stations', label: 'สถานี', icon: Building2 },
+          { key: 'vehicles', label: 'รถ', icon: Truck },
         ].map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setActiveTab(key)}
             className="flex items-center justify-center gap-2 flex-1 h-9 rounded-xl text-sm font-semibold transition-all"
@@ -357,12 +456,21 @@ export default function Transfer() {
                     {/* Expanded trips list */}
                     {isExpanded && jobDetail && (
                       <div className="px-5 pb-5" style={{ borderTop: '1px solid #f9fafb' }}>
-                        <p className="text-xs font-bold uppercase tracking-widest pt-4 mb-3" style={{ color: '#d1d5db' }}>
-                          รอบย้ายสินค้า ({jobDetail.trips.length} รอบ)
-                        </p>
+                        <div className="flex items-center justify-between pt-4 mb-3">
+                          <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#d1d5db' }}>
+                            รอบย้ายสินค้า ({jobDetail.trips.length} รอบ)
+                          </p>
+                          {job.Status !== 'COMPLETE' && job.Status !== 'CANCELLED' && (
+                            <button onClick={() => openAssignModal(job.JobID)}
+                              className="flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-bold text-white"
+                              style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 3px 10px rgba(124,58,237,0.3)' }}>
+                              <UserCheck size={13} /> มอบหมาย
+                            </button>
+                          )}
+                        </div>
                         {jobDetail.trips.length === 0 ? (
                           <p className="text-sm text-center py-4" style={{ color: '#9ca3af' }}>
-                            ยังไม่มีรอบย้าย — รอพนักงานรับงาน
+                            ยังไม่มีรอบย้าย — กดมอบหมายเพื่อส่งรถ
                           </p>
                         ) : (
                           <div className="space-y-2">
@@ -378,6 +486,11 @@ export default function Transfer() {
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
                                       <span className="text-xs font-bold" style={{ color: ts.color }}>{ts.label}</span>
+                                      {trip.VehiclePlate && (
+                                        <span className="px-1.5 py-0.5 rounded-lg text-xs font-bold" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                                          {trip.VehiclePlate}
+                                        </span>
+                                      )}
                                       {trip.OperatorName && (
                                         <span className="text-xs font-medium" style={{ color: '#9ca3af' }}>{trip.OperatorName}</span>
                                       )}
@@ -463,6 +576,62 @@ export default function Transfer() {
                   <tr>
                     <td colSpan={5} className="text-center py-10 text-sm" style={{ color: '#9ca3af' }}>
                       ยังไม่มีสถานี — กดเพิ่มสถานีด้านบน
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── VEHICLES TAB ── */}
+      {activeTab === 'vehicles' && (
+        <div className="space-y-4">
+          <div className="flex justify-end">
+            <button onClick={() => { setEditVehicle(null); setVehicleForm({ vehiclePlate: '', vehicleName: '' }); setShowVehicleModal(true); }}
+              className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
+              style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.3)' }}>
+              <Plus size={15} /> เพิ่มรถ
+            </button>
+          </div>
+          <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #f3f4f6' }}>
+            <table className="w-full">
+              <thead>
+                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
+                  {['ทะเบียนรถ', 'ชื่อ/หมายเลข', ''].map((h, i) => (
+                    <th key={i} className={`px-5 py-3 text-xs font-bold uppercase tracking-wider ${i === 2 ? 'text-right' : 'text-left'}`}
+                      style={{ color: '#9ca3af' }}>{h}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {vehicles.map((v, i) => (
+                  <tr key={v.VehicleID} style={{ background: i % 2 ? '#fafafa' : '#ffffff', borderBottom: '1px solid #f9fafb' }}>
+                    <td className="px-5 py-3 text-sm font-black" style={{ color: '#111827' }}>{v.VehiclePlate}</td>
+                    <td className="px-5 py-3 text-sm font-medium" style={{ color: '#6b7280' }}>{v.VehicleName || '-'}</td>
+                    <td className="px-5 py-3 text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        <button onClick={() => openEditVehicle(v)}
+                          className="p-1.5 rounded-xl transition-colors" style={{ color: '#6b7280' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
+                          onMouseLeave={e => e.currentTarget.style.background = ''}>
+                          <Edit2 size={14} />
+                        </button>
+                        <button onClick={() => deleteVehicle(v.VehicleID)}
+                          className="p-1.5 rounded-xl transition-colors" style={{ color: '#ef4444' }}
+                          onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                          onMouseLeave={e => e.currentTarget.style.background = ''}>
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+                {vehicles.length === 0 && (
+                  <tr>
+                    <td colSpan={3} className="text-center py-10 text-sm" style={{ color: '#9ca3af' }}>
+                      ยังไม่มีรถขนย้าย — กดเพิ่มรถด้านบน
                     </td>
                   </tr>
                 )}
@@ -579,6 +748,111 @@ export default function Transfer() {
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
                 {savingJob ? <><RefreshCw size={14} className="animate-spin" /> กำลังสร้าง...</> : 'สร้างงาน'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── VEHICLE MODAL ── */}
+      {showVehicleModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowVehicleModal(false); }}>
+          <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
+            onMouseDown={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <h3 className="text-lg font-black" style={{ color: '#111827' }}>
+                {editVehicle ? 'แก้ไขรถ' : 'เพิ่มรถใหม่'}
+              </h3>
+              <button onClick={() => setShowVehicleModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ทะเบียนรถ *</label>
+                <input type="text" value={vehicleForm.vehiclePlate}
+                  onChange={e => setVehicleForm(f => ({ ...f, vehiclePlate: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
+                  style={inputStyle} placeholder="เช่น กข-1234" />
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ชื่อ/หมายเลขรถ</label>
+                <input type="text" value={vehicleForm.vehicleName}
+                  onChange={e => setVehicleForm(f => ({ ...f, vehicleName: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
+                  style={inputStyle} placeholder="เช่น รถโฟล์คลิฟท์ #1" />
+              </div>
+            </div>
+            <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
+              <button onClick={() => setShowVehicleModal(false)}
+                className="flex-1 h-11 rounded-2xl text-sm font-bold"
+                style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
+                ยกเลิก
+              </button>
+              <button onClick={saveVehicle} disabled={savingVehicle}
+                className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
+                {savingVehicle ? <><RefreshCw size={14} className="animate-spin" /> กำลังบันทึก...</> : 'บันทึก'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── ASSIGN MODAL ── */}
+      {showAssignModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowAssignModal(false); }}>
+          <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
+            onMouseDown={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <h3 className="text-lg font-black" style={{ color: '#111827' }}>มอบหมายงาน</h3>
+              <button onClick={() => setShowAssignModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>พนักงานขับรถ *</label>
+                <select value={assignForm.operatorId}
+                  onChange={e => setAssignForm(f => ({ ...f, operatorId: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
+                  <option value="">-- เลือกพนักงาน --</option>
+                  {users.map(u => (
+                    <option key={u.UserID} value={u.UserID}>{u.FullName} ({u.Username})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รถขนย้าย *</label>
+                <select value={assignForm.vehicleId}
+                  onChange={e => setAssignForm(f => ({ ...f, vehicleId: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
+                  <option value="">-- เลือกรถ --</option>
+                  {vehicles.map(v => (
+                    <option key={v.VehicleID} value={v.VehicleID}>{v.VehiclePlate}{v.VehicleName ? ` — ${v.VehicleName}` : ''}</option>
+                  ))}
+                </select>
+              </div>
+              {vehicles.length === 0 && (
+                <p className="text-xs font-semibold" style={{ color: '#f59e0b' }}>
+                  ยังไม่มีรถในระบบ — กรุณาเพิ่มรถที่ tab รถก่อน
+                </p>
+              )}
+            </div>
+            <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
+              <button onClick={() => setShowAssignModal(false)}
+                className="flex-1 h-11 rounded-2xl text-sm font-bold"
+                style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
+                ยกเลิก
+              </button>
+              <button onClick={submitAssign} disabled={savingAssign}
+                className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
+                {savingAssign ? <><RefreshCw size={14} className="animate-spin" /> กำลังมอบหมาย...</> : <><UserCheck size={15} /> มอบหมาย</>}
               </button>
             </div>
           </div>

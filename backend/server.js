@@ -146,6 +146,17 @@ const runMigrations = async () => {
           Status NVARCHAR(20) DEFAULT 'PENDING',
           Notes NVARCHAR(500) NULL,
           OperatorID INT NULL,
+          VehicleID INT NULL,
+          CreatedAt DATETIME DEFAULT GETDATE()
+        );
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferVehicles' AND xtype='U')
+        CREATE TABLE WMS_TransferVehicles (
+          VehicleID INT IDENTITY(1,1) PRIMARY KEY,
+          VehiclePlate NVARCHAR(20) NOT NULL,
+          VehicleName NVARCHAR(100) NULL,
+          IsActive BIT DEFAULT 1,
           CreatedAt DATETIME DEFAULT GETDATE()
         );
     `);
@@ -261,6 +272,16 @@ const runMigrations = async () => {
   }
 
   // Critical standalone migrations (each in own try/catch so others still run)
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_TransferTrips') AND name='VehicleID')
+        ALTER TABLE WMS_TransferTrips ADD VehicleID INT NULL;
+    `);
+    console.log('✅ TransferTrips.VehicleID column ready');
+  } catch (e) {
+    console.warn('⚠ TransferTrips.VehicleID migration:', e.message);
+  }
+
   try {
     await pool.request().query(`
       IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Trips') AND name='SOWaitStartedAt')
