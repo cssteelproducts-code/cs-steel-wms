@@ -185,7 +185,9 @@ router.get('/jobs', async (req, res) => {
         ds.StationName AS DestStationName, ds.StationCode AS DestStationCode,
         u.FullName AS CreatedByName,
         (SELECT COUNT(*) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID) AS TripCount,
-        (SELECT COUNT(*) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID AND t.Status='COMPLETE') AS CompletedTripCount
+        (SELECT COUNT(*) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID AND t.Status='COMPLETE') AS CompletedTripCount,
+        (SELECT MIN(t.SourceEntryTime) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID AND t.SourceEntryTime IS NOT NULL) AS FirstTripStart,
+        (SELECT MAX(t.DestExitTime) FROM WMS_TransferTrips t WHERE t.JobID=j.JobID AND t.DestExitTime IS NOT NULL) AS LastTripEnd
       FROM WMS_TransferJobs j
       LEFT JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
       LEFT JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID

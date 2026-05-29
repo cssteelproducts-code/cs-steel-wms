@@ -504,7 +504,21 @@ export default function Transfer() {
                           </span>
                           <span className="flex items-center gap-1 text-xs" style={{ color: '#d1d5db' }}>
                             <Clock size={11} />
-                            {dayjs(job.CreatedAt).format('DD/MM HH:mm')}
+                            {(() => {
+                              const start = job.FirstTripStart ? dayjs(job.FirstTripStart) : null;
+                              const end   = job.LastTripEnd   ? dayjs(job.LastTripEnd)   : null;
+                              if (start && end && job.Status === 'COMPLETE') {
+                                const mins = end.diff(start, 'minute');
+                                const h = Math.floor(mins / 60), m = mins % 60;
+                                return `ใช้เวลา ${h > 0 ? `${h} ชม. ` : ''}${m} นาที`;
+                              }
+                              if (start && job.Status === 'IN_PROGRESS') {
+                                const mins = dayjs().diff(start, 'minute');
+                                const h = Math.floor(mins / 60), m = mins % 60;
+                                return `เริ่ม ${h > 0 ? `${h} ชม. ` : ''}${m} นาทีที่แล้ว`;
+                              }
+                              return dayjs(job.CreatedAt).format('DD/MM HH:mm');
+                            })()}
                           </span>
                         </div>
                         {bundlePct !== null && (
