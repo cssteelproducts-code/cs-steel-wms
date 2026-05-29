@@ -6,10 +6,28 @@ const { authenticate } = require('../middleware/auth');
 // POST /api/weigh-in - Create new trip + weigh-in record
 router.post('/', authenticate, async (req, res) => {
   try {
-    const { licensePlate, vehicleTypeId, warehouseId, customerId, deliveryType, priority, tareWeight, notes } = req.body;
+    const { licensePlate, vehicleTypeId, warehouseId, customerId, deliveryType, priority, tareWeight, notes, entryTime, entryDate } = req.body;
 
     if (!licensePlate || !vehicleTypeId || !warehouseId) {
       return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
+    }
+
+    // Build WeighDateTime from submitted date+time (treated as Thailand local UTC+7)
+    // entryDate: 'YYYY-MM-DD' (Thailand local date from browser)
+    // entryTime: 'HH:MM'
+    let weighDateTime = new Date();
+    let tripDate = null;
+
+    if (entryDate && entryTime && /^\d{4}-\d{2}-\d{2}$/.test(entryDate) && /^\d{2}:\d{2}$/.test(entryTime)) {
+      const dt = new Date(`${entryDate}T${entryTime}:00+07:00`);
+      if (!isNaN(dt.getTime())) {
+        weighDateTime = dt;
+        tripDate = entryDate; // store Thailand local date directly
+      }
+    }
+    if (!tripDate) {
+      // Fallback: Thailand today = UTC + 7h
+      tripDate = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
     }
 
     const pool = getPool();
@@ -26,17 +44,18 @@ router.post('/', authenticate, async (req, res) => {
         .input('Priority', sql.NVarChar, priority || 'ปกติ')
         .input('Status', sql.NVarChar, 'Data')
         .input('CreatedBy', sql.Int, req.user.UserID)
+        .input('TripDate', sql.Date, tripDate)
         .query(`
           INSERT INTO WMS_Trips (TripDate, LicensePlate, VehicleTypeID, WarehouseID, CustomerID, DeliveryType, Priority, Status, CreatedBy)
           OUTPUT INSERTED.TripID
-          VALUES (CAST(GETDATE() AS DATE), @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Priority, @Status, @CreatedBy)
+          VALUES (@TripDate, @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Priority, @Status, @CreatedBy)
         `);
 
       const tripId = tripResult.recordset[0].TripID;
 
       await transaction.request()
         .input('TripID', sql.Int, tripId)
-        .input('WeighDateTime', sql.DateTime, new Date())
+        .input('WeighDateTime', sql.DateTime, weighDateTime)
         .input('TareWeight', sql.Decimal(10, 2), tareWeight || null)
         .input('Notes', sql.NVarChar, notes || '')
         .input('OperatorID', sql.Int, req.user.UserID)
@@ -77,7 +96,7 @@ router.get('/today', authenticate, async (req, res) => {
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_Users u ON wi.OperatorID = u.UserID
-        WHERE CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        WHERE CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         ORDER BY wi.WeighDateTime DESC
       `);
     res.json({ success: true, data: result.recordset });
@@ -130,7 +149,7 @@ router.get('/check/:licensePlate', authenticate, async (req, res) => {
         FROM WMS_Trips
         WHERE LicensePlate = @LicensePlate
         AND Status NOT IN ('Complete', 'Cancelled')
-        AND CAST(TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        AND CAST(TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
       `);
 
     res.json({
