@@ -157,15 +157,15 @@ export default function WeighOut() {
       {tab === 'weigh' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pending list */}
-          <div className="card">
-            <h3 className="card-header flex items-center justify-between">
+          <div className="card flex flex-col">
+            <h3 className="card-header flex items-center justify-between flex-shrink-0">
               <span>รอชั่งออก ({pending.length})</span>
               <button onClick={() => { fetchPending(); fetchCompleted(); }}
                 className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors">
                 <RefreshCw size={15} />
               </button>
             </h3>
-            <div className="space-y-2 max-h-[700px] overflow-y-auto">
+            <div className="space-y-2 overflow-y-auto" style={{height: 'calc(100vh - 280px)'}}>
               {pending.map(trip => (
                 <div key={trip.TripID}
                   onClick={() => selectTrip(trip)}

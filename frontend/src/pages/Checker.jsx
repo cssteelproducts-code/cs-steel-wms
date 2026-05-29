@@ -186,11 +186,11 @@ export default function Checker() {
   const rounds = Object.keys(recordsByRound).map(Number).sort();
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Trip list */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
+        <div className="card flex flex-col">
+          <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <h3 className="card-header mb-0 flex items-center gap-2">
               <Clock size={18} className="text-orange-500" />
               รอตรวจสอบ ({pending.length})
@@ -198,7 +198,7 @@ export default function Checker() {
             <button onClick={fetchPending} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors"><RefreshCw size={15} /></button>
           </div>
 
-          <div className="space-y-2 max-h-[500px] overflow-y-auto">
+          <div className="space-y-2 overflow-y-auto" style={{height: 'calc(100vh - 200px)'}}>
             {pending.map(trip => {
               const live = liveMinutes(trip);
               return (

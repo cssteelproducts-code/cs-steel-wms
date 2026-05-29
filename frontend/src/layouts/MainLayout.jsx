@@ -22,6 +22,7 @@ const pageTitles = {
   '/transfer':          { title: 'ระบบย้ายสินค้าภายใน', subtitle: 'ควบคุมการขนย้ายสินค้าจากฝ่ายผลิตไปยังคลังสินค้า' },
   '/transfer/driver':   { title: 'ระบบย้ายสินค้าภายใน', subtitle: 'ควบคุมการขนย้ายสินค้าจากฝ่ายผลิตไปยังคลังสินค้า' },
   '/records':           { title: 'บันทึกการขึ้นสินค้า' },
+  '/forecast':          { title: 'วิเคราะห์และวางแผนล่วงหน้า' },
 };
 
 export default function MainLayout() {
