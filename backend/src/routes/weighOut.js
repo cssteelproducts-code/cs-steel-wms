@@ -54,14 +54,13 @@ router.post('/', authenticate, async (req, res) => {
 
       await transaction.request()
         .input('TripID', sql.Int, tripId)
-        .input('WeighDateTime', sql.DateTime, new Date())
         .input('GrossWeight', sql.Decimal(10, 2), grossWeight)
         .input('TareWeight', sql.Decimal(10, 2), tareWeight)
         .input('NetWeight', sql.Decimal(10, 2), netWeight)
         .input('Notes', sql.NVarChar, notes || '')
         .input('OperatorID', sql.Int, req.user.UserID)
         .query(`INSERT INTO WMS_WeighOut (TripID, WeighDateTime, GrossWeight, TareWeight, NetWeight, Notes, OperatorID)
-                VALUES (@TripID, @WeighDateTime, @GrossWeight, @TareWeight, @NetWeight, @Notes, @OperatorID)`);
+                VALUES (@TripID, GETUTCDATE(), @GrossWeight, @TareWeight, @NetWeight, @Notes, @OperatorID)`);
 
       await transaction.request()
         .input('TripID', sql.Int, tripId)

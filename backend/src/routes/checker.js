@@ -28,7 +28,7 @@ router.post('/', authenticate, async (req, res) => {
         .input('OperatorID', sql.Int, req.user.UserID)
         .input('CheckDurationMinutes', sql.Int, checkDurationMinutes != null ? checkDurationMinutes : null)
         .input('CheckStartTime', sql.DateTime, startTime)
-        .query(`UPDATE WMS_CheckerRecord SET CheckTime=GETDATE(), IsApproved=@IsApproved,
+        .query(`UPDATE WMS_CheckerRecord SET CheckTime=GETUTCDATE(), IsApproved=@IsApproved,
                 Remarks=@Remarks, OperatorID=@OperatorID,
                 CheckDurationMinutes=@CheckDurationMinutes, CheckStartTime=@CheckStartTime
                 WHERE TripID=@TripID`);
@@ -47,7 +47,7 @@ router.post('/', authenticate, async (req, res) => {
     if (isApproved) {
       await pool.request()
         .input('TripID', sql.Int, tripId)
-        .query(`UPDATE WMS_Trips SET Status='Complete', CompletedAt=GETDATE() WHERE TripID=@TripID`);
+        .query(`UPDATE WMS_Trips SET Status='Complete', CompletedAt=GETUTCDATE() WHERE TripID=@TripID`);
     }
 
     const tripInfo = await pool.request()
@@ -138,7 +138,7 @@ router.post('/fail-rework', authenticate, async (req, res) => {
         .input('OperatorID', sql.Int, req.user.UserID)
         .input('CheckDurationMinutes', sql.Int, checkDurationMinutes ?? null)
         .input('CheckStartTime', sql.DateTime, startTime)
-        .query(`UPDATE WMS_CheckerRecord SET CheckTime=GETDATE(), IsApproved=0,
+        .query(`UPDATE WMS_CheckerRecord SET CheckTime=GETUTCDATE(), IsApproved=0,
                 Remarks=@Remarks, OperatorID=@OperatorID,
                 CheckDurationMinutes=@CheckDurationMinutes, CheckStartTime=@CheckStartTime
                 WHERE TripID=@TripID`);
