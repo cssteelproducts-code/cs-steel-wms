@@ -112,7 +112,6 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
     const pool = getPool();
     const tripId = parseInt(req.params.tripId);
 
-    // Trip-level timing
     const tripData = await pool.request().input('TripID', sql.Int, tripId).query(`
       SELECT t.SOWaitStartedAt,
              wi.WeighDateTime as WeighInTime,
@@ -124,7 +123,6 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
       WHERE t.TripID = @TripID
     `);
 
-    // Loading station records
     const loadingData = await pool.request().input('TripID', sql.Int, tripId).query(`
       SELECT ls.StationName, lr.EntryTime, lr.ExitTime, lr.DurationMinutes, lr.Round
       FROM WMS_LoadingRecord lr
@@ -135,7 +133,6 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
 
     const t = tripData.recordset[0] || {};
 
-    // Calculate DataStation wait phases
     const pickWaitMinutes = t.SOWaitStartedAt && t.WeighInTime
       ? Math.max(0, Math.round((new Date(t.SOWaitStartedAt) - new Date(t.WeighInTime)) / 60000))
       : t.WeighInTime && (t.DataStationTime || t.FirstLoadEntry)
@@ -160,64 +157,119 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
   }
 });
 
-// PUT /api/records/:tripId - Update trip record
+// PUT /api/records/:tripId - Update trip record (full edit)
 router.put('/:tripId', authenticate, async (req, res) => {
   try {
-    const { licensePlate, vehicleTypeId, customerId, tareWeight, grossWeight, checkerRemarks, priority, weighInTime } = req.body;
+    const {
+      licensePlate, vehicleTypeId, customerId, priority,
+      tripDate, status,
+      weighInTime, tareWeight,
+      weighOutTime, grossWeight,
+      isApproved, checkerRemarks,
+      pickDocumentNo,
+    } = req.body;
+
     const tripId = parseInt(req.params.tripId);
     const pool = getPool();
 
-    await pool.request()
+    // Fetch current trip for date/status reference
+    const tripInfo = await pool.request()
       .input('TripID', sql.Int, tripId)
-      .input('LicensePlate', sql.NVarChar, (licensePlate || '').toUpperCase().trim())
-      .input('VehicleTypeID', sql.Int, vehicleTypeId || null)
-      .input('CustomerID', sql.Int, customerId || null)
-      .input('Priority', sql.NVarChar, priority || 'ปกติ')
-      .query(`UPDATE WMS_Trips SET LicensePlate=@LicensePlate, VehicleTypeID=@VehicleTypeID, CustomerID=@CustomerID, Priority=@Priority WHERE TripID=@TripID`);
+      .query(`SELECT CONVERT(VARCHAR(10), TripDate, 23) as TripDateStr, Status FROM WMS_Trips WHERE TripID=@TripID`);
+    if (tripInfo.recordset.length === 0)
+      return res.status(404).json({ success: false, message: 'ไม่พบ Trip' });
 
-    if (weighInTime && /^\d{2}:\d{2}$/.test(weighInTime)) {
-      const tripRes = await pool.request()
-        .input('TripID', sql.Int, tripId)
-        .query(`SELECT CONVERT(VARCHAR(10), TripDate, 23) as TripDateStr FROM WMS_Trips WHERE TripID=@TripID`);
-      if (tripRes.recordset.length > 0) {
-        const dateStr = tripRes.recordset[0].TripDateStr;
-        const dt = new Date(`${dateStr}T${weighInTime}:00+07:00`);
-        if (!isNaN(dt.getTime())) {
-          await pool.request()
-            .input('TripID', sql.Int, tripId)
-            .input('WeighDateTime', sql.DateTime, dt)
-            .query(`UPDATE WMS_WeighIn SET WeighDateTime=@WeighDateTime WHERE TripID=@TripID`);
-        }
+    const baseDateStr = tripDate || tripInfo.recordset[0].TripDateStr;
+    const prevStatus = tripInfo.recordset[0].Status;
+
+    // --- WMS_Trips ---
+    const tripsReq = pool.request().input('TripID', sql.Int, tripId);
+    const tripSets = ['LicensePlate=@LP', 'VehicleTypeID=@VTID', 'CustomerID=@CID', 'Priority=@Pri'];
+    tripsReq.input('LP', sql.NVarChar, (licensePlate || '').toUpperCase().trim());
+    tripsReq.input('VTID', sql.Int, vehicleTypeId || null);
+    tripsReq.input('CID', sql.Int, customerId || null);
+    tripsReq.input('Pri', sql.NVarChar, priority || 'ปกติ');
+
+    if (tripDate) {
+      tripSets.push('TripDate=@TripDate');
+      tripsReq.input('TripDate', sql.Date, tripDate);
+    }
+    if (status) {
+      tripSets.push('Status=@Status');
+      tripsReq.input('Status', sql.NVarChar, status);
+      if (status === 'Complete' && prevStatus !== 'Complete') {
+        tripSets.push('CompletedAt=GETUTCDATE()');
       }
     }
+    await tripsReq.query(`UPDATE WMS_Trips SET ${tripSets.join(',')} WHERE TripID=@TripID`);
 
+    // --- WMS_WeighIn ---
+    if (weighInTime && /^\d{2}:\d{2}$/.test(weighInTime)) {
+      const dt = new Date(`${baseDateStr}T${weighInTime}:00+07:00`);
+      if (!isNaN(dt.getTime())) {
+        await pool.request()
+          .input('TripID', sql.Int, tripId)
+          .input('WDT', sql.DateTime, dt)
+          .query(`UPDATE WMS_WeighIn SET WeighDateTime=@WDT WHERE TripID=@TripID`);
+      }
+    }
     if (tareWeight !== undefined && tareWeight !== '') {
       await pool.request()
         .input('TripID', sql.Int, tripId)
-        .input('TareWeight', sql.Decimal(10, 2), parseFloat(tareWeight))
-        .query(`UPDATE WMS_WeighIn SET TareWeight=@TareWeight WHERE TripID=@TripID`);
+        .input('TW', sql.Decimal(10, 2), parseFloat(tareWeight))
+        .query(`UPDATE WMS_WeighIn SET TareWeight=@TW WHERE TripID=@TripID`);
     }
 
+    // --- WMS_WeighOut ---
+    if (weighOutTime && /^\d{2}:\d{2}$/.test(weighOutTime)) {
+      const dt = new Date(`${baseDateStr}T${weighOutTime}:00+07:00`);
+      if (!isNaN(dt.getTime())) {
+        await pool.request()
+          .input('TripID', sql.Int, tripId)
+          .input('WDT', sql.DateTime, dt)
+          .query(`UPDATE WMS_WeighOut SET WeighDateTime=@WDT WHERE TripID=@TripID`);
+      }
+    }
     if (grossWeight !== undefined && grossWeight !== '') {
       const gw = parseFloat(grossWeight);
       const tw = tareWeight !== undefined && tareWeight !== '' ? parseFloat(tareWeight) : null;
       const nw = tw !== null ? gw - tw : null;
-      const req3 = pool.request()
-        .input('TripID', sql.Int, tripId)
-        .input('GrossWeight', sql.Decimal(10, 2), gw);
-      if (nw !== null) req3.input('NetWeight', sql.Decimal(10, 2), nw);
-      await req3.query(
+      const woReq = pool.request().input('TripID', sql.Int, tripId).input('GW', sql.Decimal(10, 2), gw);
+      if (nw !== null) woReq.input('NW', sql.Decimal(10, 2), nw);
+      await woReq.query(
         nw !== null
-          ? `UPDATE WMS_WeighOut SET GrossWeight=@GrossWeight, NetWeight=@NetWeight WHERE TripID=@TripID`
-          : `UPDATE WMS_WeighOut SET GrossWeight=@GrossWeight WHERE TripID=@TripID`
+          ? `UPDATE WMS_WeighOut SET GrossWeight=@GW, NetWeight=@NW WHERE TripID=@TripID`
+          : `UPDATE WMS_WeighOut SET GrossWeight=@GW WHERE TripID=@TripID`
       );
     }
 
-    if (checkerRemarks !== undefined) {
+    // --- WMS_CheckerRecord ---
+    if (isApproved !== undefined || checkerRemarks !== undefined) {
+      const existing = await pool.request()
+        .input('TripID', sql.Int, tripId)
+        .query('SELECT CheckerID FROM WMS_CheckerRecord WHERE TripID=@TripID');
+      if (existing.recordset.length > 0) {
+        const crReq = pool.request().input('TripID', sql.Int, tripId);
+        const crSets = [];
+        if (checkerRemarks !== undefined) {
+          crReq.input('Remarks', sql.NVarChar, checkerRemarks || '');
+          crSets.push('Remarks=@Remarks');
+        }
+        if (isApproved !== undefined && isApproved !== '') {
+          crReq.input('IsApproved', sql.Bit, isApproved === '1' ? 1 : 0);
+          crSets.push('IsApproved=@IsApproved');
+        }
+        if (crSets.length > 0)
+          await crReq.query(`UPDATE WMS_CheckerRecord SET ${crSets.join(',')} WHERE TripID=@TripID`);
+      }
+    }
+
+    // --- WMS_DataStation ---
+    if (pickDocumentNo !== undefined) {
       await pool.request()
         .input('TripID', sql.Int, tripId)
-        .input('Remarks', sql.NVarChar, checkerRemarks || '')
-        .query(`UPDATE WMS_CheckerRecord SET Remarks=@Remarks WHERE TripID=@TripID`);
+        .input('PickNo', sql.NVarChar, pickDocumentNo || '')
+        .query(`UPDATE WMS_DataStation SET PickDocumentNo=@PickNo WHERE TripID=@TripID`);
     }
 
     res.json({ success: true, message: 'อัปเดตข้อมูลสำเร็จ' });

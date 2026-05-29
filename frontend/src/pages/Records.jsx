@@ -8,6 +8,17 @@ import LoadingSpinner from '../components/LoadingSpinner';
 
 const PRIORITIES = ['ปกติ', 'ด่วน', 'ด่วนมาก'];
 
+const TRIP_STATUSES = [
+  { value: 'WeighIn',  label: 'ชั่งเข้า' },
+  { value: 'Data',     label: 'รอเอกสาร Pick' },
+  { value: 'WaitPick', label: 'รอหยิบสินค้า' },
+  { value: 'Loading',  label: 'กำลังขึ้นสินค้า' },
+  { value: 'WeighOut', label: 'รอชั่งออก' },
+  { value: 'Checker',  label: 'รอเช็คเกอร์' },
+  { value: 'Complete', label: 'เสร็จสิ้น' },
+  { value: 'Cancelled',label: 'ยกเลิก' },
+];
+
 const STATUS_OPTIONS = [
   { value: 'Complete', label: 'เสร็จสิ้น' },
   { value: 'all', label: 'ทั้งหมด' },
@@ -123,11 +134,17 @@ export default function Records() {
       vehicleTypeId: row.VehicleTypeID || '',
       customerId: row.CustomerID || null,
       customerName: row.CustomerName || '',
-      tareWeight: row.TareWeight != null ? row.TareWeight : '',
-      grossWeight: row.GrossWeight != null ? row.GrossWeight : '',
-      checkerRemarks: row.CheckerRemarks || '',
       priority: row.Priority || 'ปกติ',
+      status: row.Status || '',
+      tripDate: row.TripDate ? dayjs(row.TripDate).format('YYYY-MM-DD') : '',
       weighInTime: row.WeighInTime ? dayjs(row.WeighInTime).format('HH:mm') : '',
+      tareWeight: row.TareWeight != null ? row.TareWeight : '',
+      weighOutTime: row.WeighOutTime ? dayjs(row.WeighOutTime).format('HH:mm') : '',
+      grossWeight: row.GrossWeight != null ? row.GrossWeight : '',
+      pickDocumentNo: row.PickDocumentNo || '',
+      isApproved: row.IsApproved === true || row.IsApproved === 1 ? '1'
+                : row.IsApproved === false || row.IsApproved === 0 ? '0' : '',
+      checkerRemarks: row.CheckerRemarks || '',
     });
     setCustQuery(row.CustomerName || '');
     setShowCustDrop(false);
@@ -415,92 +432,151 @@ export default function Records() {
                 <X size={18} />
               </button>
             </div>
-            <div className="px-6 py-4 space-y-4">
-              {/* LicensePlate + WeighIn Time */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">ทะเบียน</label>
-                  <input value={editForm.licensePlate} onChange={e => setEditForm(f => ({ ...f, licensePlate: e.target.value }))}
-                    className="input-field w-full" />
-                </div>
-                <div>
-                  <label className="label">เวลาชั่งเข้า</label>
-                  <input type="time" value={editForm.weighInTime}
-                    onChange={e => setEditForm(f => ({ ...f, weighInTime: e.target.value }))}
-                    className="input-field w-full" />
+            <div className="px-6 py-4 space-y-5">
+
+              {/* ── ข้อมูลรถ ── */}
+              <div>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">ข้อมูลรถ</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">วันที่</label>
+                      <input type="date" value={editForm.tripDate}
+                        onChange={e => setEditForm(f => ({ ...f, tripDate: e.target.value }))}
+                        className="input-field w-full" />
+                    </div>
+                    <div>
+                      <label className="label">ทะเบียน</label>
+                      <input value={editForm.licensePlate}
+                        onChange={e => setEditForm(f => ({ ...f, licensePlate: e.target.value }))}
+                        className="input-field w-full" />
+                    </div>
+                  </div>
+                  <div>
+                    <label className="label">ประเภทรถ</label>
+                    <select value={editForm.vehicleTypeId || ''}
+                      onChange={e => setEditForm(f => ({ ...f, vehicleTypeId: e.target.value ? parseInt(e.target.value) : null }))}
+                      className="input-field w-full">
+                      <option value="">-- เลือกประเภทรถ --</option>
+                      {vehicleTypes.map(vt => <option key={vt.TypeID} value={vt.TypeID}>{vt.TypeName}</option>)}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">ลูกค้า</label>
+                    <div className="relative">
+                      <input value={custQuery} onChange={e => onCustQueryChange(e.target.value)}
+                        onFocus={() => custQuery && setCustResults(custResults)}
+                        placeholder="ค้นหาลูกค้า..."
+                        className="input-field w-full" />
+                      {showCustDrop && (
+                        <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-40 overflow-y-auto">
+                          {custResults.map(c => (
+                            <button key={c.CustomerID} type="button" onMouseDown={() => pickCustomer(c)}
+                              className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">
+                              <div className="text-sm font-semibold text-slate-900">{c.ARCode}</div>
+                              <div className="text-xs text-slate-500">{c.CustomerName}</div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">ลำดับความสำคัญ</label>
+                      <select value={editForm.priority || 'ปกติ'}
+                        onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))}
+                        className="input-field w-full">
+                        {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label">สถานะ</label>
+                      <select value={editForm.status || ''}
+                        onChange={e => setEditForm(f => ({ ...f, status: e.target.value }))}
+                        className="input-field w-full">
+                        {TRIP_STATUSES.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+                      </select>
+                    </div>
+                  </div>
                 </div>
               </div>
 
-              {/* VehicleType */}
-              <div>
-                <label className="label">ประเภทรถ</label>
-                <select value={editForm.vehicleTypeId || ''} onChange={e => setEditForm(f => ({ ...f, vehicleTypeId: e.target.value ? parseInt(e.target.value) : null }))}
-                  className="input-field w-full">
-                  <option value="">-- เลือกประเภทรถ --</option>
-                  {vehicleTypes.map(vt => <option key={vt.TypeID} value={vt.TypeID}>{vt.TypeName}</option>)}
-                </select>
-              </div>
-
-              {/* Customer */}
-              <div>
-                <label className="label">ลูกค้า</label>
-                <div className="relative">
-                  <input value={custQuery} onChange={e => onCustQueryChange(e.target.value)}
-                    onFocus={() => custQuery && setCustResults(custResults)}
-                    placeholder="ค้นหาลูกค้า..."
-                    className="input-field w-full" />
-                  {showCustDrop && (
-                    <div className="absolute top-full left-0 right-0 mt-1 bg-white border border-slate-200 rounded-xl shadow-xl z-20 max-h-40 overflow-y-auto">
-                      {custResults.map(c => (
-                        <button key={c.CustomerID} type="button" onMouseDown={() => pickCustomer(c)}
-                          className="w-full text-left px-3 py-2 hover:bg-slate-50 border-b border-slate-100 last:border-0">
-                          <div className="text-sm font-semibold text-slate-900">{c.ARCode}</div>
-                          <div className="text-xs text-slate-500">{c.CustomerName}</div>
-                        </button>
-                      ))}
+              {/* ── การชั่งน้ำหนัก ── */}
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">การชั่งน้ำหนัก</p>
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">เวลาชั่งเข้า</label>
+                      <input type="time" value={editForm.weighInTime}
+                        onChange={e => setEditForm(f => ({ ...f, weighInTime: e.target.value }))}
+                        className="input-field w-full" />
+                    </div>
+                    <div>
+                      <label className="label">เวลาชั่งออก</label>
+                      <input type="time" value={editForm.weighOutTime}
+                        onChange={e => setEditForm(f => ({ ...f, weighOutTime: e.target.value }))}
+                        className="input-field w-full" />
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">น้ำหนักเบา (กก.)</label>
+                      <input type="number" step="0.01" value={editForm.tareWeight}
+                        onChange={e => setEditForm(f => ({ ...f, tareWeight: e.target.value }))}
+                        className="input-field w-full" />
+                    </div>
+                    <div>
+                      <label className="label">น้ำหนักหนัก (กก.)</label>
+                      <input type="number" step="0.01" value={editForm.grossWeight}
+                        onChange={e => setEditForm(f => ({ ...f, grossWeight: e.target.value }))}
+                        className="input-field w-full" />
+                    </div>
+                  </div>
+                  {netWeight !== null && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-sm">
+                      <span className="text-emerald-600 font-medium">น้ำหนักสุทธิ: </span>
+                      <span className="text-emerald-800 font-bold">{netWeight} กก.</span>
                     </div>
                   )}
                 </div>
               </div>
 
-              {/* Priority */}
-              <div>
-                <label className="label">ลำดับความสำคัญ</label>
-                <select value={editForm.priority || 'ปกติ'} onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))}
-                  className="input-field w-full">
-                  {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
-                </select>
+              {/* ── เอกสาร ── */}
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">เอกสาร</p>
+                <div>
+                  <label className="label">เลขเอกสาร Pick</label>
+                  <input value={editForm.pickDocumentNo}
+                    onChange={e => setEditForm(f => ({ ...f, pickDocumentNo: e.target.value }))}
+                    className="input-field w-full" placeholder="เช่น PK-2025-0001" />
+                </div>
               </div>
 
-              {/* Weights */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">น้ำหนักเบา (กก.)</label>
-                  <input type="number" step="0.01" value={editForm.tareWeight}
-                    onChange={e => setEditForm(f => ({ ...f, tareWeight: e.target.value }))}
-                    className="input-field w-full" />
-                </div>
-                <div>
-                  <label className="label">น้ำหนักหนัก (กก.)</label>
-                  <input type="number" step="0.01" value={editForm.grossWeight}
-                    onChange={e => setEditForm(f => ({ ...f, grossWeight: e.target.value }))}
-                    className="input-field w-full" />
+              {/* ── เช็คเกอร์ ── */}
+              <div className="border-t border-slate-100 pt-4">
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">เช็คเกอร์</p>
+                <div className="space-y-3">
+                  <div>
+                    <label className="label">ผลตรวจ</label>
+                    <select value={editForm.isApproved}
+                      onChange={e => setEditForm(f => ({ ...f, isApproved: e.target.value }))}
+                      className="input-field w-full">
+                      <option value="">-- ยังไม่ได้ตรวจ --</option>
+                      <option value="1">ผ่าน</option>
+                      <option value="0">ไม่ผ่าน</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="label">หมายเหตุเช็คเกอร์</label>
+                    <textarea value={editForm.checkerRemarks}
+                      onChange={e => setEditForm(f => ({ ...f, checkerRemarks: e.target.value }))}
+                      className="input-field resize-none w-full" rows={2} />
+                  </div>
                 </div>
               </div>
-              {netWeight !== null && (
-                <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-4 py-2 text-sm">
-                  <span className="text-emerald-600 font-medium">น้ำหนักสุทธิ: </span>
-                  <span className="text-emerald-800 font-bold">{netWeight} กก.</span>
-                </div>
-              )}
 
-              {/* Checker Remarks */}
-              <div>
-                <label className="label">หมายเหตุเช็คเกอร์</label>
-                <textarea value={editForm.checkerRemarks}
-                  onChange={e => setEditForm(f => ({ ...f, checkerRemarks: e.target.value }))}
-                  className="input-field resize-none w-full" rows={2} />
-              </div>
             </div>
             <div className="px-6 py-4 border-t border-slate-100 flex gap-3">
               <button onClick={handleSave} disabled={saving} className="btn-primary flex-1 py-2.5">
