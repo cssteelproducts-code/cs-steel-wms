@@ -7,10 +7,10 @@ import { formatDateTime, formatDuration, getStatusConfig, getEffectiveStatusConf
 import toast from 'react-hot-toast';
 
 const FLOW_STEPS = [
-  { keys: ['WeighIn'],          primaryKey: 'WeighIn',  shortLabel: '1.ชั่งเข้า',         showCount: false },
+  { keys: ['WeighIn'],          primaryKey: 'WeighIn',  shortLabel: '1.ชั่งเข้า',         showCount: false, noFilter: true },
   { keys: ['Data', 'WaitPick'], primaryKey: 'WaitPick', shortLabel: '2.เอกสาร Pick',      showCount: true  },
   { keys: ['Loading'],          primaryKey: 'Loading',  shortLabel: '3.สถานีขึ้นสินค้า', showCount: true  },
-  { keys: ['WeighOut'],         primaryKey: 'WeighOut', shortLabel: '4.ชั่งออก',          showCount: false },
+  { keys: ['WeighOut'],         primaryKey: 'WeighOut', shortLabel: '4.ชั่งออก',          showCount: false, noFilter: true },
   { keys: ['Checker'],          primaryKey: 'Checker',  shortLabel: '5.เช็คเกอร์',        showCount: true  },
 ];
 
@@ -101,10 +101,12 @@ export default function TripMonitor() {
           const active = filter === idx;
           return (
             <button key={step.shortLabel}
-              onClick={() => setFilter(active ? -1 : idx)}
-              className={`p-2.5 rounded-xl border text-center transition-all ${active
-                ? `${cfg.color} scale-105`
-                : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}>
+              onClick={() => !step.noFilter && setFilter(active ? -1 : idx)}
+              className={`p-2.5 rounded-xl border text-center transition-all ${step.noFilter
+                ? 'border-slate-200 bg-white cursor-default opacity-60'
+                : active
+                  ? `${cfg.color} scale-105`
+                  : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}>
               {step.showCount ? (
                 <div className={`text-xl font-bold ${active ? '' : count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
                   {count}
