@@ -71,14 +71,14 @@ export default function Users() {
   };
 
   const openCreate = () => {
-    setForm({ username: '', password: '', fullName: '', email: '', roleId: '', warehouseId: '', isActive: 1, sessionDurationHours: '' });
+    setForm({ username: '', password: '', fullName: '', email: '', roleId: '', warehouseId: '', isActive: 1, sessionDurationHours: '', userLevel: 0 });
     setSelectedUser(null);
     setShowPw(false);
     setModal('create');
   };
 
   const openEdit = (user) => {
-    setForm({ ...user, password: '', roleId: user.RoleID, warehouseId: user.WarehouseID, isActive: user.IsActive, fullName: user.FullName, email: user.Email || '', username: user.Username, sessionDurationHours: user.SessionDurationHours || '' });
+    setForm({ ...user, password: '', roleId: user.RoleID, warehouseId: user.WarehouseID, isActive: user.IsActive, fullName: user.FullName, email: user.Email || '', username: user.Username, sessionDurationHours: user.SessionDurationHours || '', userLevel: user.UserLevel ?? 0 });
     setSelectedUser(user);
     setShowPw(false);
     setModal('edit');
@@ -233,6 +233,8 @@ export default function Users() {
                 {[...users]
                   .filter(u => !roleFilter || u.RoleID === roleFilter)
                   .sort((a, b) => {
+                    const lvl = (b.UserLevel ?? 0) - (a.UserLevel ?? 0);
+                    if (lvl !== 0) return lvl;
                     const rA = roles.find(r => r.RoleID === a.RoleID);
                     const rB = roles.find(r => r.RoleID === b.RoleID);
                     const so = (rA?.SortOrder || 0) - (rB?.SortOrder || 0);
@@ -243,8 +245,16 @@ export default function Users() {
                     <td className="table-cell font-mono text-blue-500 max-w-[100px]">
                       <div className="truncate">{u.Username}</div>
                     </td>
-                    <td className="table-cell text-slate-900 max-w-[110px]">
-                      <div className="truncate">{u.FullName}</div>
+                    <td className="table-cell text-slate-900 max-w-[140px]">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        <span className="truncate">{u.FullName}</span>
+                        {(u.UserLevel ?? 0) > 0 && (
+                          <span className="flex-shrink-0 px-1.5 py-0.5 rounded-full text-xs font-bold"
+                            style={{ background: '#eff6ff', color: '#2563eb' }}>
+                            Lv.{u.UserLevel}
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="table-cell hide-mobile">
                       <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs whitespace-nowrap">{u.RoleName}</span>
@@ -403,11 +413,19 @@ export default function Users() {
                   </select>
                 </div>
               </div>
-              <div>
-                <label className="label">เวลา Session (ชม.) — ว่างไว้ = ค่าระบบ (24 ชม.)</label>
-                <input type="number" min="1" max="720" value={form.sessionDurationHours}
-                  onChange={e => setForm(p => ({ ...p, sessionDurationHours: e.target.value }))}
-                  className="input-field" placeholder="เช่น 1, 8, 24" />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">เวลา Session (ชม.) — ว่างไว้ = 24 ชม.</label>
+                  <input type="number" min="1" max="720" value={form.sessionDurationHours}
+                    onChange={e => setForm(p => ({ ...p, sessionDurationHours: e.target.value }))}
+                    className="input-field" placeholder="เช่น 1, 8, 24" />
+                </div>
+                <div>
+                  <label className="label">เลเวล (ยิ่งมาก ยิ่งสูง)</label>
+                  <input type="number" min="0" value={form.userLevel ?? 0}
+                    onChange={e => setForm(p => ({ ...p, userLevel: e.target.value }))}
+                    className="input-field" placeholder="0" />
+                </div>
               </div>
               {modal === 'edit' && (
                 <div className="flex items-center gap-2">

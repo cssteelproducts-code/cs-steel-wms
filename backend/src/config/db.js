@@ -10,6 +10,7 @@ const dbConfig = {
     encrypt: false,
     trustServerCertificate: true,
     enableArithAbort: true,
+    useUTC: false,
     connectTimeout: 30000,
     requestTimeout: 30000
   },

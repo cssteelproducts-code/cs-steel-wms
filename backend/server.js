@@ -1,3 +1,4 @@
+process.env.TZ = 'Asia/Bangkok';
 require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
@@ -474,6 +475,16 @@ const runMigrations = async () => {
     console.log('✅ WMS_Roles.SortOrder column ready');
   } catch (e) {
     console.warn('⚠ WMS_Roles.SortOrder migration:', e.message);
+  }
+
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Users') AND name='UserLevel')
+        ALTER TABLE WMS_Users ADD UserLevel INT NOT NULL DEFAULT 0;
+    `);
+    console.log('✅ WMS_Users.UserLevel column ready');
+  } catch (e) {
+    console.warn('⚠ WMS_Users.UserLevel migration:', e.message);
   }
 };
 

@@ -306,13 +306,20 @@ router.delete('/jobs/:id', async (req, res) => {
       .input('id', sql.Int, req.params.id)
       .query("SELECT Status FROM WMS_TransferJobs WHERE JobID=@id");
     if (!check.recordset[0]) return res.status(404).json({ success: false, message: 'ไม่พบงาน' });
-    if (check.recordset[0].Status !== 'PENDING') {
-      return res.status(400).json({ success: false, message: 'ลบได้เฉพาะงานที่รอมอบหมายเท่านั้น' });
+    if (['COMPLETE', 'CANCELLED'].includes(check.recordset[0].Status)) {
+      return res.status(400).json({ success: false, message: 'ไม่สามารถลบงานที่เสร็จแล้วหรือถูกยกเลิกแล้ว' });
     }
-    await pool.request().input('id', sql.Int, req.params.id)
-      .query("DELETE FROM WMS_TransferTrips WHERE JobID=@id");
-    await pool.request().input('id', sql.Int, req.params.id)
-      .query("DELETE FROM WMS_TransferJobs WHERE JobID=@id");
+    if (check.recordset[0].Status === 'PENDING') {
+      await pool.request().input('id', sql.Int, req.params.id)
+        .query("DELETE FROM WMS_TransferTrips WHERE JobID=@id");
+      await pool.request().input('id', sql.Int, req.params.id)
+        .query("DELETE FROM WMS_TransferJobs WHERE JobID=@id");
+    } else {
+      await pool.request().input('id', sql.Int, req.params.id)
+        .query("UPDATE WMS_TransferTrips SET Status='CANCELLED' WHERE JobID=@id AND Status NOT IN ('COMPLETE','CANCELLED')");
+      await pool.request().input('id', sql.Int, req.params.id)
+        .query("UPDATE WMS_TransferJobs SET Status='CANCELLED' WHERE JobID=@id");
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

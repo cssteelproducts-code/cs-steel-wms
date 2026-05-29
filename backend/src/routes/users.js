@@ -10,13 +10,13 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
     const pool = getPool();
     const result = await pool.request().query(`
       SELECT u.UserID, u.Username, u.FullName, u.Email, u.IsActive, u.CreatedAt, u.LastLogin,
-             u.SessionDurationHours,
+             u.SessionDurationHours, u.UserLevel,
              r.RoleName, r.RoleID,
              w.WarehouseName, w.WarehouseID
       FROM WMS_Users u
       LEFT JOIN WMS_Roles r ON u.RoleID = r.RoleID
       LEFT JOIN WMS_Warehouses w ON u.WarehouseID = w.WarehouseID
-      ORDER BY u.CreatedAt DESC
+      ORDER BY u.UserLevel DESC, u.CreatedAt DESC
     `);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
@@ -27,7 +27,7 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
 // POST /api/users - Create user
 router.post('/', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { username, password, fullName, email, roleId, warehouseId, sessionDurationHours } = req.body;
+    const { username, password, fullName, email, roleId, warehouseId, sessionDurationHours, userLevel } = req.body;
 
     if (!username || !password || !fullName || !roleId) {
       return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลให้ครบ' });
@@ -53,8 +53,9 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       .input('RoleID', sql.Int, roleId)
       .input('WarehouseID', sql.Int, warehouseId || null)
       .input('SessionDurationHours', sql.Int, sessionHours)
-      .query(`INSERT INTO WMS_Users (Username, Password, FullName, Email, RoleID, WarehouseID, SessionDurationHours)
-              VALUES (@Username, @Password, @FullName, @Email, @RoleID, @WarehouseID, @SessionDurationHours)`);
+      .input('UserLevel', sql.Int, userLevel ? parseInt(userLevel) : 0)
+      .query(`INSERT INTO WMS_Users (Username, Password, FullName, Email, RoleID, WarehouseID, SessionDurationHours, UserLevel)
+              VALUES (@Username, @Password, @FullName, @Email, @RoleID, @WarehouseID, @SessionDurationHours, @UserLevel)`);
 
     res.json({ success: true, message: `สร้างผู้ใช้ "${username}" สำเร็จ` });
   } catch (err) {
@@ -65,13 +66,13 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 // PUT /api/users/:id - Update user
 router.put('/:id', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { fullName, email, roleId, warehouseId, isActive, password, sessionDurationHours } = req.body;
+    const { fullName, email, roleId, warehouseId, isActive, password, sessionDurationHours, userLevel } = req.body;
     const pool = getPool();
 
     const sessionHours = sessionDurationHours ? parseInt(sessionDurationHours) : null;
     let updateQuery = `UPDATE WMS_Users SET FullName=@FullName, Email=@Email,
                        RoleID=@RoleID, WarehouseID=@WarehouseID, IsActive=@IsActive,
-                       SessionDurationHours=@SessionDurationHours`;
+                       SessionDurationHours=@SessionDurationHours, UserLevel=@UserLevel`;
     const request = pool.request()
       .input('UserID', sql.Int, req.params.id)
       .input('FullName', sql.NVarChar, fullName)
@@ -79,7 +80,8 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       .input('RoleID', sql.Int, roleId)
       .input('WarehouseID', sql.Int, warehouseId || null)
       .input('IsActive', sql.Bit, isActive !== undefined ? isActive : 1)
-      .input('SessionDurationHours', sql.Int, sessionHours);
+      .input('SessionDurationHours', sql.Int, sessionHours)
+      .input('UserLevel', sql.Int, userLevel ? parseInt(userLevel) : 0);
 
     if (password) {
       const hashed = await bcrypt.hash(password, 10);

@@ -136,11 +136,14 @@ export default function Transfer() {
     setShowCreateJob(true);
   };
 
-  const deleteJob = async (jobId, jobCode) => {
-    if (!confirm(`ลบงาน ${jobCode} ?\nการกระทำนี้ไม่สามารถยกเลิกได้`)) return;
+  const deleteJob = async (jobId, jobCode, status) => {
+    const msg = status === 'PENDING'
+      ? `ลบงาน ${jobCode} ?\nการกระทำนี้ไม่สามารถยกเลิกได้`
+      : `ยกเลิกงาน ${jobCode} ?\nรอบที่ยังไม่เสร็จจะถูกยกเลิกทั้งหมด`;
+    if (!confirm(msg)) return;
     try {
       await api.delete(`/transfer/jobs/${jobId}`);
-      toast.success('ลบงานสำเร็จ');
+      toast.success(status === 'PENDING' ? 'ลบงานสำเร็จ' : 'ยกเลิกงานสำเร็จ');
       if (expandedJob === jobId) { setExpandedJob(null); setJobDetail(null); }
       loadJobs();
     } catch (err) {
@@ -553,11 +556,11 @@ export default function Transfer() {
                             <CheckCircle2 size={13} /> ปิดงาน
                           </button>
                         )}
-                        {job.Status === 'PENDING' && (
-                          <button onClick={() => deleteJob(job.JobID, job.JobCode)}
+                        {!['COMPLETE', 'CANCELLED'].includes(job.Status) && (
+                          <button onClick={() => deleteJob(job.JobID, job.JobCode, job.Status)}
                             className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
                             style={{ background: '#fef2f2', color: '#ef4444', border: '1.5px solid #fecaca' }}>
-                            <Trash2 size={13} /> ลบ
+                            <Trash2 size={13} /> {job.Status === 'PENDING' ? 'ลบ' : 'ยกเลิก'}
                           </button>
                         )}
                       </div>
