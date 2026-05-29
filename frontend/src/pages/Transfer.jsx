@@ -40,6 +40,7 @@ export default function Transfer() {
   const [jobDetail, setJobDetail] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
   const [showCreateJob, setShowCreateJob] = useState(false);
+  const [editingJob, setEditingJob] = useState(null);
   const [showStationModal, setShowStationModal] = useState(false);
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
@@ -120,6 +121,33 @@ export default function Transfer() {
     } catch {}
   };
 
+  const openEditJob = (job) => {
+    setEditingJob(job);
+    setJobForm({
+      sourceStationId: String(job.SourceStationID),
+      destStationId: String(job.DestStationID),
+      productDesc: job.ProductDesc,
+      plannedBundles: job.PlannedBundles != null ? String(job.PlannedBundles) : '',
+      plannedWeightKg: job.PlannedWeightKg != null ? String(job.PlannedWeightKg) : '',
+      priority: job.Priority || 'NORMAL',
+      notes: job.Notes || '',
+    });
+    setProdQuery(job.ProductDesc);
+    setShowCreateJob(true);
+  };
+
+  const deleteJob = async (jobId, jobCode) => {
+    if (!confirm(`ลบงาน ${jobCode} ?\nการกระทำนี้ไม่สามารถยกเลิกได้`)) return;
+    try {
+      await api.delete(`/transfer/jobs/${jobId}`);
+      toast.success('ลบงานสำเร็จ');
+      if (expandedJob === jobId) { setExpandedJob(null); setJobDetail(null); }
+      loadJobs();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ไม่สามารถลบงานได้');
+    }
+  };
+
   const createJob = async () => {
     if (!jobForm.sourceStationId || !jobForm.destStationId || !jobForm.productDesc.trim()) {
       toast.error('กรุณากรอกสถานีต้นทาง ปลายทาง และรายละเอียดสินค้า');
@@ -127,7 +155,7 @@ export default function Transfer() {
     }
     setSavingJob(true);
     try {
-      const res = await api.post('/transfer/jobs', {
+      const payload = {
         sourceStationId: parseInt(jobForm.sourceStationId),
         destStationId: parseInt(jobForm.destStationId),
         productDesc: jobForm.productDesc,
@@ -135,16 +163,20 @@ export default function Transfer() {
         plannedWeightKg: jobForm.plannedWeightKg ? parseFloat(jobForm.plannedWeightKg) : null,
         priority: jobForm.priority,
         notes: jobForm.notes || null,
-      });
+      };
+      const res = editingJob
+        ? await api.put(`/transfer/jobs/${editingJob.JobID}`, payload)
+        : await api.post('/transfer/jobs', payload);
       if (res.data.success) {
-        toast.success(`สร้างงาน ${res.data.jobCode} สำเร็จ`);
+        toast.success(editingJob ? 'แก้ไขงานสำเร็จ' : `สร้างงาน ${res.data.jobCode} สำเร็จ`);
         setShowCreateJob(false);
+        setEditingJob(null);
         setJobForm({ sourceStationId: '', destStationId: '', productDesc: '', plannedBundles: '', plannedWeightKg: '', priority: 'NORMAL', notes: '' });
         setProdQuery(''); setProdResults([]);
         loadJobs();
       }
-    } catch {
-      toast.error('ไม่สามารถสร้างงานได้');
+    } catch (err) {
+      toast.error(err.response?.data?.message || (editingJob ? 'ไม่สามารถแก้ไขงานได้' : 'ไม่สามารถสร้างงานได้'));
     } finally {
       setSavingJob(false);
     }
@@ -493,6 +525,13 @@ export default function Transfer() {
                           {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
                           การมอบหมาย
                         </button>
+                        {(job.Status === 'PENDING' || job.Status === 'ASSIGNED') && (
+                          <button onClick={() => openEditJob(job)}
+                            className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
+                            style={{ background: '#fff7ed', color: '#f59e0b', border: '1.5px solid #fde68a' }}>
+                            <Edit2 size={13} /> แก้ไข
+                          </button>
+                        )}
                         {job.Status === 'IN_PROGRESS' && (
                           <button onClick={() => updateJobStatus(job.JobID, 'COMPLETE')}
                             className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
@@ -501,10 +540,10 @@ export default function Transfer() {
                           </button>
                         )}
                         {job.Status === 'PENDING' && (
-                          <button onClick={() => updateJobStatus(job.JobID, 'CANCELLED')}
+                          <button onClick={() => deleteJob(job.JobID, job.JobCode)}
                             className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
                             style={{ background: '#fef2f2', color: '#ef4444', border: '1.5px solid #fecaca' }}>
-                            <X size={13} /> ยกเลิก
+                            <Trash2 size={13} /> ลบ
                           </button>
                         )}
                       </div>
@@ -751,12 +790,12 @@ export default function Transfer() {
       {showCreateJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
-          onMouseDown={e => { if (e.target === e.currentTarget) setShowCreateJob(false); }}>
+          onMouseDown={e => { if (e.target === e.currentTarget) { setShowCreateJob(false); setEditingJob(null); } }}>
           <div className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <h3 className="text-lg font-black" style={{ color: '#111827' }}>สร้างงานใหม่</h3>
-              <button onClick={() => setShowCreateJob(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
+              <h3 className="text-lg font-black" style={{ color: '#111827' }}>{editingJob ? `แก้ไขงาน ${editingJob.JobCode}` : 'สร้างงานใหม่'}</h3>
+              <button onClick={() => { setShowCreateJob(false); setEditingJob(null); }} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
                 <X size={18} />
               </button>
             </div>
@@ -845,15 +884,17 @@ export default function Transfer() {
               </div>
             </div>
             <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
-              <button onClick={() => setShowCreateJob(false)}
+              <button onClick={() => { setShowCreateJob(false); setEditingJob(null); }}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold"
                 style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
                 ยกเลิก
               </button>
               <button onClick={createJob} disabled={savingJob}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
-                style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
-                {savingJob ? <><RefreshCw size={14} className="animate-spin" /> กำลังสร้าง...</> : 'สร้างงาน'}
+                style={{ background: editingJob ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
+                {savingJob
+                  ? <><RefreshCw size={14} className="animate-spin" /> กำลังบันทึก...</>
+                  : editingJob ? <><Edit2 size={14} /> บันทึกการแก้ไข</> : 'สร้างงาน'}
               </button>
             </div>
           </div>

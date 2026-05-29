@@ -264,6 +264,59 @@ router.post('/jobs', async (req, res) => {
   }
 });
 
+router.put('/jobs/:id', async (req, res) => {
+  try {
+    const { sourceStationId, destStationId, productDesc, plannedBundles, plannedWeightKg, priority, notes } = req.body;
+    if (!sourceStationId || !destStationId || !productDesc) {
+      return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลที่จำเป็น' });
+    }
+    const pool = getPool();
+    const check = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query("SELECT Status FROM WMS_TransferJobs WHERE JobID=@id");
+    if (!check.recordset[0]) return res.status(404).json({ success: false, message: 'ไม่พบงาน' });
+    if (!['PENDING', 'ASSIGNED'].includes(check.recordset[0].Status)) {
+      return res.status(400).json({ success: false, message: 'ไม่สามารถแก้ไขงานที่เริ่มดำเนินการแล้ว' });
+    }
+    await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('src', sql.Int, sourceStationId)
+      .input('dst', sql.Int, destStationId)
+      .input('prod', sql.NVarChar, productDesc)
+      .input('bundles', sql.Int, plannedBundles || null)
+      .input('weight', sql.Decimal(12, 3), plannedWeightKg || null)
+      .input('priority', sql.NVarChar, priority || 'NORMAL')
+      .input('notes', sql.NVarChar, notes || null)
+      .query(`UPDATE WMS_TransferJobs
+        SET SourceStationID=@src, DestStationID=@dst, ProductDesc=@prod,
+            PlannedBundles=@bundles, PlannedWeightKg=@weight, Priority=@priority, Notes=@notes
+        WHERE JobID=@id`);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.delete('/jobs/:id', async (req, res) => {
+  try {
+    const pool = getPool();
+    const check = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .query("SELECT Status FROM WMS_TransferJobs WHERE JobID=@id");
+    if (!check.recordset[0]) return res.status(404).json({ success: false, message: 'ไม่พบงาน' });
+    if (check.recordset[0].Status !== 'PENDING') {
+      return res.status(400).json({ success: false, message: 'ลบได้เฉพาะงานที่รอมอบหมายเท่านั้น' });
+    }
+    await pool.request().input('id', sql.Int, req.params.id)
+      .query("DELETE FROM WMS_TransferTrips WHERE JobID=@id");
+    await pool.request().input('id', sql.Int, req.params.id)
+      .query("DELETE FROM WMS_TransferJobs WHERE JobID=@id");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.put('/jobs/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
