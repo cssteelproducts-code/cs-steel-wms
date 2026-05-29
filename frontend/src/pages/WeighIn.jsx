@@ -16,8 +16,9 @@ const DELIVERY_TYPES = [
 
 export default function WeighIn() {
   const { t } = useLang();
-  const todayStr = new Date().toISOString().slice(0, 10);
-  const timeNow = () => new Date().toTimeString().slice(0, 5);
+  // Always compute Thailand date/time (UTC+7) regardless of browser timezone
+  const todayStr = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10);
+  const timeNow = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(11, 16);
 
   const [form, setForm] = useState({
     licensePlate: '', vehicleTypeId: '', warehouseId: '',
@@ -102,9 +103,10 @@ export default function WeighIn() {
     if (!form.vehicleTypeId) { toast.error(t('weighIn.vehicleTypeLabel')); return; }
     setLoading(true);
     try {
-      const res = await api.post('/weigh-in', form);
+      const res = await api.post('/weigh-in', { ...form, entryDate: todayStr });
       if (res.data.success) {
-        toast.success(res.data.message);
+        const savedTime = form.entryTime;
+        toast.success(`${res.data.message} | เวลาเข้า: ${savedTime} น.`);
         setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', priority: 'ปกติ', tareWeight: '', entryTime: timeNow(), notes: '' });
         setPlateCheck(null);
         setCustQuery('');
@@ -124,7 +126,7 @@ export default function WeighIn() {
 
   const Pill = ({ item, active, onClick, stretch, label }) => (
     <button type="button" onClick={onClick}
-      className={`px-3 py-1.5 rounded-full text-sm font-medium border transition-all text-center ${stretch ? 'w-full' : ''} ${
+      className={`px-2 py-1.5 rounded-full text-xs font-medium border transition-all text-center leading-tight ${stretch ? 'w-full' : ''} ${
         active
           ? 'bg-red-600 border-red-600 text-white shadow-sm'
           : 'bg-white border-slate-200 text-slate-600 hover:border-red-400 hover:text-red-600'
@@ -201,7 +203,7 @@ export default function WeighIn() {
 
               <div>
                 <Label>{t('weighIn.vehicleTypeLabel')}</Label>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-3 sm:grid-cols-4 gap-1.5">
                   {masters.vehicleTypes.map(vt => (
                     <Pill key={vt.TypeID} item={vt} stretch
                       active={String(form.vehicleTypeId) === String(vt.TypeID)}

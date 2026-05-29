@@ -3,6 +3,7 @@ import { ClipboardList, RefreshCw, Search, Pencil, Trash2, X, ChevronLeft, Chevr
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
+import dayjs from 'dayjs';
 import LoadingSpinner from '../components/LoadingSpinner';
 
 const PRIORITIES = ['ปกติ', 'ด่วน', 'ด่วนมาก'];
@@ -126,6 +127,7 @@ export default function Records() {
       grossWeight: row.GrossWeight != null ? row.GrossWeight : '',
       checkerRemarks: row.CheckerRemarks || '',
       priority: row.Priority || 'ปกติ',
+      weighInTime: row.WeighInTime ? dayjs(row.WeighInTime).format('HH:mm') : '',
     });
     setCustQuery(row.CustomerName || '');
     setShowCustDrop(false);
@@ -198,29 +200,29 @@ export default function Records() {
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:flex lg:flex-wrap gap-3 items-end">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 items-end">
           <div>
             <label className="label">วันที่</label>
             <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
-              className="input-field h-10 text-sm w-full" />
+              className="input-field h-9 text-sm w-full" />
           </div>
           <div>
             <label className="label">ค้นหา</label>
             <div className="relative">
-              <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+              <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
               <input value={filterSearch} onChange={e => setFilterSearch(e.target.value)}
                 onKeyDown={handleKeyDown}
-                placeholder="ทะเบียน / ชื่อลูกค้า..."
-                className="input-field h-10 text-sm pl-8 w-full" />
+                placeholder="ทะเบียน / ลูกค้า..."
+                className="input-field h-9 text-sm pl-8 w-full" />
             </div>
           </div>
           <div>
             <label className="label">สถานะ</label>
-            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field h-10 text-sm w-full">
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)} className="input-field h-9 text-sm w-full">
               {STATUS_OPTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
             </select>
           </div>
-          <button onClick={handleSearch} className="btn-primary h-10 px-4 text-sm w-full sm:w-auto">ค้นหา</button>
+          <button onClick={handleSearch} className="btn-primary h-9 px-4 text-sm w-full">ค้นหา</button>
         </div>
       </div>
 
@@ -414,11 +416,19 @@ export default function Records() {
               </button>
             </div>
             <div className="px-6 py-4 space-y-4">
-              {/* LicensePlate */}
-              <div>
-                <label className="label">ทะเบียน</label>
-                <input value={editForm.licensePlate} onChange={e => setEditForm(f => ({ ...f, licensePlate: e.target.value }))}
-                  className="input-field w-full" />
+              {/* LicensePlate + WeighIn Time */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label">ทะเบียน</label>
+                  <input value={editForm.licensePlate} onChange={e => setEditForm(f => ({ ...f, licensePlate: e.target.value }))}
+                    className="input-field w-full" />
+                </div>
+                <div>
+                  <label className="label">เวลาชั่งเข้า</label>
+                  <input type="time" value={editForm.weighInTime}
+                    onChange={e => setEditForm(f => ({ ...f, weighInTime: e.target.value }))}
+                    className="input-field w-full" />
+                </div>
               </div>
 
               {/* VehicleType */}

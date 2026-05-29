@@ -163,7 +163,7 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
 // PUT /api/records/:tripId - Update trip record
 router.put('/:tripId', authenticate, async (req, res) => {
   try {
-    const { licensePlate, vehicleTypeId, customerId, tareWeight, grossWeight, checkerRemarks, priority } = req.body;
+    const { licensePlate, vehicleTypeId, customerId, tareWeight, grossWeight, checkerRemarks, priority, weighInTime } = req.body;
     const tripId = parseInt(req.params.tripId);
     const pool = getPool();
 
@@ -174,6 +174,22 @@ router.put('/:tripId', authenticate, async (req, res) => {
       .input('CustomerID', sql.Int, customerId || null)
       .input('Priority', sql.NVarChar, priority || 'ปกติ')
       .query(`UPDATE WMS_Trips SET LicensePlate=@LicensePlate, VehicleTypeID=@VehicleTypeID, CustomerID=@CustomerID, Priority=@Priority WHERE TripID=@TripID`);
+
+    if (weighInTime && /^\d{2}:\d{2}$/.test(weighInTime)) {
+      const tripRes = await pool.request()
+        .input('TripID', sql.Int, tripId)
+        .query(`SELECT CONVERT(VARCHAR(10), TripDate, 23) as TripDateStr FROM WMS_Trips WHERE TripID=@TripID`);
+      if (tripRes.recordset.length > 0) {
+        const dateStr = tripRes.recordset[0].TripDateStr;
+        const dt = new Date(`${dateStr}T${weighInTime}:00+07:00`);
+        if (!isNaN(dt.getTime())) {
+          await pool.request()
+            .input('TripID', sql.Int, tripId)
+            .input('WeighDateTime', sql.DateTime, dt)
+            .query(`UPDATE WMS_WeighIn SET WeighDateTime=@WeighDateTime WHERE TripID=@TripID`);
+        }
+      }
+    }
 
     if (tareWeight !== undefined && tareWeight !== '') {
       await pool.request()
