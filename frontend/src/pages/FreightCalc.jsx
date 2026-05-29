@@ -512,7 +512,7 @@ export default function FreightCalc() {
             </div>
 
             {/* Search */}
-            <div className="px-5 py-3 border-b border-slate-100 flex-shrink-0 relative">
+            <div className="px-5 py-3 border-b border-slate-100 flex-shrink-0" style={{ position: 'relative', zIndex: 10 }}>
               <div className="relative">
                 <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                 <input
@@ -526,34 +526,43 @@ export default function FreightCalc() {
                 {destSearching && (
                   <Loader size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" />
                 )}
+
+                {/* Results dropdown — inside relative wrapper, above map */}
+                {destResults.length > 0 && (
+                  <div className="absolute left-0 right-0 bg-white rounded-xl shadow-2xl border border-slate-100 max-h-52 overflow-y-auto"
+                    style={{ top: 'calc(100% + 4px)', zIndex: 9999 }}>
+                    {destResults.map((item, i) => (
+                      <button key={i} onClick={() => pickDestResult(item)}
+                        className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 border-b border-slate-50 last:border-b-0 leading-snug">
+                        <span className="font-medium">{item.display_name.split(',')[0]}</span>
+                        <span className="text-slate-400 text-xs block truncate">{item.display_name}</span>
+                      </button>
+                    ))}
+                  </div>
+                )}
               </div>
-
-              {/* Results dropdown */}
-              {destResults.length > 0 && (
-                <div className="absolute left-5 right-5 top-full mt-0.5 bg-white rounded-xl shadow-xl border border-slate-100 z-10 max-h-52 overflow-y-auto">
-                  {destResults.map((item, i) => (
-                    <button key={i} onClick={() => pickDestResult(item)}
-                      className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 border-b border-slate-50 last:border-b-0 leading-snug">
-                      <span className="font-medium">{item.display_name.split(',')[0]}</span>
-                      <span className="text-slate-400 text-xs block truncate">{item.display_name}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
             </div>
 
-            {/* Map */}
-            <div className="flex-1 min-h-0" style={{ minHeight: 300 }}>
-              <DraggableMap
-                lat={destLat || '13.7563'}
-                lng={destLng || '100.5018'}
-                onMove={(lat, lng) => { setDestLat(lat); setDestLng(lng); }}
-                height={300}
-              />
-            </div>
+            {/* Map — only render after coords are set */}
+            {destLat && destLng ? (
+              <div className="flex-1 min-h-0" style={{ minHeight: 280 }}>
+                <DraggableMap
+                  lat={destLat}
+                  lng={destLng}
+                  onMove={(lat, lng) => { setDestLat(lat); setDestLng(lng); }}
+                  height={280}
+                />
+              </div>
+            ) : (
+              <div className="flex-1 flex flex-col items-center justify-center py-14 text-center bg-slate-50">
+                <MapPin size={36} className="text-slate-200 mb-3" />
+                <p className="text-sm font-semibold text-slate-400">ค้นหาและเลือกสถานที่</p>
+                <p className="text-xs text-slate-300 mt-1">แผนที่จะแสดงหลังจากเลือกสถานที่</p>
+              </div>
+            )}
 
             {destLat && (
-              <p className="text-xs text-slate-400 text-center py-1.5 flex-shrink-0 bg-slate-50">
+              <p className="text-xs text-slate-400 text-center py-1.5 flex-shrink-0 bg-slate-50 border-t border-slate-100">
                 📍 {destLat}, {destLng} — ลากหมุดเพื่อปรับตำแหน่ง
               </p>
             )}
