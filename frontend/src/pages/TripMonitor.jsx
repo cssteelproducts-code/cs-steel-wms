@@ -145,7 +145,6 @@ export default function TripMonitor() {
                     {/* Row 1: ทะเบียน / ความเร่งด่วน / สถานะ */}
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-slate-900 font-bold text-xl">{trip.LicensePlate}</span>
-                      <span className="text-slate-400 text-xs font-mono">#{trip.TripID}</span>
                       <PriorityBadge priority={trip.Priority} />
                       <StatusBadge trip={trip} />
                       {trip.CurrentStation && (
@@ -207,6 +206,7 @@ export default function TripMonitor() {
                     <div className={`text-xs ${cfg.color.split(' ').find(c => c.startsWith('text')) || 'text-slate-400'}`}>
                       ขั้นตอน {currentStep + 1}/5
                     </div>
+                    <div className="text-xs text-slate-400 font-mono">#{trip.TripID}</div>
                   </div>
                 </div>
               </div>
