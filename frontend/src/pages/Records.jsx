@@ -349,14 +349,17 @@ export default function Records() {
                                   <p className="text-xs text-slate-400">กำลังโหลด...</p>
                                 ) : (
                                   <div className="flex flex-wrap gap-3">
-                                    {/* DataStation */}
+
+                                    {/* 1. สถานี Data */}
                                     <div className="bg-white rounded-xl border border-purple-100 px-4 py-2.5 min-w-44">
-                                      <p className="text-xs font-bold text-purple-600 mb-1.5">สถานี Data</p>
-                                      {tl.pickWaitMinutes != null && (
+                                      <p className="text-xs font-bold text-purple-600 mb-1.5">📋 สถานี Data</p>
+                                      {tl.pickWaitMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
                                           <span className="text-slate-500">รอเอกสาร Pick</span>
                                           <span className="font-semibold text-slate-700">{fmtMin(tl.pickWaitMinutes)}</span>
                                         </div>
+                                      ) : (
+                                        <p className="text-xs text-slate-400">ไม่มีข้อมูล</p>
                                       )}
                                       {tl.hasSOWait && tl.soWaitMinutes != null && (
                                         <div className="flex items-center justify-between gap-4 text-xs mt-1">
@@ -364,25 +367,55 @@ export default function Records() {
                                           <span className="font-semibold text-rose-600">{fmtMin(tl.soWaitMinutes)}</span>
                                         </div>
                                       )}
-                                      {tl.pickWaitMinutes == null && !tl.hasSOWait && (
+                                    </div>
+
+                                    {/* 2. สถานีขึ้นสินค้า */}
+                                    {(tl.stations || []).length > 0
+                                      ? (tl.stations || []).map((s, i) => (
+                                          <div key={i} className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
+                                            <p className="text-xs font-bold text-amber-600 mb-1.5">📦 สถานี {s.StationName}</p>
+                                            <div className="flex items-center justify-between gap-4 text-xs">
+                                              <span className="text-slate-500">ขึ้นสินค้า</span>
+                                              <span className="font-semibold text-amber-700">
+                                                {s.DurationMinutes != null ? fmtMin(s.DurationMinutes) : <span className="text-amber-500">กำลังขึ้น...</span>}
+                                              </span>
+                                            </div>
+                                          </div>
+                                        ))
+                                      : (
+                                          <div className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
+                                            <p className="text-xs font-bold text-amber-600 mb-1.5">📦 สถานีขึ้นสินค้า</p>
+                                            <p className="text-xs text-slate-400">ไม่มีข้อมูล</p>
+                                          </div>
+                                        )
+                                    }
+
+                                    {/* 3. สถานีชั่งออก */}
+                                    <div className="bg-white rounded-xl border border-cyan-100 px-4 py-2.5 min-w-44">
+                                      <p className="text-xs font-bold text-cyan-600 mb-1.5">⚖️ สถานีชั่งออก</p>
+                                      {tl.weighOutWaitMinutes != null ? (
+                                        <div className="flex items-center justify-between gap-4 text-xs">
+                                          <span className="text-slate-500">รอชั่งออก</span>
+                                          <span className="font-semibold text-cyan-700">{fmtMin(tl.weighOutWaitMinutes)}</span>
+                                        </div>
+                                      ) : (
                                         <p className="text-xs text-slate-400">ไม่มีข้อมูล</p>
                                       )}
                                     </div>
-                                    {/* Loading stations */}
-                                    {(tl.stations || []).map((s, i) => (
-                                      <div key={i} className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
-                                        <p className="text-xs font-bold text-amber-600 mb-1.5">สถานี {s.StationName}</p>
+
+                                    {/* 4. สถานีเช็คเกอร์ */}
+                                    <div className="bg-white rounded-xl border border-orange-100 px-4 py-2.5 min-w-44">
+                                      <p className="text-xs font-bold text-orange-600 mb-1.5">✅ สถานีเช็คเกอร์</p>
+                                      {tl.checkerMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
-                                          <span className="text-slate-500">ขึ้นสินค้า</span>
-                                          <span className="font-semibold text-amber-700">
-                                            {s.DurationMinutes != null ? fmtMin(s.DurationMinutes) : <span className="text-amber-500">กำลังขึ้น...</span>}
-                                          </span>
+                                          <span className="text-slate-500">ตรวจสินค้า</span>
+                                          <span className="font-semibold text-orange-700">{fmtMin(tl.checkerMinutes)}</span>
                                         </div>
-                                      </div>
-                                    ))}
-                                    {tl.stations?.length === 0 && (
-                                      <p className="text-xs text-slate-400 self-center">ยังไม่มีข้อมูลสถานีขึ้นสินค้า</p>
-                                    )}
+                                      ) : (
+                                        <p className="text-xs text-slate-400">ไม่มีข้อมูล</p>
+                                      )}
+                                    </div>
+
                                   </div>
                                 )}
                                 {row.CheckerRemarks && (

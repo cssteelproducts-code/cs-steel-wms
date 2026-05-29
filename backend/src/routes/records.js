@@ -116,10 +116,15 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
       SELECT t.SOWaitStartedAt,
              wi.WeighDateTime as WeighInTime,
              ds.ReceivedTime as DataStationTime,
-             (SELECT MIN(lr2.EntryTime) FROM WMS_LoadingRecord lr2 WHERE lr2.TripID = t.TripID) as FirstLoadEntry
+             (SELECT MIN(lr2.EntryTime) FROM WMS_LoadingRecord lr2 WHERE lr2.TripID = t.TripID) as FirstLoadEntry,
+             (SELECT MAX(lr3.ExitTime)  FROM WMS_LoadingRecord lr3 WHERE lr3.TripID = t.TripID) as LastLoadExit,
+             wo.WeighDateTime as WeighOutTime,
+             cr.CheckTime
       FROM WMS_Trips t
       LEFT JOIN WMS_WeighIn wi ON wi.TripID = t.TripID
       LEFT JOIN WMS_DataStation ds ON ds.TripID = t.TripID
+      LEFT JOIN WMS_WeighOut wo ON wo.TripID = t.TripID
+      LEFT JOIN WMS_CheckerRecord cr ON cr.TripID = t.TripID
       WHERE t.TripID = @TripID
     `);
 
@@ -143,13 +148,23 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
       ? Math.max(0, Math.round((new Date(t.DataStationTime || t.FirstLoadEntry) - new Date(t.SOWaitStartedAt)) / 60000))
       : null;
 
+    const weighOutWaitMinutes = t.LastLoadExit && t.WeighOutTime
+      ? Math.max(0, Math.round((new Date(t.WeighOutTime) - new Date(t.LastLoadExit)) / 60000))
+      : null;
+
+    const checkerMinutes = t.WeighOutTime && t.CheckTime
+      ? Math.max(0, Math.round((new Date(t.CheckTime) - new Date(t.WeighOutTime)) / 60000))
+      : null;
+
     res.json({
       success: true,
       data: {
         pickWaitMinutes,
         soWaitMinutes,
         hasSOWait: !!t.SOWaitStartedAt,
-        stations: loadingData.recordset
+        stations: loadingData.recordset,
+        weighOutWaitMinutes,
+        checkerMinutes,
       }
     });
   } catch (err) {
