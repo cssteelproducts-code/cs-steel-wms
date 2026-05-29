@@ -61,7 +61,9 @@
       "Bash(git *)",
       "Bash(railway deployments *)",
       "Bash(railway deployment *)",
-      "Bash(Get-ChildItem *)"
+      "Bash(Get-ChildItem *)",
+      "Bash(xargs grep -l \"migrate\\\\|initDb\\\\|CREATE TABLE\")",
+      "Bash(npm update *)"
     ]
   }
 }

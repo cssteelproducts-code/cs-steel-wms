@@ -3,6 +3,7 @@ const translations = {
     // ── Sidebar nav ──────────────────────────────────
     'nav.dashboard': 'Dashboard',
     'nav.monitor': 'Monitor รถ',
+    'nav.forecast': 'วิเคราะห์และวางแผน',
     'section.station': 'สถานี',
     'nav.weighIn': 'สถานีชั่งเข้า',
     'nav.dataStation': 'สถานี Data',

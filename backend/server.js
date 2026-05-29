@@ -49,6 +49,7 @@ app.use('/api/delivery', require('./src/routes/deliveryPlan'));
 app.use('/api/transfer', require('./src/routes/transfer'));
 app.use('/api/search', require('./src/routes/search'));
 app.use('/api/records', require('./src/routes/records'));
+app.use('/api/forecast', require('./src/routes/forecast'));
 app.use('/api/location-check', require('./src/routes/locationCheck'));
 
 // Serve React frontend (production build)

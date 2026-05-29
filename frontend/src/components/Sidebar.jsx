@@ -4,13 +4,14 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Boxes, Route, ArrowLeftRight, ClipboardList
+  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, key: 'nav.dashboard', code: 'DASHBOARD' },
   { path: '/monitor', icon: Activity, key: 'nav.monitor', code: 'TRIP_MONITOR' },
+  { path: '/forecast', icon: BrainCircuit, key: 'nav.forecast', code: 'FORECAST' },
   { key: 'section.station', divider: true },
   { path: '/weigh-in', icon: Scale, key: 'nav.weighIn', code: 'WEIGH_IN' },
   { path: '/data-station', icon: FileText, key: 'nav.dataStation', code: 'DATA_STATION' },

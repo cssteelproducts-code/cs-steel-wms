@@ -9,6 +9,7 @@
     "init-db": "node src/db/init.js"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.100.1",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "compression": "^1.8.1",
