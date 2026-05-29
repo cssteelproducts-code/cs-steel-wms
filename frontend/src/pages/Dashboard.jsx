@@ -496,7 +496,6 @@ export default function Dashboard() {
                     <th className="table-header text-left py-2 px-2">ทะเบียน</th>
                     <th className="table-header text-left py-2 px-2">ลูกค้า</th>
                     <th className="table-header text-left py-2 px-2">ชั่งเข้า</th>
-                    <th className="table-header text-right py-2 px-2">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -506,11 +505,6 @@ export default function Dashboard() {
                       <td className="py-2 px-2 text-slate-600 text-xs">{v.CustomerName || '-'}</td>
                       <td className="py-2 px-2 text-slate-500 text-xs">
                         {v.WeighInTime ? dayjs(v.WeighInTime).format('HH:mm') : '-'}
-                      </td>
-                      <td className="py-2 px-2 text-right">
-                        {v.IsLoading
-                          ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">กำลังขึ้นสินค้า</span>
-                          : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">รอขึ้นสินค้า</span>}
                       </td>
                     </tr>
                   ))}
