@@ -40,7 +40,7 @@ export default function Users() {
   const [saving, setSaving] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [roleForm, setRoleForm] = useState({ roleName: '', description: '' });
+  const [roleForm, setRoleForm] = useState({ roleName: '', description: '', sortOrder: 0 });
   const [roleFilter, setRoleFilter] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
@@ -118,7 +118,7 @@ export default function Users() {
 
   const openEditRole = (role) => {
     setEditingRole(role);
-    setRoleForm({ roleName: role.RoleName, description: role.Description || '' });
+    setRoleForm({ roleName: role.RoleName, description: role.Description || '', sortOrder: role.SortOrder || 0 });
     setModal('role');
   };
 
@@ -132,7 +132,7 @@ export default function Users() {
       if (res.data.success) {
         toast.success(res.data.message);
         setModal(null);
-        setRoleForm({ roleName: '', description: '' });
+        setRoleForm({ roleName: '', description: '', sortOrder: 0 });
         setEditingRole(null);
         fetchAll();
       }
@@ -199,23 +199,22 @@ export default function Users() {
               <Plus size={14} />เพิ่มผู้ใช้
             </button>
           </div>
-          {/* Role filter chips */}
-          <div className="flex flex-wrap gap-2 mb-4">
-            <button onClick={() => setRoleFilter(null)}
-              className="px-3 h-8 rounded-xl text-xs font-bold transition-all"
-              style={!roleFilter ? { background: '#dc2626', color: '#fff' } : { background: '#f1f5f9', color: '#64748b' }}>
-              ทั้งหมด ({users.length})
-            </button>
-            {[...roles].sort((a, b) => (a.RoleName || '').localeCompare(b.RoleName || '', 'th')).map(r => {
-              const count = users.filter(u => u.RoleID === r.RoleID).length;
-              return (
-                <button key={r.RoleID} onClick={() => setRoleFilter(roleFilter === r.RoleID ? null : r.RoleID)}
-                  className="px-3 h-8 rounded-xl text-xs font-bold transition-all"
-                  style={roleFilter === r.RoleID ? { background: '#dc2626', color: '#fff' } : { background: '#f1f5f9', color: '#64748b' }}>
-                  {r.RoleName} ({count})
-                </button>
-              );
-            })}
+          {/* Role filter dropdown */}
+          <div className="flex items-center gap-2 mb-4">
+            <label className="text-xs font-semibold whitespace-nowrap" style={{ color: '#64748b' }}>กรองบทบาท</label>
+            <select value={roleFilter ?? ''}
+              onChange={e => setRoleFilter(e.target.value ? parseInt(e.target.value) : null)}
+              className="h-8 px-3 rounded-xl text-xs font-semibold outline-none"
+              style={{ border: '1.5px solid #e2e8f0', background: '#fff', color: '#1e293b', minWidth: 200 }}>
+              <option value="">ทั้งหมด ({users.length})</option>
+              {[...roles].sort((a, b) => (a.SortOrder || 0) - (b.SortOrder || 0) || (a.RoleName || '').localeCompare(b.RoleName || '', 'th')).map(r => {
+                const count = users.filter(u => u.RoleID === r.RoleID).length;
+                return <option key={r.RoleID} value={r.RoleID}>{r.RoleName} ({count})</option>;
+              })}
+            </select>
+            {roleFilter && (
+              <button onClick={() => setRoleFilter(null)} className="text-xs font-semibold" style={{ color: '#ef4444' }}>ล้าง</button>
+            )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -234,8 +233,10 @@ export default function Users() {
                 {[...users]
                   .filter(u => !roleFilter || u.RoleID === roleFilter)
                   .sort((a, b) => {
-                    const rc = (a.RoleName || '').localeCompare(b.RoleName || '', 'th');
-                    return rc !== 0 ? rc : (a.FullName || '').localeCompare(b.FullName || '', 'th');
+                    const rA = roles.find(r => r.RoleID === a.RoleID);
+                    const rB = roles.find(r => r.RoleID === b.RoleID);
+                    const so = (rA?.SortOrder || 0) - (rB?.SortOrder || 0);
+                    return so !== 0 ? so : (a.FullName || '').localeCompare(b.FullName || '', 'th');
                   })
                   .map(u => (
                   <tr key={u.UserID} className="border-b border-slate-100 hover:bg-slate-50">
@@ -335,6 +336,11 @@ export default function Users() {
                 <label className="label">คำอธิบาย</label>
                 <input value={roleForm.description} onChange={e => setRoleForm(p => ({ ...p, description: e.target.value }))}
                   className="input-field" placeholder="หน้าที่ความรับผิดชอบ..." />
+              </div>
+              <div>
+                <label className="label">ลำดับตำแหน่ง (น้อย = สูงกว่า)</label>
+                <input type="number" value={roleForm.sortOrder} onChange={e => setRoleForm(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))}
+                  className="input-field" placeholder="เช่น 1=Admin, 10=หัวหน้า, 50=พนักงาน" min="0" />
               </div>
             </div>
             <div className="flex gap-3 mt-5">

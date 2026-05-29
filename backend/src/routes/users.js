@@ -114,7 +114,7 @@ router.get('/roles', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_Roles WHERE IsActive=1 ORDER BY RoleID');
+      .query('SELECT * FROM WMS_Roles WHERE IsActive=1 ORDER BY SortOrder ASC, RoleName');
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -123,7 +123,7 @@ router.get('/roles', authenticate, async (req, res) => {
 
 router.post('/roles', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { roleName, description } = req.body;
+    const { roleName, description, sortOrder } = req.body;
     if (!roleName) return res.status(400).json({ success: false, message: 'กรุณาระบุชื่อบทบาท' });
     const pool = getPool();
     const exists = await pool.request()
@@ -132,17 +132,18 @@ router.post('/roles', authenticate, requireAdmin, async (req, res) => {
     if (exists.recordset.length > 0) {
       const row = exists.recordset[0];
       if (row.IsActive) return res.status(400).json({ success: false, message: 'มีบทบาทนี้อยู่แล้ว' });
-      // Reactivate previously deleted role
       await pool.request()
         .input('RoleID', sql.Int, row.RoleID)
         .input('Description', sql.NVarChar, description || '')
-        .query('UPDATE WMS_Roles SET IsActive=1, Description=@Description WHERE RoleID=@RoleID');
+        .input('SortOrder', sql.Int, sortOrder || 0)
+        .query('UPDATE WMS_Roles SET IsActive=1, Description=@Description, SortOrder=@SortOrder WHERE RoleID=@RoleID');
       return res.json({ success: true, message: 'เพิ่มบทบาทสำเร็จ' });
     }
     await pool.request()
       .input('RoleName', sql.NVarChar, roleName)
       .input('Description', sql.NVarChar, description || '')
-      .query('INSERT INTO WMS_Roles (RoleName, Description) VALUES (@RoleName, @Description)');
+      .input('SortOrder', sql.Int, sortOrder || 0)
+      .query('INSERT INTO WMS_Roles (RoleName, Description, SortOrder) VALUES (@RoleName, @Description, @SortOrder)');
     res.json({ success: true, message: 'เพิ่มบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -152,14 +153,15 @@ router.post('/roles', authenticate, requireAdmin, async (req, res) => {
 // PUT /api/users/roles/:roleId
 router.put('/roles/:roleId', authenticate, requireAdmin, async (req, res) => {
   try {
-    const { roleName, description } = req.body;
+    const { roleName, description, sortOrder } = req.body;
     if (!roleName) return res.status(400).json({ success: false, message: 'กรุณาระบุชื่อบทบาท' });
     const pool = getPool();
     await pool.request()
       .input('RoleID', sql.Int, req.params.roleId)
       .input('RoleName', sql.NVarChar, roleName)
       .input('Description', sql.NVarChar, description || '')
-      .query('UPDATE WMS_Roles SET RoleName=@RoleName, Description=@Description WHERE RoleID=@RoleID');
+      .input('SortOrder', sql.Int, sortOrder || 0)
+      .query('UPDATE WMS_Roles SET RoleName=@RoleName, Description=@Description, SortOrder=@SortOrder WHERE RoleID=@RoleID');
     res.json({ success: true, message: 'แก้ไขบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

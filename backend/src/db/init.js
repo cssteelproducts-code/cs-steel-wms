@@ -56,8 +56,11 @@ const initDatabase = async () => {
       RoleID INT IDENTITY(1,1) PRIMARY KEY,
       RoleName NVARCHAR(50) NOT NULL,
       Description NVARCHAR(200),
+      SortOrder INT DEFAULT 0,
       IsActive BIT DEFAULT 1
     );
+    IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Roles') AND name='SortOrder')
+      ALTER TABLE WMS_Roles ADD SortOrder INT DEFAULT 0;
 
     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_Users' AND xtype='U')
     CREATE TABLE WMS_Users (
