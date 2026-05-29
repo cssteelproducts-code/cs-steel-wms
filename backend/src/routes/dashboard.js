@@ -78,15 +78,18 @@ router.get('/summary', authenticate, async (req, res) => {
       `),
       pool.request().query(`
         SELECT ls.StationName,
-               COUNT(dst.TripID) as ActiveTrucks
+               COUNT(DISTINCT t.TripID) as ActiveTrucks
         FROM WMS_LoadingStations ls
-        LEFT JOIN WMS_DataStationTargets dst ON ls.StationID = dst.StationID
-        LEFT JOIN WMS_Trips t ON dst.TripID = t.TripID
-          AND t.Status IN ('WaitPick','Loading')
+        JOIN WMS_DataStationTargets dst ON ls.StationID = dst.StationID
+        JOIN WMS_Trips t ON dst.TripID = t.TripID
+          AND t.Status NOT IN ('Complete','Cancelled','WeighOut','Checker')
           AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+        LEFT JOIN WMS_LoadingRecord lr_done ON lr_done.TripID = t.TripID
+          AND lr_done.StationID = ls.StationID AND lr_done.ExitTime IS NOT NULL
         WHERE ls.IsActive = 1
+          AND lr_done.RecordID IS NULL
         GROUP BY ls.StationID, ls.StationName, ls.SortOrder
-        HAVING COUNT(dst.TripID) > 0
+        HAVING COUNT(DISTINCT t.TripID) > 0
         ORDER BY ls.SortOrder
       `),
       pool.request().query(`
@@ -440,11 +443,14 @@ router.get('/station-vehicles', authenticate, async (req, res) => {
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        LEFT JOIN WMS_LoadingRecord lr_done ON lr_done.TripID = t.TripID
+          AND lr_done.StationID = ls.StationID AND lr_done.ExitTime IS NOT NULL
         LEFT JOIN WMS_LoadingRecord lr_cur ON lr_cur.TripID = t.TripID
           AND lr_cur.StationID = ls.StationID AND lr_cur.ExitTime IS NULL
         WHERE ls.StationName = @stationName
-          AND t.Status IN ('WaitPick', 'Loading')
+          AND t.Status NOT IN ('Complete','Cancelled','WeighOut','Checker')
           AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+          AND lr_done.RecordID IS NULL
         ORDER BY t.CreatedAt
       `);
     res.json({ success: true, data: result.recordset, stationName });
