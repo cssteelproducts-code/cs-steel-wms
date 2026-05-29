@@ -160,6 +160,46 @@ const runMigrations = async () => {
           CreatedAt DATETIME DEFAULT GETDATE()
         );
     `);
+    // Add vehicle status columns (migration for existing installs)
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_TransferVehicles') AND name='VehicleCode')
+        ALTER TABLE WMS_TransferVehicles ADD VehicleCode NVARCHAR(20) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_TransferVehicles') AND name='VehicleType')
+        ALTER TABLE WMS_TransferVehicles ADD VehicleType NVARCHAR(50) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_TransferVehicles') AND name='VehicleStatus')
+        ALTER TABLE WMS_TransferVehicles ADD VehicleStatus NVARCHAR(20) NOT NULL DEFAULT 'READY';
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_TransferVehicles') AND name='StatusNote')
+        ALTER TABLE WMS_TransferVehicles ADD StatusNote NVARCHAR(500) NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_TransferVehicles') AND name='RepairStartDate')
+        ALTER TABLE WMS_TransferVehicles ADD RepairStartDate DATE NULL;
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_TransferVehicles') AND name='RepairExpectedDate')
+        ALTER TABLE WMS_TransferVehicles ADD RepairExpectedDate DATE NULL;
+    `);
+    // Seed initial transfer vehicles from Excel data
+    const seedVehicles = [
+      { code: 'FG03', plate: '81-3359', type: '10 ล้อ' },
+      { code: 'FG04', plate: '78-7301', type: '6 ล้อ' },
+      { code: 'FG05', plate: '79-2671', type: '10 ล้อ' },
+      { code: 'FG06', plate: '78-7298', type: '6 ล้อ' },
+      { code: 'FG07', plate: '78-7300', type: '10 ล้อ' },
+      { code: 'FG08', plate: '78-7302', type: '6 ล้อ' },
+      { code: 'FG09', plate: '60-8708', type: '10 ล้อ' },
+      { code: 'FL5',  plate: 'TMC',     type: '10 ล้อ' },
+      { code: 'FL7',  plate: 'NISSAN',  type: '10 ล้อ' },
+    ];
+    for (const v of seedVehicles) {
+      const exists = await pool.request()
+        .input('plate', sql.NVarChar, v.plate)
+        .query('SELECT 1 FROM WMS_TransferVehicles WHERE VehiclePlate=@plate');
+      if (!exists.recordset.length) {
+        await pool.request()
+          .input('code', sql.NVarChar, v.code)
+          .input('plate', sql.NVarChar, v.plate)
+          .input('type', sql.NVarChar, v.type)
+          .query('INSERT INTO WMS_TransferVehicles (VehicleCode,VehiclePlate,VehicleType) VALUES (@code,@plate,@type)');
+      }
+    }
+    console.log('✅ TransferVehicles seeded');
     await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_DataStationTargets' AND xtype='U')
         CREATE TABLE WMS_DataStationTargets (

@@ -3,7 +3,8 @@ import api from '../services/api';
 import {
   ArrowRight, Package, CheckCircle2, Plus,
   ChevronDown, ChevronUp, X, Edit2, Trash2,
-  RefreshCw, Building2, Layers, Clock, Truck, UserCheck
+  RefreshCw, Building2, Layers, Clock, Truck, UserCheck,
+  Wrench, AlertTriangle, CheckCircle
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -49,7 +50,10 @@ export default function Transfer() {
   const [savingStation, setSavingStation] = useState(false);
   const [savingVehicle, setSavingVehicle] = useState(false);
   const [savingAssign, setSavingAssign] = useState(false);
-  const [vehicleForm, setVehicleForm] = useState({ vehiclePlate: '', vehicleName: '' });
+  const [vehicleForm, setVehicleForm] = useState({
+    vehicleCode: '', vehiclePlate: '', vehicleName: '', vehicleType: '',
+    vehicleStatus: 'READY', statusNote: '', repairStartDate: '', repairExpectedDate: ''
+  });
 
   // Product search for job form
   const [prodQuery, setProdQuery] = useState('');
@@ -210,7 +214,7 @@ export default function Transfer() {
       }
       setShowVehicleModal(false);
       setEditVehicle(null);
-      setVehicleForm({ vehiclePlate: '', vehicleName: '' });
+      setVehicleForm({ vehicleCode: '', vehiclePlate: '', vehicleName: '', vehicleType: '', vehicleStatus: 'READY', statusNote: '', repairStartDate: '', repairExpectedDate: '' });
       loadVehicles();
     } catch {
       toast.error('เกิดข้อผิดพลาด');
@@ -221,7 +225,16 @@ export default function Transfer() {
 
   const openEditVehicle = (v) => {
     setEditVehicle(v);
-    setVehicleForm({ vehiclePlate: v.VehiclePlate, vehicleName: v.VehicleName || '' });
+    setVehicleForm({
+      vehicleCode: v.VehicleCode || '',
+      vehiclePlate: v.VehiclePlate,
+      vehicleName: v.VehicleName || '',
+      vehicleType: v.VehicleType || '',
+      vehicleStatus: v.VehicleStatus || 'READY',
+      statusNote: v.StatusNote || '',
+      repairStartDate: v.RepairStartDate ? v.RepairStartDate.slice(0, 10) : '',
+      repairExpectedDate: v.RepairExpectedDate ? v.RepairExpectedDate.slice(0, 10) : '',
+    });
     setShowVehicleModal(true);
   };
 
@@ -586,60 +599,100 @@ export default function Transfer() {
       )}
 
       {/* ── VEHICLES TAB ── */}
-      {activeTab === 'vehicles' && (
-        <div className="space-y-4">
-          <div className="flex justify-end">
-            <button onClick={() => { setEditVehicle(null); setVehicleForm({ vehiclePlate: '', vehicleName: '' }); setShowVehicleModal(true); }}
-              className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
-              style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.3)' }}>
-              <Plus size={15} /> เพิ่มรถ
-            </button>
-          </div>
-          <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #f3f4f6' }}>
-            <table className="w-full">
-              <thead>
-                <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                  {['ทะเบียนรถ', 'ชื่อ/หมายเลข', ''].map((h, i) => (
-                    <th key={i} className={`px-5 py-3 text-xs font-bold uppercase tracking-wider ${i === 2 ? 'text-right' : 'text-left'}`}
-                      style={{ color: '#9ca3af' }}>{h}</th>
-                  ))}
-                </tr>
-              </thead>
-              <tbody>
-                {vehicles.map((v, i) => (
-                  <tr key={v.VehicleID} style={{ background: i % 2 ? '#fafafa' : '#ffffff', borderBottom: '1px solid #f9fafb' }}>
-                    <td className="px-5 py-3 text-sm font-black" style={{ color: '#111827' }}>{v.VehiclePlate}</td>
-                    <td className="px-5 py-3 text-sm font-medium" style={{ color: '#6b7280' }}>{v.VehicleName || '-'}</td>
-                    <td className="px-5 py-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
-                        <button onClick={() => openEditVehicle(v)}
-                          className="p-1.5 rounded-xl transition-colors" style={{ color: '#6b7280' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
-                          onMouseLeave={e => e.currentTarget.style.background = ''}>
-                          <Edit2 size={14} />
-                        </button>
-                        <button onClick={() => deleteVehicle(v.VehicleID)}
-                          className="p-1.5 rounded-xl transition-colors" style={{ color: '#ef4444' }}
-                          onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
-                          onMouseLeave={e => e.currentTarget.style.background = ''}>
-                          <Trash2 size={14} />
-                        </button>
-                      </div>
-                    </td>
+      {activeTab === 'vehicles' && (() => {
+        const VSTATUS = {
+          READY:       { label: 'พร้อมใช้',  icon: CheckCircle,    bg: '#f0fdf4', color: '#16a34a' },
+          MAINTENANCE: { label: 'รอซ่อม',    icon: Wrench,         bg: '#fffbeb', color: '#d97706' },
+          ACCIDENT:    { label: 'อุบัติเหตุ', icon: AlertTriangle,  bg: '#fef2f2', color: '#dc2626' },
+        };
+        const ready = vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').length;
+        const notReady = vehicles.length - ready;
+        return (
+          <div className="space-y-4">
+            {/* summary chips */}
+            <div className="flex items-center justify-between gap-3 flex-wrap">
+              <div className="flex gap-2 flex-wrap">
+                {Object.entries(VSTATUS).map(([k, s]) => {
+                  const cnt = vehicles.filter(v => (v.VehicleStatus || 'READY') === k).length;
+                  return (
+                    <div key={k} className="flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-bold"
+                      style={{ background: s.bg, color: s.color }}>
+                      <s.icon size={12} /> {s.label} ({cnt})
+                    </div>
+                  );
+                })}
+              </div>
+              <button onClick={() => { setEditVehicle(null); setVehicleForm({ vehicleCode: '', vehiclePlate: '', vehicleName: '', vehicleType: '', vehicleStatus: 'READY', statusNote: '', repairStartDate: '', repairExpectedDate: '' }); setShowVehicleModal(true); }}
+                className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
+                style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.3)' }}>
+                <Plus size={15} /> เพิ่มรถ
+              </button>
+            </div>
+            <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #f3f4f6' }}>
+              <table className="w-full">
+                <thead>
+                  <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
+                    {['รหัส', 'ทะเบียนรถ', 'ประเภท', 'สถานะ', 'หมายเหตุ', ''].map((h, i) => (
+                      <th key={i} className={`px-4 py-3 text-xs font-bold uppercase tracking-wider ${i === 5 ? 'text-right' : 'text-left'}`}
+                        style={{ color: '#9ca3af' }}>{h}</th>
+                    ))}
                   </tr>
-                ))}
-                {vehicles.length === 0 && (
-                  <tr>
-                    <td colSpan={3} className="text-center py-10 text-sm" style={{ color: '#9ca3af' }}>
-                      ยังไม่มีรถขนย้าย — กดเพิ่มรถด้านบน
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {vehicles.map((v, i) => {
+                    const st = VSTATUS[v.VehicleStatus || 'READY'] || VSTATUS.READY;
+                    const StIcon = st.icon;
+                    return (
+                      <tr key={v.VehicleID} style={{ background: i % 2 ? '#fafafa' : '#ffffff', borderBottom: '1px solid #f9fafb' }}>
+                        <td className="px-4 py-3 text-xs font-bold" style={{ color: '#6b7280' }}>{v.VehicleCode || '-'}</td>
+                        <td className="px-4 py-3">
+                          <div className="text-sm font-black" style={{ color: '#111827' }}>{v.VehiclePlate}</div>
+                          {v.VehicleName && <div className="text-xs font-medium" style={{ color: '#9ca3af' }}>{v.VehicleName}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-sm font-medium" style={{ color: '#6b7280' }}>{v.VehicleType || '-'}</td>
+                        <td className="px-4 py-3">
+                          <span className="flex items-center gap-1 w-fit px-2 py-0.5 rounded-lg text-xs font-bold"
+                            style={{ background: st.bg, color: st.color }}>
+                            <StIcon size={11} /> {st.label}
+                          </span>
+                        </td>
+                        <td className="px-4 py-3 text-xs" style={{ color: '#6b7280', maxWidth: 180 }}>
+                          {v.StatusNote && <div className="truncate">{v.StatusNote}</div>}
+                          {v.RepairStartDate && <div>เข้าซ่อม: {v.RepairStartDate.slice(0, 10)}</div>}
+                          {v.RepairExpectedDate && <div>คาดเสร็จ: {v.RepairExpectedDate.slice(0, 10)}</div>}
+                        </td>
+                        <td className="px-4 py-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <button onClick={() => openEditVehicle(v)}
+                              className="p-1.5 rounded-xl transition-colors" style={{ color: '#6b7280' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#f3f4f6'}
+                              onMouseLeave={e => e.currentTarget.style.background = ''}>
+                              <Edit2 size={14} />
+                            </button>
+                            <button onClick={() => deleteVehicle(v.VehicleID)}
+                              className="p-1.5 rounded-xl transition-colors" style={{ color: '#ef4444' }}
+                              onMouseEnter={e => e.currentTarget.style.background = '#fef2f2'}
+                              onMouseLeave={e => e.currentTarget.style.background = ''}>
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {vehicles.length === 0 && (
+                    <tr>
+                      <td colSpan={6} className="text-center py-10 text-sm" style={{ color: '#9ca3af' }}>
+                        ยังไม่มีรถขนย้าย — กดเพิ่มรถด้านบน
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ── CREATE JOB MODAL ── */}
       {showCreateJob && (
@@ -759,31 +812,98 @@ export default function Transfer() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
           onMouseDown={e => { if (e.target === e.currentTarget) setShowVehicleModal(false); }}>
-          <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
+          <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
               <h3 className="text-lg font-black" style={{ color: '#111827' }}>
-                {editVehicle ? 'แก้ไขรถ' : 'เพิ่มรถใหม่'}
+                {editVehicle ? 'แก้ไขข้อมูลรถ' : 'เพิ่มรถใหม่'}
               </h3>
               <button onClick={() => setShowVehicleModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
                 <X size={18} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ทะเบียนรถ *</label>
-                <input type="text" value={vehicleForm.vehiclePlate}
-                  onChange={e => setVehicleForm(f => ({ ...f, vehiclePlate: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
-                  style={inputStyle} placeholder="เช่น กข-1234" />
+            <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รหัสรถ</label>
+                  <input type="text" value={vehicleForm.vehicleCode}
+                    onChange={e => setVehicleForm(f => ({ ...f, vehicleCode: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
+                    style={inputStyle} placeholder="เช่น FG03" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ทะเบียนรถ *</label>
+                  <input type="text" value={vehicleForm.vehiclePlate}
+                    onChange={e => setVehicleForm(f => ({ ...f, vehiclePlate: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
+                    style={inputStyle} placeholder="เช่น 81-3359" />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ชื่อ/หมายเลข</label>
+                  <input type="text" value={vehicleForm.vehicleName}
+                    onChange={e => setVehicleForm(f => ({ ...f, vehicleName: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
+                    style={inputStyle} placeholder="เช่น รถโฟล์คลิฟท์" />
+                </div>
+                <div>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ประเภทรถ</label>
+                  <select value={vehicleForm.vehicleType}
+                    onChange={e => setVehicleForm(f => ({ ...f, vehicleType: e.target.value }))}
+                    className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
+                    <option value="">-- เลือก --</option>
+                    <option value="6 ล้อ">6 ล้อ</option>
+                    <option value="10 ล้อ">10 ล้อ</option>
+                    <option value="รถพ่วง">รถพ่วง</option>
+                    <option value="อื่นๆ">อื่นๆ</option>
+                  </select>
+                </div>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ชื่อ/หมายเลขรถ</label>
-                <input type="text" value={vehicleForm.vehicleName}
-                  onChange={e => setVehicleForm(f => ({ ...f, vehicleName: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
-                  style={inputStyle} placeholder="เช่น รถโฟล์คลิฟท์ #1" />
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>สถานะรถ</label>
+                <div className="grid grid-cols-3 gap-2">
+                  {[
+                    { v: 'READY',       l: 'พร้อมใช้',  Icon: CheckCircle,   bg: '#f0fdf4', color: '#16a34a', active: '#16a34a' },
+                    { v: 'MAINTENANCE', l: 'รอซ่อม',    Icon: Wrench,        bg: '#fffbeb', color: '#d97706', active: '#d97706' },
+                    { v: 'ACCIDENT',    l: 'อุบัติเหตุ', Icon: AlertTriangle, bg: '#fef2f2', color: '#dc2626', active: '#dc2626' },
+                  ].map(({ v, l, Icon, bg, color, active }) => (
+                    <button key={v} type="button" onClick={() => setVehicleForm(f => ({ ...f, vehicleStatus: v }))}
+                      className="flex flex-col items-center justify-center gap-1 h-16 rounded-2xl text-xs font-bold transition-all"
+                      style={vehicleForm.vehicleStatus === v
+                        ? { background: bg, color: active, border: `2px solid ${active}` }
+                        : { background: '#f9fafb', color: '#9ca3af', border: '1.5px solid #f3f4f6' }}>
+                      <Icon size={16} />
+                      {l}
+                    </button>
+                  ))}
+                </div>
               </div>
+              {(vehicleForm.vehicleStatus === 'MAINTENANCE' || vehicleForm.vehicleStatus === 'ACCIDENT') && (
+                <div className="space-y-3 p-4 rounded-2xl" style={{ background: '#fef9f0', border: '1.5px solid #fde68a' }}>
+                  <div>
+                    <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>อาการ / รายละเอียด</label>
+                    <textarea rows={2} value={vehicleForm.statusNote}
+                      onChange={e => setVehicleForm(f => ({ ...f, statusNote: e.target.value }))}
+                      className="w-full px-3 py-2 rounded-xl text-sm font-semibold outline-none resize-none"
+                      style={inputStyle} placeholder="ระบุอาการหรือรายละเอียด..." />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>วันที่เข้าซ่อม</label>
+                      <input type="date" value={vehicleForm.repairStartDate}
+                        onChange={e => setVehicleForm(f => ({ ...f, repairStartDate: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle} />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>คาดว่าจะเสร็จ</label>
+                      <input type="date" value={vehicleForm.repairExpectedDate}
+                        onChange={e => setVehicleForm(f => ({ ...f, repairExpectedDate: e.target.value }))}
+                        className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle} />
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
               <button onClick={() => setShowVehicleModal(false)}
@@ -832,14 +952,21 @@ export default function Transfer() {
                   onChange={e => setAssignForm(f => ({ ...f, vehicleId: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
                   <option value="">-- เลือกรถ --</option>
-                  {vehicles.map(v => (
-                    <option key={v.VehicleID} value={v.VehicleID}>{v.VehiclePlate}{v.VehicleName ? ` — ${v.VehicleName}` : ''}</option>
+                  {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').map(v => (
+                    <option key={v.VehicleID} value={v.VehicleID}>
+                      {v.VehicleCode ? `[${v.VehicleCode}] ` : ''}{v.VehiclePlate}{v.VehicleType ? ` (${v.VehicleType})` : ''}
+                    </option>
                   ))}
                 </select>
+                {vehicles.filter(v => (v.VehicleStatus || 'READY') !== 'READY').length > 0 && (
+                  <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>
+                    ไม่แสดงรถที่รอซ่อม/อุบัติเหตุ ({vehicles.filter(v => (v.VehicleStatus || 'READY') !== 'READY').length} คัน)
+                  </p>
+                )}
               </div>
-              {vehicles.length === 0 && (
-                <p className="text-xs font-semibold" style={{ color: '#f59e0b' }}>
-                  ยังไม่มีรถในระบบ — กรุณาเพิ่มรถที่ tab รถก่อน
+              {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').length === 0 && (
+                <p className="text-xs font-semibold" style={{ color: '#dc2626' }}>
+                  ไม่มีรถที่พร้อมใช้งาน — กรุณาตรวจสอบสถานะรถที่ tab รถ
                 </p>
               )}
             </div>

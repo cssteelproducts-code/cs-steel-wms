@@ -21,16 +21,22 @@ router.get('/vehicles', async (req, res) => {
 
 router.post('/vehicles', async (req, res) => {
   try {
-    const { vehiclePlate, vehicleName } = req.body;
+    const { vehicleCode, vehiclePlate, vehicleName, vehicleType, vehicleStatus, statusNote, repairStartDate, repairExpectedDate } = req.body;
     if (!vehiclePlate) return res.status(400).json({ success: false, message: 'กรุณากรอกทะเบียนรถ' });
     const pool = getPool();
     const result = await pool.request()
-      .input('plate', sql.NVarChar, vehiclePlate.trim())
-      .input('name', sql.NVarChar, vehicleName || null)
+      .input('code',   sql.NVarChar, vehicleCode || null)
+      .input('plate',  sql.NVarChar, vehiclePlate.trim())
+      .input('name',   sql.NVarChar, vehicleName || null)
+      .input('type',   sql.NVarChar, vehicleType || null)
+      .input('status', sql.NVarChar, vehicleStatus || 'READY')
+      .input('note',   sql.NVarChar, statusNote || null)
+      .input('rstart', sql.Date, repairStartDate || null)
+      .input('rend',   sql.Date, repairExpectedDate || null)
       .query(`
-        INSERT INTO WMS_TransferVehicles (VehiclePlate, VehicleName)
+        INSERT INTO WMS_TransferVehicles (VehicleCode, VehiclePlate, VehicleName, VehicleType, VehicleStatus, StatusNote, RepairStartDate, RepairExpectedDate)
         OUTPUT INSERTED.VehicleID
-        VALUES (@plate, @name)
+        VALUES (@code, @plate, @name, @type, @status, @note, @rstart, @rend)
       `);
     res.json({ success: true, vehicleId: result.recordset[0].VehicleID });
   } catch (err) {
@@ -40,14 +46,23 @@ router.post('/vehicles', async (req, res) => {
 
 router.put('/vehicles/:id', async (req, res) => {
   try {
-    const { vehiclePlate, vehicleName, isActive } = req.body;
+    const { vehicleCode, vehiclePlate, vehicleName, vehicleType, vehicleStatus, statusNote, repairStartDate, repairExpectedDate, isActive } = req.body;
     const pool = getPool();
     await pool.request()
-      .input('id', sql.Int, req.params.id)
-      .input('plate', sql.NVarChar, vehiclePlate)
-      .input('name', sql.NVarChar, vehicleName || null)
-      .input('active', sql.Bit, isActive !== false ? 1 : 0)
-      .query('UPDATE WMS_TransferVehicles SET VehiclePlate=@plate, VehicleName=@name, IsActive=@active WHERE VehicleID=@id');
+      .input('id',     sql.Int,      req.params.id)
+      .input('code',   sql.NVarChar, vehicleCode || null)
+      .input('plate',  sql.NVarChar, vehiclePlate)
+      .input('name',   sql.NVarChar, vehicleName || null)
+      .input('type',   sql.NVarChar, vehicleType || null)
+      .input('status', sql.NVarChar, vehicleStatus || 'READY')
+      .input('note',   sql.NVarChar, statusNote || null)
+      .input('rstart', sql.Date,     repairStartDate || null)
+      .input('rend',   sql.Date,     repairExpectedDate || null)
+      .input('active', sql.Bit,      isActive !== false ? 1 : 0)
+      .query(`UPDATE WMS_TransferVehicles
+        SET VehicleCode=@code, VehiclePlate=@plate, VehicleName=@name, VehicleType=@type,
+            VehicleStatus=@status, StatusNote=@note, RepairStartDate=@rstart, RepairExpectedDate=@rend, IsActive=@active
+        WHERE VehicleID=@id`);
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
