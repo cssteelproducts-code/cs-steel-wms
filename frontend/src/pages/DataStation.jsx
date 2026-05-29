@@ -126,11 +126,10 @@ export default function DataStation() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-slate-900 font-bold">{trip.LicensePlate}</span>
-                      <span className="text-slate-400 text-xs">#{trip.TripID}</span>
                       <PriorityBadge priority={trip.Priority} />
                     </div>
                     <div className="text-slate-500 text-xs mt-1">
-                      {trip.VehicleType}{trip.DeliveryType && ` | ${trip.DeliveryType}`}{trip.WarehouseName && ` | ${trip.WarehouseName}`}
+                      {[trip.VehicleType, trip.DeliveryType, trip.WarehouseName, `#${trip.TripID}`].filter(Boolean).join(' / ')}
                     </div>
                     {trip.CustomerName && (
                       <div className="text-blue-500 text-xs">{trip.CustomerName}</div>
