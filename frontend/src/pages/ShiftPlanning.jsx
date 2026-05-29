@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { Users, Clock, Plus, Trash2, BarChart2, RefreshCw, Download } from 'lucide-react';
+import { Users, Clock, Plus, Trash2, BarChart2, RefreshCw, Download, Pencil, Check, X as XIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
@@ -71,6 +71,18 @@ export default function ShiftPlanning() {
   };
 
   const removeRecord = (id) => setRecords(r => r.filter(x => x.id !== id));
+
+  const [editingId, setEditingId] = useState(null);
+  const [editRow, setEditRow] = useState({});
+
+  const startEdit = (r) => { setEditingId(r.id); setEditRow({ endTime: r.endTime, otEmp: r.otEmp, otHrs2: r.otHrs2 }); };
+  const cancelEdit = () => setEditingId(null);
+  const saveEdit = (id) => {
+    const ot1 = calcOT1(editRow.endTime, cfg);
+    const ot2 = parseFloat(editRow.otHrs2) || calcOT2(editRow.endTime, cfg);
+    setRecords(r => r.map(x => x.id === id ? { ...x, endTime: editRow.endTime, otEmp: parseInt(editRow.otEmp) || 0, otHrs2: ot2, otHrs1: ot1 } : x));
+    setEditingId(null);
+  };
 
   const addBatchRecords = () => {
     if (!batchForm.fromDate || !batchForm.toDate || !batchForm.endTime) return;
@@ -284,7 +296,41 @@ export default function ShiftPlanning() {
                 {records.length === 0 ? (
                   <tr><td colSpan={7} className="text-center py-10 text-slate-400">ยังไม่มีข้อมูล — กรอกข้อมูลด้านบน</td></tr>
                 ) : records.map(r => {
+                  const isEditing = editingId === r.id;
                   const diff = +(r.otHrs1 - r.otHrs2).toFixed(2);
+                  if (isEditing) {
+                    const previewOT1 = calcOT1(editRow.endTime, cfg);
+                    const previewOT2 = parseFloat(editRow.otHrs2) || calcOT2(editRow.endTime, cfg);
+                    return (
+                      <tr key={r.id} className="border-b border-indigo-100 bg-indigo-50">
+                        <td className="px-3 py-1.5 font-medium text-indigo-700">{r.date}</td>
+                        <td className="px-3 py-1.5">
+                          <input type="time" value={editRow.endTime} onChange={e => setEditRow(f => ({ ...f, endTime: e.target.value }))}
+                            className="input-field text-sm py-1 w-28" />
+                        </td>
+                        <td className="px-3 py-1.5">
+                          <input type="number" min="0" value={editRow.otEmp} onChange={e => setEditRow(f => ({ ...f, otEmp: e.target.value }))}
+                            placeholder="คน" className="input-field text-sm py-1 w-20 text-center" />
+                        </td>
+                        <td className="px-3 py-1.5 text-right text-xs text-blue-400">{fmtHr(previewOT1)}</td>
+                        <td className="px-3 py-1.5">
+                          <input type="number" step="0.5" min="0" value={editRow.otHrs2} onChange={e => setEditRow(f => ({ ...f, otHrs2: e.target.value }))}
+                            placeholder={`≈${previewOT2}`} className="input-field text-sm py-1 w-24 text-right" />
+                        </td>
+                        <td className="px-3 py-1.5 text-right text-xs text-slate-400">-</td>
+                        <td className="px-3 py-1.5">
+                          <div className="flex items-center gap-1">
+                            <button onClick={() => saveEdit(r.id)} className="p-1 rounded text-emerald-500 hover:bg-emerald-100 transition-colors" title="บันทึก">
+                              <Check size={14} />
+                            </button>
+                            <button onClick={cancelEdit} className="p-1 rounded text-slate-400 hover:bg-slate-100 transition-colors" title="ยกเลิก">
+                              <XIcon size={14} />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  }
                   return (
                     <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="px-3 py-2 font-medium">{r.date}</td>
@@ -296,9 +342,14 @@ export default function ShiftPlanning() {
                         {diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : '0'}
                       </td>
                       <td className="px-3 py-2">
-                        <button onClick={() => removeRecord(r.id)} className="p-1 rounded text-slate-300 hover:text-red-500 transition-colors">
-                          <Trash2 size={13} />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button onClick={() => startEdit(r)} className="p-1 rounded text-slate-300 hover:text-indigo-500 transition-colors" title="แก้ไข">
+                            <Pencil size={13} />
+                          </button>
+                          <button onClick={() => removeRecord(r.id)} className="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" title="ลบ">
+                            <Trash2 size={13} />
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   );
