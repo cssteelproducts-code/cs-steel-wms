@@ -219,11 +219,6 @@ export default function FreightCalc() {
                 </button>
               ))}
             </div>
-            <p className="text-xs mt-3 text-slate-400">
-              กม./ลิตร: <span className="font-semibold text-slate-600">{cfg.kmPerL}</span>
-              &ensp;·&ensp;บรรทุก: <span className="font-semibold text-slate-600">{cfg.capacity.toLocaleString()} กก.</span>
-              &ensp;·&ensp;ค่าแรง STD: <span className="font-semibold text-slate-600">{fmt(cfg.labor)} บ./เที่ยว</span>
-            </p>
           </div>
 
           {/* ต้นทาง / ปลายทาง */}
