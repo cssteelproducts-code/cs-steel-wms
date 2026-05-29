@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { Truck, Settings, X, Plus, Trash2, Fuel, Wrench, ShieldCheck, Radio, Wallet, Calculator, RefreshCw } from 'lucide-react';
+import api from '../services/api';
 
 const VEHICLE_TYPES = ['4ล้อ', '6ล้อ', '8ล้อ', '10ล้อ', '12ล้อ', 'เทรลเลอร์', 'พ่วง'];
 const STORAGE_KEY = 'freightcalc_std_v1';
@@ -31,6 +32,14 @@ export default function FreightCalc() {
   const [showStd, setShowStd] = useState(false);
   const [stdTab, setStdTab] = useState('4ล้อ');
   const [stdDraft, setStdDraft] = useState(null);
+
+  const [warehouses, setWarehouses] = useState([]);
+  const [customers, setCustomers] = useState([]);
+
+  useEffect(() => {
+    api.get('/master/warehouses').then(r => setWarehouses(r.data.data || [])).catch(() => {});
+    api.get('/master/customers').then(r => setCustomers(r.data.data || [])).catch(() => {});
+  }, []);
 
   const [vehType, setVehType] = useState('4ล้อ');
   const [origin, setOrigin] = useState('');
@@ -175,14 +184,22 @@ export default function FreightCalc() {
             <p className="card-header">เส้นทาง</p>
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label className="label">เขต/จังหวัดต้นทาง</label>
-                <input type="text" value={origin} onChange={e => setOrigin(e.target.value)}
-                  className="input-field" placeholder="คลังสินค้า (Depot)" />
+                <label className="label">ต้นทาง (คลังสินค้า)</label>
+                <select value={origin} onChange={e => setOrigin(e.target.value)} className="input-field">
+                  <option value="">-- เลือกคลังสินค้า --</option>
+                  {warehouses.map(w => (
+                    <option key={w.WarehouseID} value={w.WarehouseName}>{w.WarehouseName}</option>
+                  ))}
+                </select>
               </div>
               <div>
-                <label className="label">เขต/จังหวัดปลายทาง <span className="text-red-500">*</span></label>
-                <input type="text" value={destination} onChange={e => setDestination(e.target.value)}
-                  className="input-field" placeholder="กรุงเทพฯ, สมุทรสาคร" />
+                <label className="label">ปลายทาง (ลูกค้า) <span className="text-red-500">*</span></label>
+                <select value={destination} onChange={e => setDestination(e.target.value)} className="input-field">
+                  <option value="">-- เลือกลูกค้า --</option>
+                  {customers.map(c => (
+                    <option key={c.CustomerID} value={c.CustomerName}>{c.CustomerCode} – {c.CustomerName}</option>
+                  ))}
+                </select>
               </div>
             </div>
           </div>
