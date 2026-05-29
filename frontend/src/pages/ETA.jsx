@@ -15,6 +15,7 @@ export default function ETA() {
   const [source, setSource] = useState('');
   const [whitelistConfigured, setWhitelistConfigured] = useState(true);
   const [search, setSearch] = useState('');
+  const [statFilter, setStatFilter] = useState(null); // null | 'inRadius' | 'arriving' | 'farAway'
   const [selectedId, setSelectedId] = useState(null);
   const [savingAssign, setSavingAssign] = useState({});
 
@@ -84,17 +85,22 @@ export default function ETA() {
     }
   };
 
-  const filtered = vehicles.filter(v => {
-    const q = search.toLowerCase();
-    return !q ||
-      v.licensePlate?.toLowerCase().includes(q) ||
-      v.warehouseName?.toLowerCase().includes(q) ||
-      v.address?.toLowerCase().includes(q);
-  });
-
   const arriving = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 0 && v.etaMinutes <= 60).length;
   const inRadius = vehicles.filter(v => v.withinRadius).length;
   const farAway = vehicles.filter(v => !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 180).length;
+
+  const filtered = vehicles.filter(v => {
+    const q = search.toLowerCase();
+    const matchSearch = !q ||
+      v.licensePlate?.toLowerCase().includes(q) ||
+      v.warehouseName?.toLowerCase().includes(q) ||
+      v.address?.toLowerCase().includes(q);
+    let matchStat = true;
+    if (statFilter === 'inRadius') matchStat = !!v.withinRadius;
+    else if (statFilter === 'arriving') matchStat = !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 0 && v.etaMinutes <= 60;
+    else if (statFilter === 'farAway') matchStat = !v.withinRadius && v.etaMinutes !== null && v.etaMinutes > 180;
+    return matchSearch && matchStat;
+  });
 
   const shortAddress = (addr) => {
     if (!addr) return '';
@@ -165,16 +171,22 @@ export default function ETA() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'รถทั้งหมด',          value: vehicles.length, color: 'text-gray-900' },
-          { label: 'อยู่ภายในคลัง',      value: inRadius,        color: 'text-red-600' },
-          { label: 'ถึงคลังภายใน 60 นาที',  value: arriving,  color: 'text-amber-500' },
-          { label: 'ห่างจากคลัง 180 นาที+', value: farAway,  color: 'text-blue-600' },
-        ].map(s => (
-          <div key={s.label} className="card text-center py-3">
-            <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-            <div className="text-gray-400 text-xs mt-0.5">{s.label}</div>
-          </div>
-        ))}
+          { label: 'รถทั้งหมด',             value: vehicles.length, color: 'text-gray-900',  filter: null,        ring: 'ring-gray-400' },
+          { label: 'อยู่ภายในคลัง',         value: inRadius,        color: 'text-red-600',   filter: 'inRadius',  ring: 'ring-red-500'  },
+          { label: 'ถึงคลังภายใน 60 นาที',  value: arriving,        color: 'text-amber-500', filter: 'arriving',  ring: 'ring-amber-500'},
+          { label: 'ห่างจากคลัง 180 นาที+', value: farAway,         color: 'text-blue-600',  filter: 'farAway',   ring: 'ring-blue-500' },
+        ].map(s => {
+          const active = statFilter === s.filter;
+          return (
+            <div key={s.label}
+              onClick={() => setStatFilter(f => f === s.filter ? null : s.filter)}
+              className={`card text-center py-3 cursor-pointer transition-all hover:shadow-md select-none ${active ? `ring-2 ${s.ring}` : 'hover:ring-1 hover:ring-slate-300'}`}>
+              <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
+              <div className="text-gray-400 text-xs mt-0.5">{s.label}</div>
+              {active && <div className="text-[10px] text-slate-400 mt-1">กดอีกครั้งเพื่อยกเลิก</div>}
+            </div>
+          );
+        })}
       </div>
 
       {/* Map */}
