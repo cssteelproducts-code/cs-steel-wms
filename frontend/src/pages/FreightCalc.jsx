@@ -1,6 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
-import { Truck, Settings, X, Plus, Trash2, Fuel, Wrench, ShieldCheck, Radio, Wallet, Calculator, RefreshCw } from 'lucide-react';
+import { useState, useCallback, useEffect, useRef } from 'react';
+import { Truck, Settings, X, Plus, Trash2, Fuel, Wrench, ShieldCheck, Radio, Wallet, Calculator, RefreshCw, MapPin, Search, Loader } from 'lucide-react';
 import api from '../services/api';
+import DraggableMap from '../components/DraggableMap';
 
 const VEHICLE_TYPES = ['4ล้อ', '6ล้อ', '8ล้อ', '10ล้อ', '12ล้อ', 'เทรลเลอร์', 'พ่วง'];
 const STORAGE_KEY = 'freightcalc_std_v1';
@@ -34,12 +35,57 @@ export default function FreightCalc() {
   const [stdDraft, setStdDraft] = useState(null);
 
   const [warehouses, setWarehouses] = useState([]);
-  const [customers, setCustomers] = useState([]);
 
   useEffect(() => {
     api.get('/master/warehouses').then(r => setWarehouses(r.data.data || [])).catch(() => {});
-    api.get('/master/customers').then(r => setCustomers(r.data.data || [])).catch(() => {});
   }, []);
+
+  // destination map picker
+  const [showDestMap, setShowDestMap] = useState(false);
+  const [destQuery, setDestQuery] = useState('');
+  const [destResults, setDestResults] = useState([]);
+  const [destSearching, setDestSearching] = useState(false);
+  const [destLat, setDestLat] = useState('');
+  const [destLng, setDestLng] = useState('');
+  const destTimer = useRef(null);
+
+  const searchDest = async (q) => {
+    if (!q.trim()) { setDestResults([]); return; }
+    setDestSearching(true);
+    try {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=6&countrycodes=th&accept-language=th,en`,
+        { headers: { 'User-Agent': 'CS.Smart WMS/1.0' } }
+      );
+      setDestResults(await res.json());
+    } catch { setDestResults([]); }
+    finally { setDestSearching(false); }
+  };
+
+  const handleDestInput = (v) => {
+    setDestQuery(v);
+    clearTimeout(destTimer.current);
+    destTimer.current = setTimeout(() => searchDest(v), 500);
+  };
+
+  const pickDestResult = (item) => {
+    setDestLat(parseFloat(item.lat).toFixed(6));
+    setDestLng(parseFloat(item.lon).toFixed(6));
+    setDestQuery(item.display_name);
+    setDestResults([]);
+  };
+
+  const confirmDest = () => {
+    setDestination(destQuery);
+    setShowDestMap(false);
+    setDestResults([]);
+  };
+
+  const openDestMap = () => {
+    setDestQuery(destination);
+    setDestResults([]);
+    setShowDestMap(true);
+  };
 
   const [vehType, setVehType] = useState('4ล้อ');
   const [origin, setOrigin] = useState('');
@@ -99,6 +145,7 @@ export default function FreightCalc() {
     setOrigin(''); setDestination(''); setDistKm('');
     setFuelPrice(''); setToll(''); setOthers('');
     setHasOT(false); setResult(null);
+    setDestQuery(''); setDestLat(''); setDestLng('');
   };
 
   const calculate = () => {
@@ -193,13 +240,14 @@ export default function FreightCalc() {
                 </select>
               </div>
               <div>
-                <label className="label">ปลายทาง (ลูกค้า) <span className="text-red-500">*</span></label>
-                <select value={destination} onChange={e => setDestination(e.target.value)} className="input-field">
-                  <option value="">-- เลือกลูกค้า --</option>
-                  {customers.map(c => (
-                    <option key={c.CustomerID} value={c.CustomerName}>{c.CustomerCode} – {c.CustomerName}</option>
-                  ))}
-                </select>
+                <label className="label">ปลายทาง <span className="text-red-500">*</span></label>
+                <button type="button" onClick={openDestMap}
+                  className="input-field w-full text-left flex items-center gap-2 cursor-pointer">
+                  <MapPin size={14} className={destination ? 'text-red-500' : 'text-slate-300'} />
+                  <span className={`truncate ${destination ? 'text-slate-800' : 'text-slate-400'}`}>
+                    {destination || 'ค้นหาและปักหมุดปลายทาง...'}
+                  </span>
+                </button>
               </div>
             </div>
           </div>
@@ -439,6 +487,84 @@ export default function FreightCalc() {
             <div className="flex gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
               <button onClick={() => setShowStd(false)} className="btn-secondary flex-1 py-2.5">ยกเลิก</button>
               <button onClick={saveStd} className="btn-primary flex-1 py-2.5">✓ บันทึก STD</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── DESTINATION MAP MODAL ── */}
+      {showDestMap && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.5)', backdropFilter: 'blur(4px)' }}
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowDestMap(false); }}>
+          <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl bg-white max-h-[90vh] flex flex-col"
+            onMouseDown={e => e.stopPropagation()}>
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 flex-shrink-0">
+              <div className="flex items-center gap-2">
+                <MapPin size={16} className="text-red-500" />
+                <h3 className="font-bold text-slate-800">เลือกปลายทาง</h3>
+              </div>
+              <button onClick={() => setShowDestMap(false)} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-400">
+                <X size={16} />
+              </button>
+            </div>
+
+            {/* Search */}
+            <div className="px-5 py-3 border-b border-slate-100 flex-shrink-0 relative">
+              <div className="relative">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  autoFocus
+                  type="text"
+                  value={destQuery}
+                  onChange={e => handleDestInput(e.target.value)}
+                  placeholder="ค้นหาสถานที่... เช่น กรุงเทพฯ, สมุทรสาคร"
+                  className="input-field pl-8 pr-8"
+                />
+                {destSearching && (
+                  <Loader size={13} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 animate-spin" />
+                )}
+              </div>
+
+              {/* Results dropdown */}
+              {destResults.length > 0 && (
+                <div className="absolute left-5 right-5 top-full mt-0.5 bg-white rounded-xl shadow-xl border border-slate-100 z-10 max-h-52 overflow-y-auto">
+                  {destResults.map((item, i) => (
+                    <button key={i} onClick={() => pickDestResult(item)}
+                      className="w-full text-left px-3 py-2.5 text-sm text-slate-700 hover:bg-red-50 hover:text-red-700 border-b border-slate-50 last:border-b-0 leading-snug">
+                      <span className="font-medium">{item.display_name.split(',')[0]}</span>
+                      <span className="text-slate-400 text-xs block truncate">{item.display_name}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Map */}
+            <div className="flex-1 min-h-0" style={{ minHeight: 300 }}>
+              <DraggableMap
+                lat={destLat || '13.7563'}
+                lng={destLng || '100.5018'}
+                onMove={(lat, lng) => { setDestLat(lat); setDestLng(lng); }}
+                height={300}
+              />
+            </div>
+
+            {destLat && (
+              <p className="text-xs text-slate-400 text-center py-1.5 flex-shrink-0 bg-slate-50">
+                📍 {destLat}, {destLng} — ลากหมุดเพื่อปรับตำแหน่ง
+              </p>
+            )}
+
+            {/* Footer */}
+            <div className="flex gap-3 px-5 py-4 border-t border-slate-100 flex-shrink-0">
+              <button onClick={() => setShowDestMap(false)} className="btn-secondary flex-1 py-2.5">ยกเลิก</button>
+              <button onClick={confirmDest} disabled={!destQuery.trim()}
+                className="btn-primary flex-1 py-2.5 disabled:opacity-40 disabled:cursor-not-allowed">
+                <MapPin size={14} /> ยืนยันปลายทาง
+              </button>
             </div>
           </div>
         </div>
