@@ -146,6 +146,7 @@ export default function Records() {
       pickDocumentNo: row.PickDocumentNo || '',
       isApproved: row.IsApproved === true || row.IsApproved === 1 ? '1'
                 : row.IsApproved === false || row.IsApproved === 0 ? '0' : '',
+      completedAtTime: row.CompletedAt ? dayjs(row.CompletedAt).format('HH:mm') : '',
       checkerRemarks: row.CheckerRemarks || '',
     });
     setCustQuery(row.CustomerName || '');
@@ -565,15 +566,23 @@ export default function Records() {
               <div className="border-t border-slate-100 pt-4">
                 <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">เช็คเกอร์</p>
                 <div className="space-y-3">
-                  <div>
-                    <label className="label">ผลตรวจ</label>
-                    <select value={editForm.isApproved}
-                      onChange={e => setEditForm(f => ({ ...f, isApproved: e.target.value }))}
-                      className="input-field w-full">
-                      <option value="">-- ยังไม่ได้ตรวจ --</option>
-                      <option value="1">ผ่าน</option>
-                      <option value="0">ไม่ผ่าน</option>
-                    </select>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="label">ผลตรวจ</label>
+                      <select value={editForm.isApproved}
+                        onChange={e => setEditForm(f => ({ ...f, isApproved: e.target.value }))}
+                        className="input-field w-full">
+                        <option value="">-- ยังไม่ได้ตรวจ --</option>
+                        <option value="1">ผ่าน</option>
+                        <option value="0">ไม่ผ่าน</option>
+                      </select>
+                    </div>
+                    <div>
+                      <label className="label">เวลาอนุมัติ</label>
+                      <input type="time" value={editForm.completedAtTime}
+                        onChange={e => setEditForm(f => ({ ...f, completedAtTime: e.target.value }))}
+                        className="input-field w-full" />
+                    </div>
                   </div>
                   <div>
                     <label className="label">หมายเหตุเช็คเกอร์</label>

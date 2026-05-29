@@ -165,7 +165,7 @@ router.put('/:tripId', authenticate, async (req, res) => {
       tripDate, status,
       weighInTime, tareWeight,
       weighOutTime, grossWeight,
-      isApproved, checkerRemarks,
+      isApproved, checkerRemarks, completedAtTime,
       pickDocumentNo,
     } = req.body;
 
@@ -197,8 +197,15 @@ router.put('/:tripId', authenticate, async (req, res) => {
     if (status) {
       tripSets.push('Status=@Status');
       tripsReq.input('Status', sql.NVarChar, status);
-      if (status === 'Complete' && prevStatus !== 'Complete') {
+      if (status === 'Complete' && prevStatus !== 'Complete' && !completedAtTime) {
         tripSets.push('CompletedAt=GETUTCDATE()');
+      }
+    }
+    if (completedAtTime && /^\d{2}:\d{2}$/.test(completedAtTime)) {
+      const dt = new Date(`${baseDateStr}T${completedAtTime}:00+07:00`);
+      if (!isNaN(dt.getTime())) {
+        tripSets.push('CompletedAt=@CompletedAt');
+        tripsReq.input('CompletedAt', sql.DateTime, dt);
       }
     }
     await tripsReq.query(`UPDATE WMS_Trips SET ${tripSets.join(',')} WHERE TripID=@TripID`);
