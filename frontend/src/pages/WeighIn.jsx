@@ -172,12 +172,12 @@ export default function WeighIn() {
                   <Label><span className="flex items-center gap-1"><Clock size={10} />{t('weighIn.entryTime')}</span></Label>
                   <div className="input-field h-10 flex items-center gap-0 px-2">
                     <select value={form.entryTime.split(':')[0]} onChange={e => setForm(p => ({ ...p, entryTime: `${e.target.value}:${p.entryTime.split(':')[1]}` }))}
-                      className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer">
+                      className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer appearance-none">
                       {Array.from({length:24},(_,i)=>String(i).padStart(2,'0')).map(h=><option key={h} value={h}>{h}</option>)}
                     </select>
                     <span className="text-slate-400 font-bold text-sm select-none">:</span>
                     <select value={form.entryTime.split(':')[1]} onChange={e => setForm(p => ({ ...p, entryTime: `${p.entryTime.split(':')[0]}:${e.target.value}` }))}
-                      className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer">
+                      className="bg-transparent text-sm font-medium text-slate-700 outline-none cursor-pointer appearance-none">
                       {Array.from({length:60},(_,i)=>String(i).padStart(2,'0')).map(m=><option key={m} value={m}>{m}</option>)}
                     </select>
                   </div>
