@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw } from 'lucide-react';
+import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
@@ -35,6 +35,7 @@ export default function Users() {
   const [selectedRole, setSelectedRole] = useState(null);
   const [permissions, setPermissions] = useState({});
   const [saving, setSaving] = useState(false);
+  const [showPw, setShowPw] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [roleForm, setRoleForm] = useState({ roleName: '', description: '' });
 
@@ -68,12 +69,14 @@ export default function Users() {
   const openCreate = () => {
     setForm({ username: '', password: '', fullName: '', email: '', roleId: '', warehouseId: '', isActive: 1, sessionDurationHours: '' });
     setSelectedUser(null);
+    setShowPw(false);
     setModal('create');
   };
 
   const openEdit = (user) => {
     setForm({ ...user, password: '', roleId: user.RoleID, warehouseId: user.WarehouseID, isActive: user.IsActive, fullName: user.FullName, email: user.Email || '', username: user.Username, sessionDurationHours: user.SessionDurationHours || '' });
     setSelectedUser(user);
+    setShowPw(false);
     setModal('edit');
   };
 
@@ -331,8 +334,14 @@ export default function Users() {
               </div>
               <div>
                 <label className="label">{modal === 'edit' ? 'รหัสผ่านใหม่ (ว่างไว้=ไม่เปลี่ยน)' : 'รหัสผ่าน *'}</label>
-                <input type="password" value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
-                  className="input-field" />
+                <div className="relative">
+                  <input type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
+                    className="input-field pr-10" />
+                  <button type="button" onClick={() => setShowPw(p => !p)}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors">
+                    {showPw ? <EyeOff size={15} /> : <Eye size={15} />}
+                  </button>
+                </div>
               </div>
               <div>
                 <label className="label">ชื่อ-นามสกุล *</label>
