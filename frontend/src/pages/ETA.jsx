@@ -118,27 +118,28 @@ export default function ETA() {
   return (
     <div className="space-y-4">
       {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h2 className="text-xl font-black text-gray-900 flex items-center gap-2">
-            <Navigation size={22} className="text-red-600" />
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <h2 className="text-lg font-black text-gray-900 flex items-center gap-2">
+            <Navigation size={20} className="text-red-600 flex-shrink-0" />
             {t('page.eta')}
           </h2>
           <p className="text-gray-400 text-xs mt-0.5">
-            {source === 'mock' && <span className="text-amber-500 mr-1">⚠ Mock Data ·</span>}
+            {source === 'mock' && <span className="text-amber-500 mr-1">⚠ Mock ·</span>}
             {lastUpdate ? `อัพเดต ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex gap-1.5 flex-shrink-0">
           <button onClick={openManage}
-            className="btn-secondary text-sm px-4 py-2 flex items-center gap-2">
-            <Settings size={14} />
-            จัดการรถขนส่ง
+            className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <Settings size={13} />
+            <span className="hidden sm:inline">จัดการรถขนส่ง</span>
+            <span className="sm:hidden">จัดการ</span>
           </button>
           <button onClick={fetchVehicles} disabled={loading}
-            className="btn-secondary text-sm px-4 py-2 flex items-center gap-2">
-            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-            {t('common.refresh')}
+            className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />
+            <span className="hidden sm:inline">{t('common.refresh')}</span>
           </button>
         </div>
       </div>
@@ -212,50 +213,37 @@ export default function ETA() {
             <p className="text-sm">ไม่พบข้อมูลรถ</p>
           </div>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="border-b border-gray-100 bg-gray-50/50">
-                  <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5 whitespace-nowrap">ทะเบียน</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5">ที่อยู่ปัจจุบัน</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5 whitespace-nowrap">คลังประจำ</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5 whitespace-nowrap">ระยะห่างคลัง</th>
-                  <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5 whitespace-nowrap">
-                    <span className="flex items-center gap-1"><Clock size={11} />ETA ถึงคลัง</span>
-                  </th>
-                  <th className="text-left text-xs font-semibold text-gray-400 px-4 py-2.5 whitespace-nowrap">อัพเดต</th>
-                </tr>
-              </thead>
-              <tbody>
-                {[...filtered].sort((a, b) => {
-                  if (a.withinRadius !== b.withinRadius) return a.withinRadius ? 1 : -1;
-                  return (a.etaMinutes ?? 9999) - (b.etaMinutes ?? 9999);
-                }).map(v => {
-                  const isMoving = v.status === 'Moving';
-                  const isSelected = v.vehicleId === selectedId;
-                  return (
-                    <tr key={v.vehicleId}
-                      onClick={() => setSelectedId(isSelected ? null : v.vehicleId)}
-                      className={`border-b border-gray-50 cursor-pointer transition-colors ${isSelected ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
-
-                      <td className="px-4 py-3 font-bold text-gray-900 whitespace-nowrap">{v.licensePlate}</td>
-
-                      <td className="px-4 py-3 max-w-[220px]">
-                        {v.address ? (
-                          <span className="text-gray-500 text-xs flex items-start gap-1">
-                            <MapPin size={10} className="text-gray-300 mt-0.5 flex-shrink-0" />
-                            <span>{shortAddress(v.address)}</span>
-                          </span>
-                        ) : <span className="text-gray-300 text-xs">-</span>}
-                      </td>
-
-                      <td className="px-4 py-2.5 whitespace-nowrap" onClick={e => e.stopPropagation()}>
-                        <div className="relative">
+          <div>
+            {[...filtered].sort((a, b) => {
+              if (a.withinRadius !== b.withinRadius) return a.withinRadius ? 1 : -1;
+              return (a.etaMinutes ?? 9999) - (b.etaMinutes ?? 9999);
+            }).map(v => {
+              const isSelected = v.vehicleId === selectedId;
+              return (
+                <div key={v.vehicleId}
+                  onClick={() => setSelectedId(isSelected ? null : v.vehicleId)}
+                  className={`border-b border-gray-50 px-4 py-3 cursor-pointer transition-colors ${isSelected ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-gray-900">{v.licensePlate}</span>
+                        {v.distanceKm != null && (
+                          <span className="text-xs text-gray-500">{v.distanceKm} กม.</span>
+                        )}
+                      </div>
+                      {v.address && (
+                        <div className="text-xs text-gray-400 mt-0.5 flex items-start gap-1 truncate">
+                          <MapPin size={9} className="text-gray-300 mt-0.5 flex-shrink-0" />
+                          <span className="truncate">{shortAddress(v.address)}</span>
+                        </div>
+                      )}
+                      <div className="mt-1.5" onClick={e => e.stopPropagation()}>
+                        <div className="relative inline-block">
                           <select
                             value={v.warehouseId || ''}
                             onChange={e => handleAssign(v.vehicleId, e.target.value)}
                             disabled={savingAssign[v.vehicleId]}
-                            className="text-xs rounded-xl border border-gray-200 px-2 py-1 pr-6 bg-white text-gray-700 focus:outline-none focus:border-red-400 appearance-none cursor-pointer max-w-[130px]"
+                            className="text-xs rounded-lg border border-gray-200 px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-red-400 appearance-none cursor-pointer max-w-[140px]"
                             style={{ backgroundImage: 'none' }}>
                             <option value="">-- เลือกคลัง --</option>
                             {warehouses.map(w => (
@@ -266,25 +254,18 @@ export default function ETA() {
                             <span className="absolute right-1 top-1/2 -translate-y-1/2 w-3 h-3 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                           )}
                         </div>
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap">
-                        {v.distanceKm != null ? (
-                          <span className="font-semibold text-gray-800">{v.distanceKm} <span className="text-gray-400 font-normal text-xs">กม.</span></span>
-                        ) : <span className="text-gray-300 text-xs">-</span>}
-                      </td>
-
-                      <td className="px-4 py-3 whitespace-nowrap">{fmtEta(v)}</td>
-
-                      <td className="px-4 py-3 text-gray-400 text-xs whitespace-nowrap">
-                        {v.lastUpdate ? formatDateTime(v.lastUpdate) : '-'}
-                      </td>
-
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <div>{fmtEta(v)}</div>
+                      {v.lastUpdate && (
+                        <div className="text-gray-300 text-[10px] mt-0.5">{formatDateTime(v.lastUpdate)}</div>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

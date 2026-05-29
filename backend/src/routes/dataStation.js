@@ -91,8 +91,8 @@ router.get('/pending', authenticate, async (req, res) => {
                wi.TareWeight, wi.WeighDateTime,
                DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as WaitMinutes,
                CASE WHEN t.SOWaitStartedAt IS NOT NULL
-                    THEN DATEDIFF(MINUTE, t.SOWaitStartedAt, GETUTCDATE())
-                    ELSE NULL END as SOWaitMinutes
+                    THEN DATEDIFF(SECOND, t.SOWaitStartedAt, GETUTCDATE())
+                    ELSE NULL END as SOWaitSeconds
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID

@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import api from '../services/api';
 import {
   ArrowRight, Package, CheckCircle2, Plus,
@@ -40,6 +40,12 @@ export default function Transfer() {
   const [editStation, setEditStation] = useState(null);
   const [savingJob, setSavingJob] = useState(false);
   const [savingStation, setSavingStation] = useState(false);
+
+  // Product search for job form
+  const [prodQuery, setProdQuery] = useState('');
+  const [prodResults, setProdResults] = useState([]);
+  const [showProdDrop, setShowProdDrop] = useState(false);
+  const prodTimer = useRef(null);
 
   const [jobForm, setJobForm] = useState({
     sourceStationId: '', destStationId: '', productDesc: '',
@@ -101,6 +107,7 @@ export default function Transfer() {
         toast.success(`สร้างงาน ${res.data.jobCode} สำเร็จ`);
         setShowCreateJob(false);
         setJobForm({ sourceStationId: '', destStationId: '', productDesc: '', plannedBundles: '', plannedWeightKg: '', priority: 'NORMAL', notes: '' });
+        setProdQuery(''); setProdResults([]);
         loadJobs();
       }
     } catch {
@@ -161,6 +168,32 @@ export default function Transfer() {
     } catch {
       toast.error('เกิดข้อผิดพลาด');
     }
+  };
+
+  const sortedStations = [...stations].sort((a, b) =>
+    a.StationCode.localeCompare(b.StationCode, undefined, { numeric: true })
+  );
+
+  const handleProdInput = (val) => {
+    setProdQuery(val);
+    setJobForm(f => ({ ...f, productDesc: val }));
+    clearTimeout(prodTimer.current);
+    if (!val.trim()) { setProdResults([]); setShowProdDrop(false); return; }
+    prodTimer.current = setTimeout(async () => {
+      try {
+        const res = await api.get(`/master/products?search=${encodeURIComponent(val)}&limit=10`);
+        const list = res.data.data || [];
+        setProdResults(list);
+        setShowProdDrop(list.length > 0);
+      } catch { setProdResults([]); }
+    }, 200);
+  };
+
+  const pickProduct = (p) => {
+    const desc = `${p.ProductCode} - ${p.ProductName}${p.SKUType ? ` [${p.SKUType}]` : ''}`;
+    setProdQuery(desc);
+    setJobForm(f => ({ ...f, productDesc: desc }));
+    setShowProdDrop(false);
   };
 
   const inputStyle = { border: '1.5px solid #e5e7eb', color: '#111827', background: '#ffffff' };
@@ -398,7 +431,7 @@ export default function Transfer() {
                 </tr>
               </thead>
               <tbody>
-                {stations.map((s, i) => (
+                {sortedStations.map((s, i) => (
                   <tr key={s.StationID} style={{ background: i % 2 ? '#fafafa' : '#ffffff', borderBottom: '1px solid #f9fafb' }}>
                     <td className="px-5 py-3 text-sm font-bold" style={{ color: '#374151' }}>{s.StationCode}</td>
                     <td className="px-5 py-3 text-sm font-semibold" style={{ color: '#111827' }}>{s.StationName}</td>
@@ -460,7 +493,7 @@ export default function Transfer() {
                     onChange={e => setJobForm(f => ({ ...f, sourceStationId: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
                     <option value="">-- เลือก --</option>
-                    {stations.map(s => <option key={s.StationID} value={s.StationID}>{s.StationName}</option>)}
+                    {sortedStations.map(s => <option key={s.StationID} value={s.StationID}>{s.StationName}</option>)}
                   </select>
                 </div>
                 <div>
@@ -469,17 +502,34 @@ export default function Transfer() {
                     onChange={e => setJobForm(f => ({ ...f, destStationId: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
                     <option value="">-- เลือก --</option>
-                    {stations.map(s => <option key={s.StationID} value={s.StationID}>{s.StationName}</option>)}
+                    {sortedStations.map(s => <option key={s.StationID} value={s.StationID}>{s.StationName}</option>)}
                   </select>
                 </div>
               </div>
               <div>
                 <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รายละเอียดสินค้า *</label>
-                <textarea value={jobForm.productDesc}
-                  onChange={e => setJobForm(f => ({ ...f, productDesc: e.target.value }))}
-                  rows={2} className="w-full px-3 py-2 rounded-xl text-sm font-semibold outline-none resize-none"
-                  style={inputStyle}
-                  placeholder="เช่น เหล็กแผ่น SPC 1.2mm, เหล็กเส้น 10mm..." />
+                <div className="relative">
+                  <input type="text" value={prodQuery}
+                    onChange={e => handleProdInput(e.target.value)}
+                    onBlur={() => setTimeout(() => setShowProdDrop(false), 150)}
+                    className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
+                    style={inputStyle}
+                    placeholder="ค้นหารหัส / ชื่อสินค้า..." />
+                  {showProdDrop && (
+                    <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto"
+                      style={{ border: '1.5px solid #e5e7eb' }}>
+                      {prodResults.map(p => (
+                        <button key={p.ProductID} type="button" onMouseDown={() => pickProduct(p)}
+                          className="w-full text-left px-3 py-2 hover:bg-red-50 text-sm transition-colors"
+                          style={{ borderBottom: '1px solid #f3f4f6' }}>
+                          <span className="font-bold text-gray-800">{p.ProductCode}</span>
+                          <span className="text-gray-500 ml-2">{p.ProductName}</span>
+                          {p.SKUType && <span className="ml-2 px-1.5 py-0.5 rounded text-xs bg-gray-100 text-gray-500">{p.SKUType}</span>}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>

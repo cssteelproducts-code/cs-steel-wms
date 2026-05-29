@@ -14,7 +14,11 @@ const MENUS = [
   { code: 'WEIGH_OUT', name: 'สถานีชั่งออก' },
   { code: 'CHECKER', name: 'เช็คเกอร์' },
   { code: 'RECORDS', name: 'บันทึกการขึ้นสินค้า' },
+  { code: 'STOCK', name: 'สต็อกสินค้า' },
+  { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' },
+  { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน' },
   { code: 'ETA', name: 'ETA / GPS' },
+  { code: 'ALERTS', name: 'การแจ้งเตือน' },
   { code: 'USERS', name: 'จัดการผู้ใช้' },
   { code: 'MASTER', name: 'ข้อมูลหลัก' },
   { code: 'REPORTS', name: 'รายงาน' }
@@ -204,20 +208,24 @@ export default function Users() {
               <tbody>
                 {users.map(u => (
                   <tr key={u.UserID} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="table-cell font-mono text-blue-500">{u.Username}</td>
-                    <td className="table-cell text-slate-900">{u.FullName}</td>
+                    <td className="table-cell font-mono text-blue-500 max-w-[100px]">
+                      <div className="truncate">{u.Username}</div>
+                    </td>
+                    <td className="table-cell text-slate-900 max-w-[110px]">
+                      <div className="truncate">{u.FullName}</div>
+                    </td>
                     <td className="table-cell hide-mobile">
-                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs">{u.RoleName}</span>
+                      <span className="px-2 py-0.5 bg-slate-100 text-slate-600 rounded-full text-xs whitespace-nowrap">{u.RoleName}</span>
                     </td>
                     <td className="table-cell hide-mobile">{u.WarehouseName || '-'}</td>
                     <td className="table-cell text-center">
-                      <span className={`px-2 py-0.5 rounded-full text-xs ${u.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
+                      <span className={`px-2 py-0.5 rounded-full text-xs whitespace-nowrap ${u.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
                         {u.IsActive ? 'ใช้งาน' : 'ระงับ'}
                       </span>
                     </td>
-                    <td className="table-cell hide-mobile text-slate-400 text-xs">{formatDateTime(u.LastLogin) || 'ยังไม่เคย'}</td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
+                    <td className="table-cell hide-mobile text-slate-400 text-xs whitespace-nowrap">{formatDateTime(u.LastLogin) || 'ยังไม่เคย'}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(u)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
                           <Edit size={14} />
                         </button>

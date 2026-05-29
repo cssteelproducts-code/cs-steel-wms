@@ -22,9 +22,9 @@ const menuItems = [
   { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
   { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
+  { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { key: 'section.system', divider: true },
   { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
-  { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { path: '/users', icon: Users, key: 'nav.users', code: 'USERS' },
   { path: '/master', icon: Settings, key: 'nav.master', code: 'MASTER' }
 ];
@@ -41,11 +41,11 @@ export default function Sidebar({ isOpen, onClose }) {
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/40 z-40 lg:hidden backdrop-blur-sm" onClick={onClose} />
+        <div className="fixed inset-0 bg-black/40 z-[9998] lg:hidden backdrop-blur-sm" onClick={onClose} />
       )}
 
       <aside className={`
-        fixed top-0 left-0 h-full w-60 z-50
+        fixed top-0 left-0 h-full w-60 z-[9999]
         flex flex-col transition-transform duration-250 ease-out
         lg:translate-x-0 lg:static lg:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
