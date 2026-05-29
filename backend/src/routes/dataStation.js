@@ -36,7 +36,7 @@ router.post('/', authenticate, async (req, res) => {
         .input('Notes', sql.NVarChar, notes || '')
         .input('OperatorID', sql.Int, req.user.UserID)
         .query(`UPDATE WMS_DataStation SET TargetStationID=@TargetStationID,
-                PickDocumentNo=NULL, ReceivedTime=GETUTCDATE(),
+                PickDocumentNo=NULL,
                 Notes=@Notes, OperatorID=@OperatorID
                 WHERE TripID=@TripID`);
     } else {
