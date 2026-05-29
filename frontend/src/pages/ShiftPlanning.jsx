@@ -22,7 +22,7 @@ function InputNum({ label, value, onChange, placeholder }) {
   );
 }
 const toHrs = (min) => min <= 0 ? 0 : +(min / 60).toFixed(2);
-const fmtHr = (h) => h <= 0 ? '-' : `${h.toFixed(1)} ชม.`;
+const fmtHr = (h) => h <= 0 ? '-' : `${h.toFixed(2)} ชม.`;
 
 const DEFAULT_CONFIG = {
   s1: { start: '08:00', end: '17:00', emp: 10 },
@@ -179,11 +179,11 @@ export default function ShiftPlanning() {
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {[
           { label: 'วันที่บันทึก', value: `${summary.days} วัน`, color: 'text-slate-700', bg: 'bg-slate-50' },
-          { label: 'OT รวม แบบ 1', value: `${summary.totalOT1.toFixed(1)} ชม.`, color: 'text-blue-600', bg: 'bg-blue-50' },
-          { label: 'OT รวม แบบ 2', value: `${summary.totalOT2.toFixed(1)} ชม.`, color: 'text-orange-600', bg: 'bg-orange-50' },
+          { label: 'OT รวม แบบ 1', value: `${summary.totalOT1.toFixed(2)} ชม.`, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'OT รวม แบบ 2', value: `${summary.totalOT2.toFixed(2)} ชม.`, color: 'text-orange-600', bg: 'bg-orange-50' },
           {
             label: summary.diff > 0 ? 'แบบ 1 OT มากกว่า' : 'แบบ 2 OT มากกว่า',
-            value: `${Math.abs(summary.diff).toFixed(1)} ชม.`,
+            value: `${Math.abs(summary.diff).toFixed(2)} ชม.`,
             color: summary.diff > 0 ? 'text-red-600' : 'text-emerald-600',
             bg: summary.diff > 0 ? 'bg-red-50' : 'bg-emerald-50'
           },
@@ -339,7 +339,7 @@ export default function ShiftPlanning() {
                       <td className="px-3 py-2 text-right font-bold text-blue-600">{fmtHr(r.otHrs1)}</td>
                       <td className="px-3 py-2 text-right font-bold text-orange-600">{fmtHr(r.otHrs2)}</td>
                       <td className={`px-3 py-2 text-right font-semibold ${diff > 0 ? 'text-red-500' : diff < 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
-                        {diff > 0 ? `+${diff}` : diff < 0 ? `${diff}` : '0'}
+                        {diff > 0 ? `+${diff.toFixed(2)}` : diff < 0 ? diff.toFixed(2) : '0.00'}
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1">
@@ -359,10 +359,10 @@ export default function ShiftPlanning() {
                 <tfoot>
                   <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold">
                     <td className="px-3 py-2 text-sm" colSpan={3}>รวม {summary.days} วัน</td>
-                    <td className="px-3 py-2 text-right text-blue-700">{summary.totalOT1.toFixed(1)} ชม.</td>
-                    <td className="px-3 py-2 text-right text-orange-700">{summary.totalOT2.toFixed(1)} ชม.</td>
+                    <td className="px-3 py-2 text-right text-blue-700">{summary.totalOT1.toFixed(2)} ชม.</td>
+                    <td className="px-3 py-2 text-right text-orange-700">{summary.totalOT2.toFixed(2)} ชม.</td>
                     <td className={`px-3 py-2 text-right ${summary.diff > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                      {summary.diff > 0 ? `+${summary.diff}` : summary.diff}
+                      {summary.diff > 0 ? `+${summary.diff.toFixed(2)}` : summary.diff.toFixed(2)}
                     </td>
                     <td />
                   </tr>
@@ -398,23 +398,23 @@ export default function ShiftPlanning() {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-sm">
                 <div className="bg-blue-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-blue-400">OT รวม แบบที่ 1</p>
-                  <p className="text-xl font-bold text-blue-600">{summary.totalOT1.toFixed(1)} ชม.</p>
-                  <p className="text-xs text-blue-400">เฉลี่ย {(summary.totalOT1 / summary.days).toFixed(1)} ชม./วัน</p>
+                  <p className="text-xl font-bold text-blue-600">{summary.totalOT1.toFixed(2)} ชม.</p>
+                  <p className="text-xs text-blue-400">เฉลี่ย {(summary.totalOT1 / summary.days).toFixed(2)} ชม./วัน</p>
                 </div>
                 <div className="bg-orange-50 rounded-lg p-3 text-center">
                   <p className="text-xs text-orange-400">OT รวม แบบที่ 2</p>
-                  <p className="text-xl font-bold text-orange-600">{summary.totalOT2.toFixed(1)} ชม.</p>
-                  <p className="text-xs text-orange-400">เฉลี่ย {(summary.totalOT2 / summary.days).toFixed(1)} ชม./วัน</p>
+                  <p className="text-xl font-bold text-orange-600">{summary.totalOT2.toFixed(2)} ชม.</p>
+                  <p className="text-xs text-orange-400">เฉลี่ย {(summary.totalOT2 / summary.days).toFixed(2)} ชม./วัน</p>
                 </div>
                 <div className={`rounded-lg p-3 text-center ${summary.diff > 0 ? 'bg-red-50' : 'bg-emerald-50'}`}>
                   <p className={`text-xs ${summary.diff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
                     {summary.diff > 0 ? 'ถ้าใช้แบบ 1 จะมี OT มากกว่า' : 'แบบ 1 ประหยัด OT กว่า'}
                   </p>
                   <p className={`text-xl font-bold ${summary.diff > 0 ? 'text-red-600' : 'text-emerald-600'}`}>
-                    {Math.abs(summary.diff).toFixed(1)} ชม.
+                    {Math.abs(summary.diff).toFixed(2)} ชม.
                   </p>
                   <p className={`text-xs ${summary.diff > 0 ? 'text-red-400' : 'text-emerald-400'}`}>
-                    เฉลี่ย {(Math.abs(summary.diff) / summary.days).toFixed(1)} ชม./วัน
+                    เฉลี่ย {(Math.abs(summary.diff) / summary.days).toFixed(2)} ชม./วัน
                   </p>
                 </div>
               </div>
