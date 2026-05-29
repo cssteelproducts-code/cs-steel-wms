@@ -317,6 +317,34 @@ const runMigrations = async () => {
     console.warn('⚠ WMS_Products migration:', e.message);
   }
 
+  // Add missing columns to existing WMS_Products table
+  const productsAlters = [
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='SKUType')
+       ALTER TABLE WMS_Products ADD SKUType NVARCHAR(50) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='CategoryCode')
+       ALTER TABLE WMS_Products ADD CategoryCode NVARCHAR(10) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='CategoryName')
+       ALTER TABLE WMS_Products ADD CategoryName NVARCHAR(100) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='MaterialType')
+       ALTER TABLE WMS_Products ADD MaterialType NVARCHAR(20) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='FormCode')
+       ALTER TABLE WMS_Products ADD FormCode NVARCHAR(20) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='SizeCode')
+       ALTER TABLE WMS_Products ADD SizeCode NVARCHAR(50) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='Thickness')
+       ALTER TABLE WMS_Products ADD Thickness DECIMAL(8,2) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='TargetGroup')
+       ALTER TABLE WMS_Products ADD TargetGroup NVARCHAR(100) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='UnitNetWeight')
+       ALTER TABLE WMS_Products ADD UnitNetWeight DECIMAL(10,3) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='UpdatedAt')
+       ALTER TABLE WMS_Products ADD UpdatedAt DATETIME NULL`,
+  ];
+  for (const sql of productsAlters) {
+    try { await pool.request().query(sql); } catch (e) { console.warn('⚠ Products alter:', e.message); }
+  }
+  console.log('✅ WMS_Products columns ready');
+
   try {
     await pool.request().query(`
       IF NOT EXISTS (SELECT 1 FROM sys.tables WHERE name='WMS_LocationTypes')
