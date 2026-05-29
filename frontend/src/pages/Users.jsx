@@ -41,6 +41,7 @@ export default function Users() {
   const [showPw, setShowPw] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
   const [roleForm, setRoleForm] = useState({ roleName: '', description: '' });
+  const [roleFilter, setRoleFilter] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -192,11 +193,29 @@ export default function Users() {
 
       {tab === 'users' && (
         <div className="card">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex items-center justify-between mb-3">
             <h3 className="card-header mb-0">ผู้ใช้งานทั้งหมด</h3>
             <button onClick={openCreate} className="btn-primary text-sm">
               <Plus size={14} />เพิ่มผู้ใช้
             </button>
+          </div>
+          {/* Role filter chips */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <button onClick={() => setRoleFilter(null)}
+              className="px-3 h-8 rounded-xl text-xs font-bold transition-all"
+              style={!roleFilter ? { background: '#dc2626', color: '#fff' } : { background: '#f1f5f9', color: '#64748b' }}>
+              ทั้งหมด ({users.length})
+            </button>
+            {[...roles].sort((a, b) => (a.RoleName || '').localeCompare(b.RoleName || '', 'th')).map(r => {
+              const count = users.filter(u => u.RoleID === r.RoleID).length;
+              return (
+                <button key={r.RoleID} onClick={() => setRoleFilter(roleFilter === r.RoleID ? null : r.RoleID)}
+                  className="px-3 h-8 rounded-xl text-xs font-bold transition-all"
+                  style={roleFilter === r.RoleID ? { background: '#dc2626', color: '#fff' } : { background: '#f1f5f9', color: '#64748b' }}>
+                  {r.RoleName} ({count})
+                </button>
+              );
+            })}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
@@ -204,7 +223,7 @@ export default function Users() {
                 <tr className="border-b border-slate-200">
                   <th className="table-header text-left px-4 py-2">ชื่อผู้ใช้</th>
                   <th className="table-header text-left px-4 py-2">ชื่อ-นามสกุล</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">บทบาท</th>
+                  <th className="table-header text-left px-4 py-2 hide-mobile">บทบาท ↑</th>
                   <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
                   <th className="table-header text-center px-4 py-2">สถานะ</th>
                   <th className="table-header text-left px-4 py-2 hide-mobile">เข้าสู่ระบบล่าสุด</th>
@@ -212,7 +231,13 @@ export default function Users() {
                 </tr>
               </thead>
               <tbody>
-                {users.map(u => (
+                {[...users]
+                  .filter(u => !roleFilter || u.RoleID === roleFilter)
+                  .sort((a, b) => {
+                    const rc = (a.RoleName || '').localeCompare(b.RoleName || '', 'th');
+                    return rc !== 0 ? rc : (a.FullName || '').localeCompare(b.FullName || '', 'th');
+                  })
+                  .map(u => (
                   <tr key={u.UserID} className="border-b border-slate-100 hover:bg-slate-50">
                     <td className="table-cell font-mono text-blue-500 max-w-[100px]">
                       <div className="truncate">{u.Username}</div>

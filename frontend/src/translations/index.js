@@ -206,7 +206,7 @@ const translations = {
     'dash.flowStatus': 'สถานะรถในคลัง',
     'dash.viewAll': 'ดูทั้งหมด',
     'dash.stationsSection': 'สถานีขึ้นสินค้า',
-    'dash.chart': 'จำนวนรถ 7 วันย้อนหลัง',
+    'dash.chart': 'จำนวนรถ 15 วันย้อนหลัง',
     'dash.recentActivity': 'กิจกรรมล่าสุดวันนี้',
     'dash.noActivity': 'ยังไม่มีข้อมูลวันนี้',
     'dash.history': 'ย้อนหลัง',

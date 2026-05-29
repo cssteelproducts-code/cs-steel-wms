@@ -331,7 +331,7 @@ router.post('/trips', async (req, res) => {
 
     await pool.request()
       .input('jid', sql.Int, jobId)
-      .query("UPDATE WMS_TransferJobs SET Status='IN_PROGRESS' WHERE JobID=@jid AND Status='PENDING'");
+      .query("UPDATE WMS_TransferJobs SET Status='ASSIGNED' WHERE JobID=@jid AND Status='PENDING'");
 
     res.json({ success: true, tripId: result.recordset[0].TripID, tripNo });
   } catch (err) {
@@ -342,9 +342,14 @@ router.post('/trips', async (req, res) => {
 router.put('/trips/:id/source-entry', async (req, res) => {
   try {
     const pool = getPool();
-    await pool.request()
+    const r = await pool.request()
       .input('id', sql.Int, req.params.id)
-      .query("UPDATE WMS_TransferTrips SET SourceEntryTime=GETDATE(), Status='SOURCE_ENTRY' WHERE TripID=@id AND Status='PENDING'");
+      .query("UPDATE WMS_TransferTrips SET SourceEntryTime=GETDATE(), Status='SOURCE_ENTRY' OUTPUT INSERTED.JobID WHERE TripID=@id AND Status='PENDING'");
+    if (r.recordset.length > 0) {
+      await pool.request()
+        .input('jid', sql.Int, r.recordset[0].JobID)
+        .query("UPDATE WMS_TransferJobs SET Status='IN_PROGRESS' WHERE JobID=@jid AND Status='ASSIGNED'");
+    }
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -98,7 +98,7 @@ router.get('/summary', authenticate, async (req, res) => {
                COUNT(*) as TotalTrips,
                SUM(CASE WHEN Status='Complete' THEN 1 ELSE 0 END) as Completed
         FROM WMS_Trips
-        WHERE TripDate >= DATEADD(DAY, -6, CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
+        WHERE TripDate >= DATEADD(DAY, -14, CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
         GROUP BY CAST(TripDate AS DATE)
         ORDER BY TripDate
       `),

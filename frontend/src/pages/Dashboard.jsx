@@ -412,7 +412,7 @@ export default function Dashboard() {
 
       {/* Weekly bar chart */}
       <div className="card">
-        <SectionHeader title="ปริมาณรถย้อนหลัง 7 วัน" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection}
+        <SectionHeader title="ปริมาณรถย้อนหลัง 15 วัน" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection}
           icon={BarChart2} iconColor="text-blue-500" />
         {!collapsed.chart && (
           <ResponsiveContainer width="100%" height={220}>

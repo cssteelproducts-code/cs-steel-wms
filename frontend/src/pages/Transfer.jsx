@@ -11,7 +11,8 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
 
 const JOB_STATUS = {
-  PENDING:     { label: 'รอดำเนินการ',  color: '#f59e0b', bg: '#fffbeb' },
+  PENDING:     { label: 'รอมอบหมาย',    color: '#f59e0b', bg: '#fffbeb' },
+  ASSIGNED:    { label: 'มอบหมาย',      color: '#8b5cf6', bg: '#f5f3ff' },
   IN_PROGRESS: { label: 'กำลังดำเนินการ', color: '#3b82f6', bg: '#eff6ff' },
   COMPLETE:    { label: 'เสร็จสิ้น',    color: '#10b981', bg: '#f0fdf4' },
   CANCELLED:   { label: 'ยกเลิก',       color: '#6b7280', bg: '#f9fafb' },
@@ -43,7 +44,7 @@ export default function Transfer() {
   const [showVehicleModal, setShowVehicleModal] = useState(false);
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignJobId, setAssignJobId] = useState(null);
-  const [assignForm, setAssignForm] = useState({ operatorId: '', vehicleId: '' });
+  const [assignForm, setAssignForm] = useState([{ operatorId: '', vehicleId: '' }]);
   const [editStation, setEditStation] = useState(null);
   const [editVehicle, setEditVehicle] = useState(null);
   const [savingJob, setSavingJob] = useState(false);
@@ -251,29 +252,34 @@ export default function Transfer() {
 
   const openAssignModal = (jobId) => {
     setAssignJobId(jobId);
-    setAssignForm({ operatorId: '', vehicleId: '' });
+    setAssignForm([{ operatorId: '', vehicleId: '' }]);
     setShowAssignModal(true);
   };
 
+  const addAssignPair = () => setAssignForm(f => [...f, { operatorId: '', vehicleId: '' }]);
+  const removeAssignPair = (idx) => setAssignForm(f => f.filter((_, i) => i !== idx));
+  const updateAssignPair = (idx, field, val) => setAssignForm(f => f.map((p, i) => i === idx ? { ...p, [field]: val } : p));
+
   const submitAssign = async () => {
-    if (!assignForm.operatorId || !assignForm.vehicleId) {
-      toast.error('กรุณาเลือกพนักงานและรถ');
+    const valid = assignForm.filter(p => p.operatorId && p.vehicleId);
+    if (valid.length === 0) {
+      toast.error('กรุณาเลือกพนักงานและรถอย่างน้อย 1 คู่');
       return;
     }
     setSavingAssign(true);
     try {
-      const res = await api.post('/transfer/trips', {
-        jobId: assignJobId,
-        operatorId: parseInt(assignForm.operatorId),
-        vehicleId: parseInt(assignForm.vehicleId),
-      });
-      if (res.data.success) {
-        toast.success(`มอบหมายงานรอบที่ ${res.data.tripNo} สำเร็จ`);
-        setShowAssignModal(false);
-        const res2 = await api.get(`/transfer/jobs/${assignJobId}`);
-        if (res2.data.success) setJobDetail(res2.data);
-        loadJobs();
+      for (const pair of valid) {
+        await api.post('/transfer/trips', {
+          jobId: assignJobId,
+          operatorId: parseInt(pair.operatorId),
+          vehicleId: parseInt(pair.vehicleId),
+        });
       }
+      toast.success(`มอบหมาย ${valid.length} คู่ (รถ/คนขับ) สำเร็จ`);
+      setShowAssignModal(false);
+      const res2 = await api.get(`/transfer/jobs/${assignJobId}`);
+      if (res2.data.success) setJobDetail(res2.data);
+      loadJobs();
     } catch {
       toast.error('ไม่สามารถมอบหมายงานได้');
     } finally {
@@ -354,8 +360,9 @@ export default function Transfer() {
           <div className="flex flex-wrap gap-2">
             {[
               { v: '', l: 'ทั้งหมด' },
-              { v: 'PENDING', l: 'รอดำเนินการ' },
-              { v: 'IN_PROGRESS', l: 'กำลังทำ' },
+              { v: 'PENDING', l: 'รอมอบหมาย' },
+              { v: 'ASSIGNED', l: 'มอบหมาย' },
+              { v: 'IN_PROGRESS', l: 'กำลังดำเนินการ' },
               { v: 'COMPLETE', l: 'เสร็จสิ้น' },
             ].map(({ v, l }) => (
               <button key={v} onClick={() => setStatusFilter(v)}
@@ -445,9 +452,11 @@ export default function Transfer() {
                       <div className="flex flex-col items-end gap-2 flex-shrink-0">
                         <button onClick={() => toggleJobDetail(job.JobID)}
                           className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
-                          style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6', color: '#6b7280' }}>
+                          style={isExpanded
+                            ? { background: '#eff6ff', border: '1.5px solid #bfdbfe', color: '#3b82f6' }
+                            : { background: '#f5f3ff', border: '1.5px solid #ddd6fe', color: '#7c3aed' }}>
                           {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                          รอบย้าย
+                          การมอบหมาย
                         </button>
                         {job.Status === 'IN_PROGRESS' && (
                           <button onClick={() => updateJobStatus(job.JobID, 'COMPLETE')}
@@ -471,7 +480,7 @@ export default function Transfer() {
                       <div className="px-5 pb-5" style={{ borderTop: '1px solid #f9fafb' }}>
                         <div className="flex items-center justify-between pt-4 mb-3">
                           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#d1d5db' }}>
-                            รอบย้ายสินค้า ({jobDetail.trips.length} รอบ)
+                            การมอบหมาย ({jobDetail.trips.length} รอบ)
                           </p>
                           {job.Status !== 'COMPLETE' && job.Status !== 'CANCELLED' && (
                             <button onClick={() => openAssignModal(job.JobID)}
@@ -483,7 +492,7 @@ export default function Transfer() {
                         </div>
                         {jobDetail.trips.length === 0 ? (
                           <p className="text-sm text-center py-4" style={{ color: '#9ca3af' }}>
-                            ยังไม่มีรอบย้าย — กดมอบหมายเพื่อส่งรถ
+                            ยังไม่มีการมอบหมาย — กดมอบหมายเพื่อส่งรถ
                           </p>
                         ) : (
                           <div className="space-y-2">
@@ -926,7 +935,7 @@ export default function Transfer() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
           style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
           onMouseDown={e => { if (e.target === e.currentTarget) setShowAssignModal(false); }}>
-          <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
+          <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
               <h3 className="text-lg font-black" style={{ color: '#111827' }}>มอบหมายงาน</h3>
@@ -934,41 +943,47 @@ export default function Transfer() {
                 <X size={18} />
               </button>
             </div>
-            <div className="p-6 space-y-4">
-              <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>พนักงานขับรถ *</label>
-                <select value={assignForm.operatorId}
-                  onChange={e => setAssignForm(f => ({ ...f, operatorId: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                  <option value="">-- เลือกพนักงาน --</option>
-                  {users.map(u => (
-                    <option key={u.UserID} value={u.UserID}>{u.FullName} ({u.Username})</option>
-                  ))}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รถขนย้าย *</label>
-                <select value={assignForm.vehicleId}
-                  onChange={e => setAssignForm(f => ({ ...f, vehicleId: e.target.value }))}
-                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                  <option value="">-- เลือกรถ --</option>
-                  {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').map(v => (
-                    <option key={v.VehicleID} value={v.VehicleID}>
-                      {v.VehicleCode ? `[${v.VehicleCode}] ` : ''}{v.VehiclePlate}{v.VehicleType ? ` (${v.VehicleType})` : ''}
-                    </option>
-                  ))}
-                </select>
-                {vehicles.filter(v => (v.VehicleStatus || 'READY') !== 'READY').length > 0 && (
-                  <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>
-                    ไม่แสดงรถที่รอซ่อม/อุบัติเหตุ ({vehicles.filter(v => (v.VehicleStatus || 'READY') !== 'READY').length} คัน)
-                  </p>
-                )}
-              </div>
+            <div className="p-5 space-y-2 max-h-96 overflow-y-auto">
+              {assignForm.map((pair, idx) => (
+                <div key={idx} className="p-3 rounded-2xl space-y-2" style={{ background: '#f9fafb', border: '1px solid #f3f4f6' }}>
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-black" style={{ color: '#9ca3af' }}>คู่ที่ {idx + 1}</span>
+                    {assignForm.length > 1 && (
+                      <button onClick={() => removeAssignPair(idx)}
+                        className="w-6 h-6 rounded-lg flex items-center justify-center"
+                        style={{ background: '#fee2e2', color: '#ef4444' }}>
+                        <X size={12} />
+                      </button>
+                    )}
+                  </div>
+                  <select value={pair.operatorId} onChange={e => updateAssignPair(idx, 'operatorId', e.target.value)}
+                    className="w-full h-9 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
+                    <option value="">-- พนักงานขับรถ --</option>
+                    {users.map(u => (
+                      <option key={u.UserID} value={u.UserID}>{u.FullName} ({u.Username})</option>
+                    ))}
+                  </select>
+                  <select value={pair.vehicleId} onChange={e => updateAssignPair(idx, 'vehicleId', e.target.value)}
+                    className="w-full h-9 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
+                    <option value="">-- รถขนย้าย --</option>
+                    {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').map(v => (
+                      <option key={v.VehicleID} value={v.VehicleID}>
+                        {v.VehicleCode ? `[${v.VehicleCode}] ` : ''}{v.VehiclePlate}{v.VehicleType ? ` (${v.VehicleType})` : ''}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              ))}
               {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').length === 0 && (
                 <p className="text-xs font-semibold" style={{ color: '#dc2626' }}>
                   ไม่มีรถที่พร้อมใช้งาน — กรุณาตรวจสอบสถานะรถที่ tab รถ
                 </p>
               )}
+              <button onClick={addAssignPair}
+                className="w-full h-9 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
+                style={{ background: '#f0fdf4', color: '#10b981', border: '1.5px dashed #bbf7d0' }}>
+                <Plus size={13} /> เพิ่มรถ/คนขับ
+              </button>
             </div>
             <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
               <button onClick={() => setShowAssignModal(false)}
