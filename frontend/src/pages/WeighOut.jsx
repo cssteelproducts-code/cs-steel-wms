@@ -152,17 +152,19 @@ export default function WeighOut() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'done' ? 'bg-emerald-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <CheckCircle size={14} className="inline mr-1" />เสร็จสิ้นวันนี้ ({completed.length})
         </button>
-        <button onClick={() => { fetchPending(); fetchCompleted(); }}
-          className="ml-auto p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
-          <RefreshCw size={15} />
-        </button>
       </div>
 
       {tab === 'weigh' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Pending list */}
           <div className="card">
-            <h3 className="card-header">รอชั่งออก ({pending.length})</h3>
+            <h3 className="card-header flex items-center justify-between">
+              <span>รอชั่งออก ({pending.length})</span>
+              <button onClick={() => { fetchPending(); fetchCompleted(); }}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors">
+                <RefreshCw size={15} />
+              </button>
+            </h3>
             <div className="space-y-2 max-h-[700px] overflow-y-auto">
               {pending.map(trip => (
                 <div key={trip.TripID}
