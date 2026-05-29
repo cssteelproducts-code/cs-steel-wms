@@ -10,6 +10,7 @@ import Dashboard from './pages/Dashboard';
 import TripMonitor from './pages/TripMonitor';
 import Forecast from './pages/Forecast';
 import ShiftPlanning from './pages/ShiftPlanning';
+import FreightCalc from './pages/FreightCalc';
 import WeighIn from './pages/WeighIn';
 import DataStation from './pages/DataStation';
 import LoadingStation from './pages/LoadingStation';
@@ -79,6 +80,7 @@ function AppRoutes() {
         <Route path="transfer" element={<ProtectedRoute menuCode="TRANSFER"><Transfer /></ProtectedRoute>} />
         <Route path="transfer/driver" element={<ProtectedRoute menuCode="TRANSFER"><TransferDriver /></ProtectedRoute>} />
         <Route path="records" element={<ProtectedRoute menuCode="RECORDS"><Records /></ProtectedRoute>} />
+        <Route path="freight-calc" element={<ProtectedRoute menuCode="FREIGHT_CALC"><FreightCalc /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

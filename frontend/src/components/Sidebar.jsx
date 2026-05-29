@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit, CalendarClock
+  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit, CalendarClock, Truck
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -21,15 +21,16 @@ const menuItems = [
   { path: '/records', icon: ClipboardList, key: 'nav.records', code: 'RECORDS' },
   { key: 'section.warehouse', divider: true },
   { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
-  { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
   { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
+  { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
   { key: 'section.system', divider: true },
   { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
   { path: '/users', icon: Users, key: 'nav.users', code: 'USERS' },
   { path: '/master', icon: Settings, key: 'nav.master', code: 'MASTER' },
   { key: 'section.tools', divider: true },
   { path: '/shift-planning', icon: CalendarClock, key: 'nav.shiftPlanning', code: 'SHIFT_PLANNING' },
+  { path: '/freight-calc', icon: Truck, key: 'nav.freightCalc', code: 'FREIGHT_CALC' },
 ];
 
 export default function Sidebar({ isOpen, onClose }) {

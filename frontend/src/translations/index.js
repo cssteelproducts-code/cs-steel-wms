@@ -5,6 +5,7 @@ const translations = {
     'nav.monitor': 'Monitor รถ',
     'section.tools': 'เครื่องมือ',
     'nav.shiftPlanning': 'วางแผนกะพนักงาน',
+    'nav.freightCalc': 'คำนวณค่าขนส่ง',
     'nav.forecast': 'วิเคราะห์และวางแผน',
     'section.station': 'สถานี',
     'nav.weighIn': 'สถานีชั่งเข้า',
@@ -342,6 +343,9 @@ const translations = {
   en: {
     'nav.dashboard': 'Dashboard',
     'nav.monitor': 'Vehicle Monitor',
+    'section.tools': 'Tools',
+    'nav.shiftPlanning': 'Shift Planning',
+    'nav.freightCalc': 'Freight Calculator',
     'section.station': 'Stations',
     'nav.weighIn': 'Weigh In',
     'nav.dataStation': 'Data Station',

@@ -10,6 +10,7 @@ const MENUS = [
   { code: 'TRIP_MONITOR', name: 'Monitor รถ' },
   { code: 'FORECAST', name: 'วิเคราะห์และวางแผน' },
   { code: 'SHIFT_PLANNING', name: 'วางแผนกะพนักงาน' },
+  { code: 'FREIGHT_CALC', name: 'คำนวณค่าขนส่ง' },
   { code: 'WEIGH_IN', name: 'สถานีชั่งเข้า' },
   { code: 'DATA_STATION', name: 'สถานี Data' },
   { code: 'LOADING_STATION', name: 'สถานีขึ้นสินค้า' },

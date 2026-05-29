@@ -266,6 +266,17 @@ const runMigrations = async () => {
       SELECT r.RoleID, 'RECORDS', N'บันทึกการขึ้นสินค้า', 1, 1, 1, 1
       FROM WMS_Roles r WHERE r.RoleName='Admin';
     `);
+    // Ensure FREIGHT_CALC permission exists for Admin role
+    await pool.request().query(`
+      IF NOT EXISTS (
+        SELECT 1 FROM WMS_MenuPermissions mp
+        JOIN WMS_Roles r ON mp.RoleID=r.RoleID
+        WHERE r.RoleName='Admin' AND mp.MenuCode='FREIGHT_CALC'
+      )
+      INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
+      SELECT r.RoleID, 'FREIGHT_CALC', N'คำนวณค่าขนส่ง', 1, 1, 1, 1
+      FROM WMS_Roles r WHERE r.RoleName='Admin';
+    `);
     console.log('✅ Migrations applied');
   } catch (e) {
     console.warn('⚠ Migration warning:', e.message);
