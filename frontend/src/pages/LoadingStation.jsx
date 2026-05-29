@@ -134,7 +134,7 @@ export default function LoadingStation() {
                 <option value="">-- เลือกรถที่เข้าสถานี --</option>
                 {loadingTrips.map(t => (
                   <option key={t.TripID} value={t.TripID}>
-                    #{t.TripID} - {t.LicensePlate} ({t.CustomerName || '-'})
+                    {t.LicensePlate} - {t.CustomerName || '-'}
                   </option>
                 ))}
               </select>
