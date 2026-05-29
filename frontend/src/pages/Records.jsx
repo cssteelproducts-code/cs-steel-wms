@@ -161,12 +161,22 @@ export default function Records() {
       await api.put(`/records/${editRow.TripID}`, editForm);
       toast.success('อัปเดตข้อมูลสำเร็จ');
       setEditModal(false);
+      // clear timeline cache ของ trip นี้ เพื่อให้คำนวณใหม่เมื่อกดดู
+      setTimeline(t => { const n = { ...t }; delete n[editRow.TripID]; return n; });
       fetchRecords(page);
     } catch (err) {
       toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
     } finally {
       setSaving(false);
     }
+  };
+
+  const refreshTimeline = async (tripId) => {
+    setTimeline(t => { const n = { ...t }; delete n[tripId]; return n; });
+    try {
+      const res = await api.get(`/records/${tripId}/timeline`);
+      if (res.data.success) setTimeline(t => ({ ...t, [tripId]: res.data.data }));
+    } catch {}
   };
 
   const handleDelete = async () => {
@@ -342,9 +352,15 @@ export default function Records() {
                             <div className="mx-2 mb-2 rounded-xl border-2 border-blue-100 overflow-hidden"
                               style={{ background: 'linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%)', animation: 'fadeIn 0.25s ease-out' }}>
                               <div className="px-5 py-3">
-                                <p className="text-xs font-bold text-blue-600 uppercase tracking-wider mb-3 flex items-center gap-1.5">
-                                  ⏱ สรุปเวลาแต่ละขั้นตอน
-                                </p>
+                                <div className="flex items-center justify-between mb-3">
+                                  <p className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
+                                    ⏱ สรุปเวลาแต่ละขั้นตอน
+                                  </p>
+                                  <button onClick={() => refreshTimeline(row.TripID)}
+                                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors px-2 py-1 rounded-lg hover:bg-white">
+                                    <RefreshCw size={11} />คำนวณใหม่
+                                  </button>
+                                </div>
                                 {!tl ? (
                                   <p className="text-xs text-slate-400">กำลังโหลด...</p>
                                 ) : (
