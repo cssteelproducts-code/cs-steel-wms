@@ -339,6 +339,25 @@ router.post('/trips', async (req, res) => {
   }
 });
 
+router.put('/trips/:id/reassign', async (req, res) => {
+  try {
+    const { operatorId, vehicleId } = req.body;
+    if (!operatorId || !vehicleId) return res.status(400).json({ success: false, message: 'กรุณาเลือกพนักงานและรถ' });
+    const pool = getPool();
+    const r = await pool.request()
+      .input('id', sql.Int, req.params.id)
+      .input('op', sql.Int, operatorId)
+      .input('vid', sql.Int, vehicleId)
+      .query("UPDATE WMS_TransferTrips SET OperatorID=@op, VehicleID=@vid WHERE TripID=@id AND Status='PENDING'");
+    if (r.rowsAffected[0] === 0) {
+      return res.status(400).json({ success: false, message: 'ไม่สามารถแก้ไขได้ — รอบนี้เริ่มดำเนินการแล้ว' });
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 router.put('/trips/:id/source-entry', async (req, res) => {
   try {
     const pool = getPool();

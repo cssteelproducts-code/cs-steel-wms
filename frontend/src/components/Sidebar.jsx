@@ -22,6 +22,7 @@ const menuItems = [
   { key: 'section.warehouse', divider: true },
   { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
   { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
+  { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
   { key: 'section.system', divider: true },

@@ -21,6 +21,7 @@ const translations = {
     'nav.alerts': 'การแจ้งเตือน',
     'nav.eta': 'ETA / GPS รถ',
     'nav.transfer': 'ย้ายสินค้าภายใน',
+    'nav.transferDriver': 'บันทึกเวลาขนย้าย',
     'nav.users': 'จัดการผู้ใช้',
     'nav.master': 'ข้อมูลหลัก',
     // ── Header ───────────────────────────────────────
@@ -359,6 +360,7 @@ const translations = {
     'nav.alerts': 'Alerts',
     'nav.eta': 'ETA / GPS Tracking',
     'nav.transfer': 'Internal Transfer',
+    'nav.transferDriver': 'Transfer Log',
     'nav.users': 'User Management',
     'nav.master': 'Master Data',
     'header.profile': 'Profile / Change Password',
@@ -677,6 +679,7 @@ const translations = {
     'nav.alerts': 'သတိပေးချက်',
     'nav.eta': 'ETA / GPS ခြေရာခံ',
     'nav.transfer': 'ကုန်ပစ္စည်းရွှေ့ပြောင်း',
+    'nav.transferDriver': 'သယ်ယူပို့ဆောင်မှတ်တမ်း',
     'nav.users': 'အသုံးပြုသူ',
     'nav.master': 'အဓိကဒေတာ',
     // ── Header ───────────────────────────────────────

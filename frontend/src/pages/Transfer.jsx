@@ -45,6 +45,10 @@ export default function Transfer() {
   const [showAssignModal, setShowAssignModal] = useState(false);
   const [assignJobId, setAssignJobId] = useState(null);
   const [assignForm, setAssignForm] = useState([{ operatorId: '', vehicleId: '' }]);
+  const [showEditTripModal, setShowEditTripModal] = useState(false);
+  const [editTripId, setEditTripId] = useState(null);
+  const [editTripForm, setEditTripForm] = useState({ operatorId: '', vehicleId: '' });
+  const [savingEditTrip, setSavingEditTrip] = useState(false);
   const [editStation, setEditStation] = useState(null);
   const [editVehicle, setEditVehicle] = useState(null);
   const [savingJob, setSavingJob] = useState(false);
@@ -254,6 +258,37 @@ export default function Transfer() {
     setAssignJobId(jobId);
     setAssignForm([{ operatorId: '', vehicleId: '' }]);
     setShowAssignModal(true);
+  };
+
+  const openEditTripModal = (trip) => {
+    setEditTripId(trip.TripID);
+    setEditTripForm({ operatorId: String(trip.OperatorID || ''), vehicleId: String(trip.VehicleID || '') });
+    setShowEditTripModal(true);
+  };
+
+  const submitEditTrip = async () => {
+    if (!editTripForm.operatorId || !editTripForm.vehicleId) {
+      toast.error('กรุณาเลือกพนักงานและรถ');
+      return;
+    }
+    setSavingEditTrip(true);
+    try {
+      const res = await api.put(`/transfer/trips/${editTripId}/reassign`, {
+        operatorId: parseInt(editTripForm.operatorId),
+        vehicleId: parseInt(editTripForm.vehicleId),
+      });
+      if (res.data.success) {
+        toast.success('แก้ไขการมอบหมายสำเร็จ');
+        setShowEditTripModal(false);
+        const res2 = await api.get(`/transfer/jobs/${expandedJob}`);
+        if (res2.data.success) setJobDetail(res2.data);
+        loadJobs();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ไม่สามารถแก้ไขได้');
+    } finally {
+      setSavingEditTrip(false);
+    }
   };
 
   const addAssignPair = () => setAssignForm(f => [...f, { operatorId: '', vehicleId: '' }]);
@@ -524,11 +559,20 @@ export default function Transfer() {
                                       </div>
                                     )}
                                   </div>
-                                  <div className="text-right text-xs space-y-0.5 flex-shrink-0" style={{ color: '#9ca3af' }}>
-                                    {trip.SourceEntryTime && <div>เข้าต้น {dayjs(trip.SourceEntryTime).format('HH:mm')}</div>}
-                                    {trip.SourceExitTime  && <div>ออกต้น {dayjs(trip.SourceExitTime).format('HH:mm')}</div>}
-                                    {trip.DestEntryTime   && <div>เข้าปลาย {dayjs(trip.DestEntryTime).format('HH:mm')}</div>}
-                                    {trip.DestExitTime    && <div>ออกปลาย {dayjs(trip.DestExitTime).format('HH:mm')}</div>}
+                                  <div className="flex flex-col items-end gap-1 flex-shrink-0">
+                                    {trip.Status === 'PENDING' && (
+                                      <button onClick={() => openEditTripModal(trip)}
+                                        className="flex items-center gap-1 px-2 h-6 rounded-lg text-xs font-bold"
+                                        style={{ background: '#fff7ed', color: '#f59e0b', border: '1px solid #fde68a' }}>
+                                        <Edit2 size={11} /> แก้ไข
+                                      </button>
+                                    )}
+                                    <div className="text-right text-xs space-y-0.5" style={{ color: '#9ca3af' }}>
+                                      {trip.SourceEntryTime && <div>เข้าต้น {dayjs(trip.SourceEntryTime).format('HH:mm')}</div>}
+                                      {trip.SourceExitTime  && <div>ออกต้น {dayjs(trip.SourceExitTime).format('HH:mm')}</div>}
+                                      {trip.DestEntryTime   && <div>เข้าปลาย {dayjs(trip.DestEntryTime).format('HH:mm')}</div>}
+                                      {trip.DestExitTime    && <div>ออกปลาย {dayjs(trip.DestExitTime).format('HH:mm')}</div>}
+                                    </div>
                                   </div>
                                 </div>
                               );
@@ -995,6 +1039,60 @@ export default function Transfer() {
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
                 {savingAssign ? <><RefreshCw size={14} className="animate-spin" /> กำลังมอบหมาย...</> : <><UserCheck size={15} /> มอบหมาย</>}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── EDIT TRIP MODAL ── */}
+      {showEditTripModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          onMouseDown={e => { if (e.target === e.currentTarget) setShowEditTripModal(false); }}>
+          <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
+            onMouseDown={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
+              <h3 className="text-lg font-black" style={{ color: '#111827' }}>แก้ไขการมอบหมาย</h3>
+              <button onClick={() => setShowEditTripModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
+                <X size={18} />
+              </button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>พนักงานขับรถ *</label>
+                <select value={editTripForm.operatorId} onChange={e => setEditTripForm(f => ({ ...f, operatorId: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
+                  <option value="">-- เลือกพนักงาน --</option>
+                  {users.map(u => (
+                    <option key={u.UserID} value={u.UserID}>{u.FullName} ({u.Username})</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รถขนย้าย *</label>
+                <select value={editTripForm.vehicleId} onChange={e => setEditTripForm(f => ({ ...f, vehicleId: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
+                  <option value="">-- เลือกรถ --</option>
+                  {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').map(v => (
+                    <option key={v.VehicleID} value={v.VehicleID}>
+                      {v.VehicleCode ? `[${v.VehicleCode}] ` : ''}{v.VehiclePlate}{v.VehicleType ? ` (${v.VehicleType})` : ''}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <p className="text-xs" style={{ color: '#9ca3af' }}>แก้ไขได้เฉพาะรอบที่ยังไม่เริ่มออกเดินทาง</p>
+            </div>
+            <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
+              <button onClick={() => setShowEditTripModal(false)}
+                className="flex-1 h-11 rounded-2xl text-sm font-bold"
+                style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
+                ยกเลิก
+              </button>
+              <button onClick={submitEditTrip} disabled={savingEditTrip}
+                className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
+                style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
+                {savingEditTrip ? <><RefreshCw size={14} className="animate-spin" /> กำลังบันทึก...</> : <><Edit2 size={15} /> บันทึกการแก้ไข</>}
               </button>
             </div>
           </div>
