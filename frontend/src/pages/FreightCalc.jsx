@@ -356,9 +356,12 @@ export default function FreightCalc() {
                   <p className="text-xs text-slate-400">บาท / กม.</p>
                   <p className="text-lg font-black text-blue-600">{result.perKm > 0 ? fmt(result.perKm) : '—'}</p>
                 </div>
-                <div className="px-4 py-3 text-center">
-                  <p className="text-xs text-slate-400">บาท / ตัน</p>
-                  <p className="text-lg font-black text-emerald-600">{fmt(result.perTon)}</p>
+                <div className="px-4 py-3 flex flex-col justify-between">
+                  <div className="text-center">
+                    <p className="text-xs text-slate-400">บาท / ตัน</p>
+                    <p className="text-lg font-black text-emerald-600">{fmt(result.perTon)}</p>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">บรรทุก {result.capacity.toLocaleString()} กก. ({(result.capacity / 1000).toFixed(1)} ตัน)</p>
                 </div>
               </div>
 
@@ -392,7 +395,6 @@ export default function FreightCalc() {
                   <span className="text-sm font-bold text-slate-800">รวมทั้งหมด</span>
                   <span className="text-base font-black text-red-600">{fmt(result.total)} บ.</span>
                 </div>
-                <p className="text-xs text-slate-400">บรรทุก {result.capacity.toLocaleString()} กก. ({(result.capacity / 1000).toFixed(1)} ตัน)</p>
               </div>
             </div>
           ) : (
