@@ -117,15 +117,15 @@ export default function LoadingStation() {
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'exit' ? 'bg-amber-500 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
           <LogOut size={14} className="inline mr-1" />บันทึกออกสถานี ({activeRecords.length})
         </button>
-        <button onClick={fetchAll} className="ml-auto p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors">
-          <RefreshCw size={15} />
-        </button>
       </div>
 
       {tab === 'entry' && (
         <div className="card">
-          <h3 className="card-header flex items-center gap-2">
-            <LogIn size={18} className="text-blue-500" />บันทึกรถเข้าสถานีขึ้นสินค้า
+          <h3 className="card-header flex items-center justify-between gap-2">
+            <span className="flex items-center gap-2"><LogIn size={18} className="text-blue-500" />บันทึกรถเข้าสถานีขึ้นสินค้า</span>
+            <button onClick={fetchAll} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-slate-100 transition-colors">
+              <RefreshCw size={15} />
+            </button>
           </h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
