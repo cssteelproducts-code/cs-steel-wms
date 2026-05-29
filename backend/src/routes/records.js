@@ -119,7 +119,9 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
              (SELECT MIN(lr2.EntryTime) FROM WMS_LoadingRecord lr2 WHERE lr2.TripID = t.TripID) as FirstLoadEntry,
              (SELECT MAX(lr3.ExitTime)  FROM WMS_LoadingRecord lr3 WHERE lr3.TripID = t.TripID) as LastLoadExit,
              wo.WeighDateTime as WeighOutTime,
-             cr.CheckTime
+             cr.CheckTime,
+             cr.CheckStartTime,
+             cr.CheckDurationMinutes
       FROM WMS_Trips t
       LEFT JOIN WMS_WeighIn wi ON wi.TripID = t.TripID
       LEFT JOIN WMS_DataStation ds ON ds.TripID = t.TripID
@@ -152,9 +154,16 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
       ? Math.max(0, Math.round((new Date(t.WeighOutTime) - new Date(t.LastLoadExit)) / 60000))
       : null;
 
-    const checkerMinutes = t.WeighOutTime && t.CheckTime
-      ? Math.max(0, Math.round((new Date(t.CheckTime) - new Date(t.WeighOutTime)) / 60000))
-      : null;
+    // ใช้ CheckDurationMinutes ที่บันทึกไว้ตอนเช็คเกอร์ submit (ถูกต้องที่สุด)
+    // ถ้าไม่มี ใช้ CheckTime - CheckStartTime
+    // ถ้าไม่มี CheckStartTime ค่อย fallback เป็น CheckTime - WeighOutTime
+    const checkerMinutes = t.CheckDurationMinutes != null
+      ? t.CheckDurationMinutes
+      : t.CheckStartTime && t.CheckTime
+        ? Math.max(0, Math.round((new Date(t.CheckTime) - new Date(t.CheckStartTime)) / 60000))
+        : t.WeighOutTime && t.CheckTime
+          ? Math.max(0, Math.round((new Date(t.CheckTime) - new Date(t.WeighOutTime)) / 60000))
+          : null;
 
     res.json({
       success: true,
