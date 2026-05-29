@@ -91,19 +91,30 @@ router.get('/pending', authenticate, async (req, res) => {
     const result = await pool.request()
       .query(`
         SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt, t.TripDate,
-               t.DeliveryType, t.Priority, t.CustomerID,
+               t.DeliveryType, t.Priority, t.CustomerID, t.SOWaitStartedAt,
                vt.TypeName as VehicleType,
                w.WarehouseName,
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
                ds.PickDocumentNo,
-               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse
+               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse,
+               ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
+               ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
+               cur.StationName as CurrentStation
         FROM WMS_Trips t
         INNER JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
+        LEFT JOIN (
+          SELECT lr2.TripID, ls2.StationName,
+            ROW_NUMBER() OVER (PARTITION BY lr2.TripID ORDER BY lr2.EntryTime DESC) as rn
+          FROM WMS_LoadingRecord lr2 JOIN WMS_LoadingStations ls2 ON lr2.StationID = ls2.StationID
+          WHERE lr2.ExitTime IS NULL
+        ) cur ON cur.TripID = t.TripID AND cur.rn = 1
         WHERE t.Status NOT IN ('Complete', 'Cancelled')
         ORDER BY
           CASE t.Status WHEN 'WeighOut' THEN 0 WHEN 'Loading' THEN 1 WHEN 'WaitPick' THEN 2 WHEN 'Data' THEN 3 ELSE 4 END,
