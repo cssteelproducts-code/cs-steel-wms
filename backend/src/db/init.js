@@ -295,6 +295,63 @@ const initDatabase = async () => {
       ActualArrival DATETIME,
       Status NVARCHAR(20) DEFAULT 'PENDING'
     );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferVehicles' AND xtype='U')
+    CREATE TABLE WMS_TransferVehicles (
+      VehicleID INT IDENTITY(1,1) PRIMARY KEY,
+      VehiclePlate NVARCHAR(20) NOT NULL,
+      VehicleName NVARCHAR(100),
+      IsActive BIT NOT NULL DEFAULT 1,
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferStations' AND xtype='U')
+    CREATE TABLE WMS_TransferStations (
+      StationID INT IDENTITY(1,1) PRIMARY KEY,
+      StationCode NVARCHAR(20) NOT NULL,
+      StationName NVARCHAR(100) NOT NULL,
+      StationType NVARCHAR(20) DEFAULT 'BOTH',
+      SortOrder INT DEFAULT 0,
+      IsActive BIT NOT NULL DEFAULT 1,
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferJobs' AND xtype='U')
+    CREATE TABLE WMS_TransferJobs (
+      JobID INT IDENTITY(1,1) PRIMARY KEY,
+      JobCode NVARCHAR(30) NOT NULL,
+      SourceStationID INT,
+      DestStationID INT,
+      ProductDesc NVARCHAR(200) NOT NULL,
+      PlannedBundles INT,
+      PlannedWeightKg DECIMAL(12,3),
+      ActualBundles INT DEFAULT 0,
+      ActualWeightKg DECIMAL(12,3) DEFAULT 0,
+      Priority NVARCHAR(20) DEFAULT 'NORMAL',
+      Status NVARCHAR(20) DEFAULT 'PENDING',
+      Notes NVARCHAR(500),
+      CreatedBy INT,
+      CreatedAt DATETIME DEFAULT GETDATE(),
+      CompletedAt DATETIME
+    );
+
+    IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_TransferTrips' AND xtype='U')
+    CREATE TABLE WMS_TransferTrips (
+      TripID INT IDENTITY(1,1) PRIMARY KEY,
+      JobID INT NOT NULL,
+      TripNo INT NOT NULL DEFAULT 1,
+      OperatorID INT,
+      VehicleID INT,
+      Status NVARCHAR(20) DEFAULT 'PENDING',
+      SourceEntryTime DATETIME,
+      SourceExitTime DATETIME,
+      DestEntryTime DATETIME,
+      DestExitTime DATETIME,
+      BundleCount INT,
+      TotalWeightKg DECIMAL(12,3),
+      Notes NVARCHAR(500),
+      CreatedAt DATETIME DEFAULT GETDATE()
+    );
   `;
 
   // Execute table creation queries one by one

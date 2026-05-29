@@ -63,7 +63,7 @@ export default function Records() {
   const [deleting, setDeleting] = useState(false);
 
   // Expand / flip timeline
-  const [expandedTripId, setExpandedTripId] = useState(null);
+  const [expandedTripIds, setExpandedTripIds] = useState(new Set());
   const [loadingHistory, setLoadingHistory] = useState({});
   const [timeline, setTimeline] = useState({});
 
@@ -199,8 +199,12 @@ export default function Records() {
   };
 
   const toggleExpand = async (tripId) => {
-    if (expandedTripId === tripId) { setExpandedTripId(null); return; }
-    setExpandedTripId(tripId);
+    setExpandedTripIds(prev => {
+      const next = new Set(prev);
+      if (next.has(tripId)) { next.delete(tripId); return next; }
+      next.add(tripId);
+      return next;
+    });
     if (!timeline[tripId]) {
       try {
         const res = await api.get(`/records/${tripId}/timeline`);
@@ -307,7 +311,7 @@ export default function Records() {
                       <td className="px-4 py-2 text-center">
                         <button onClick={() => toggleExpand(row.TripID)}
                           className="p-0.5 rounded text-slate-400 hover:text-blue-500 transition-colors">
-                          {expandedTripId === row.TripID ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          {expandedTripIds.has(row.TripID) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
                       </td>
                       <td className="px-4 py-2 text-xs text-slate-400 font-mono">#{row.TripID}</td>
@@ -348,7 +352,7 @@ export default function Records() {
                         </div>
                       </td>
                     </tr>
-                    {expandedTripId === row.TripID && (() => {
+                    {expandedTripIds.has(row.TripID) && (() => {
                       const tl = timeline[row.TripID];
                       return (
                         <tr key={`exp-${row.TripID}`}>

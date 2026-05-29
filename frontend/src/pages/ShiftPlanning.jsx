@@ -23,14 +23,26 @@ function InputNum({ label, value, onChange, placeholder }) {
 }
 const toHrs = (min) => min <= 0 ? 0 : +(min / 60).toFixed(2);
 const fmtHr = (h) => h <= 0 ? '-' : `${h.toFixed(2)} ชม.`;
+const shiftLabel = (i) => String.fromCharCode(65 + i); // A, B, C, D...
 
 const DEFAULT_CONFIG = {
   s1: { start: '08:00', end: '17:00', emp: 10 },
-  s2a: { start: '08:00', end: '17:00', emp: 6 },
-  s2b: { start: '10:00', end: '19:00', emp: 4 },
+  s2: [
+    { start: '08:00', end: '17:00', emp: 6 },
+    { start: '10:00', end: '19:00', emp: 4 },
+  ],
 };
 
 const STORAGE_KEY = 'shiftplanning_v1';
+
+function migrateStored(stored) {
+  if (!stored.cfg) return stored;
+  const cfg = stored.cfg;
+  if (cfg.s2a && !cfg.s2) {
+    return { ...stored, cfg: { s1: cfg.s1, s2: [cfg.s2a, cfg.s2b].filter(Boolean) } };
+  }
+  return stored;
+}
 
 function calcOT1(endTime, cfg) {
   const endMin = toMin(endTime);
@@ -41,25 +53,36 @@ function calcOT1(endTime, cfg) {
 
 function calcOT2(endTime, cfg) {
   const endMin = toMin(endTime);
-  const cutA = toMin(cfg.s2a.end);
-  const cutB = toMin(cfg.s2b.end);
-  const otA = endMin > cutA ? toHrs((endMin - cutA) * cfg.s2a.emp) : 0;
-  const otB = endMin > cutB ? toHrs((endMin - cutB) * cfg.s2b.emp) : 0;
-  return +(otA + otB).toFixed(2);
+  let total = 0;
+  for (const s of cfg.s2) {
+    const cut = toMin(s.end);
+    if (endMin > cut) total += toHrs((endMin - cut) * s.emp);
+  }
+  return +total.toFixed(2);
 }
 
 export default function ShiftPlanning() {
-  const stored = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+  const stored = migrateStored(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
   const [cfg, setCfg] = useState(stored.cfg || DEFAULT_CONFIG);
   const [records, setRecords] = useState(stored.records || []);
   const [tab, setTab] = useState('records');
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
-  const [addMode, setAddMode] = useState('single'); // 'single' | 'range'
+  const [addMode, setAddMode] = useState('single');
   const [batchForm, setBatchForm] = useState({ fromDate: new Date().toISOString().slice(0, 10), toDate: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ cfg, records }));
   }, [cfg, records]);
+
+  const updateShift = (i, key, val) => setCfg(c => ({
+    ...c, s2: c.s2.map((s, idx) => idx === i ? { ...s, [key]: val } : s)
+  }));
+  const addShift = () => setCfg(c => ({
+    ...c, s2: [...c.s2, { start: '08:00', end: '17:00', emp: 0 }]
+  }));
+  const removeShift = (i) => setCfg(c => ({
+    ...c, s2: c.s2.filter((_, idx) => idx !== i)
+  }));
 
   const addRecord = () => {
     if (!form.date || !form.endTime) return;
@@ -122,6 +145,9 @@ export default function ShiftPlanning() {
     a.download = 'shift_ot_compare.csv'; a.click();
   };
 
+  const totalS2Emp = cfg.s2.reduce((s, x) => s + (x.emp || 0), 0);
+  const s2OTNote = cfg.s2.map((s, i) => `กะ ${shiftLabel(i)} หลัง ${s.end}`).join(', ');
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -131,7 +157,7 @@ export default function ShiftPlanning() {
             <Users size={20} className="text-indigo-500 flex-shrink-0" />
             วางแผนกะพนักงาน
           </h2>
-          <p className="text-slate-500 text-xs mt-0.5">เปรียบเทียบค่า OT ระหว่างกะเดียว vs 2 กะ</p>
+          <p className="text-slate-500 text-xs mt-0.5">เปรียบเทียบค่า OT ระหว่างกะเดียว vs {cfg.s2.length} กะ</p>
         </div>
         <div className="flex gap-2">
           <button onClick={exportCSV} className="btn-secondary text-sm flex items-center gap-1.5">
@@ -158,20 +184,42 @@ export default function ShiftPlanning() {
 
         {/* แบบที่ 2 */}
         <div className="card border-2 border-orange-100">
-          <p className="text-sm font-bold text-orange-600 mb-3 flex items-center gap-2"><Clock size={15} />แบบที่ 2 — 2 กะ</p>
+          <p className="text-sm font-bold text-orange-600 mb-3 flex items-center gap-2">
+            <Clock size={15} />แบบที่ 2 — {cfg.s2.length} กะ
+          </p>
           <div className="space-y-2">
-            <div className="grid grid-cols-3 gap-3">
-              <InputTime label="กะ A เริ่ม" value={cfg.s2a.start} onChange={v => setCfg(c => ({ ...c, s2a: { ...c.s2a, start: v } }))} />
-              <InputTime label="กะ A เลิก" value={cfg.s2a.end} onChange={v => setCfg(c => ({ ...c, s2a: { ...c.s2a, end: v } }))} />
-              <InputNum label="กะ A (คน)" value={cfg.s2a.emp} onChange={v => setCfg(c => ({ ...c, s2a: { ...c.s2a, emp: +v } }))} />
-            </div>
-            <div className="grid grid-cols-3 gap-3">
-              <InputTime label="กะ B เริ่ม" value={cfg.s2b.start} onChange={v => setCfg(c => ({ ...c, s2b: { ...c.s2b, start: v } }))} />
-              <InputTime label="กะ B เลิก" value={cfg.s2b.end} onChange={v => setCfg(c => ({ ...c, s2b: { ...c.s2b, end: v } }))} />
-              <InputNum label="กะ B (คน)" value={cfg.s2b.emp} onChange={v => setCfg(c => ({ ...c, s2b: { ...c.s2b, emp: +v } }))} />
-            </div>
+            {cfg.s2.map((s, i) => (
+              <div key={i} className="grid grid-cols-3 gap-3 relative group">
+                <InputTime label={`กะ ${shiftLabel(i)} เริ่ม`} value={s.start} onChange={v => updateShift(i, 'start', v)} />
+                <InputTime label={`กะ ${shiftLabel(i)} เลิก`} value={s.end} onChange={v => updateShift(i, 'end', v)} />
+                <div className="flex gap-1.5 items-end">
+                  <div className="flex-1">
+                    <InputNum label={`กะ ${shiftLabel(i)} (คน)`} value={s.emp} onChange={v => updateShift(i, 'emp', +v)} />
+                  </div>
+                  {cfg.s2.length > 1 && (
+                    <button
+                      onClick={() => removeShift(i)}
+                      className="mb-0.5 p-1.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
+                      title={`ลบกะ ${shiftLabel(i)}`}
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
           </div>
-          <p className="text-xs text-orange-400 mt-2">รวม {cfg.s2a.emp + cfg.s2b.emp} คน — OT กะ A หลัง {cfg.s2a.end}, กะ B หลัง {cfg.s2b.end}</p>
+          <div className="flex items-center justify-between mt-3">
+            <p className="text-xs text-orange-400">รวม {totalS2Emp} คน — OT {s2OTNote}</p>
+            {cfg.s2.length < 6 && (
+              <button
+                onClick={addShift}
+                className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-700 hover:bg-orange-50 px-2 py-1 rounded-lg transition-colors"
+              >
+                <Plus size={12} />เพิ่มกะ {shiftLabel(cfg.s2.length)}
+              </button>
+            )}
+          </div>
         </div>
       </div>
 
