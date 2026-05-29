@@ -25,7 +25,7 @@ router.get('/summary', authenticate, async (req, res) => {
           SUM(CASE WHEN Status NOT IN ('Complete','Cancelled') THEN 1 ELSE 0 END) as InProgress,
           SUM(CASE WHEN Status = 'Cancelled' THEN 1 ELSE 0 END) as Cancelled
         FROM WMS_Trips
-        WHERE CAST(TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        WHERE CAST(TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
       `),
       pool.request().query(`
         SELECT
@@ -35,12 +35,12 @@ router.get('/summary', authenticate, async (req, res) => {
           COUNT(*) as CompletedCount
         FROM WMS_WeighOut wo
         JOIN WMS_Trips t ON wo.TripID = t.TripID
-        WHERE CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        WHERE CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
       `),
       pool.request().query(`
         SELECT Status, COUNT(*) as Count
         FROM WMS_Trips
-        WHERE CAST(TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        WHERE CAST(TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         AND Status NOT IN ('Complete','Cancelled')
         GROUP BY Status
       `),
@@ -49,13 +49,14 @@ router.get('/summary', authenticate, async (req, res) => {
         FROM WMS_Trips t
         JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         JOIN WMS_WeighOut wo ON t.TripID = wo.TripID
-        WHERE CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+        WHERE CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
       `),
       pool.request().query(`
         SELECT TOP 10 t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
                t.SOWaitStartedAt,
                c.CustomerName, w.WarehouseName,
                vt.TypeName as VehicleType,
+               wi.WeighDateTime as WeighInTime,
                ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
                ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
                cur.StationName as CurrentStation
@@ -63,6 +64,7 @@ router.get('/summary', authenticate, async (req, res) => {
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
         LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
         LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
         LEFT JOIN (
@@ -71,7 +73,7 @@ router.get('/summary', authenticate, async (req, res) => {
           FROM WMS_LoadingRecord lr JOIN WMS_LoadingStations ls ON lr.StationID=ls.StationID
           WHERE lr.ExitTime IS NULL
         ) cur ON cur.TripID = t.TripID AND cur.rn = 1
-        WHERE t.TripDate >= CAST(GETUTCDATE() AS DATE)
+        WHERE t.TripDate >= CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         ORDER BY t.CreatedAt DESC
       `),
       pool.request().query(`
@@ -81,7 +83,7 @@ router.get('/summary', authenticate, async (req, res) => {
         LEFT JOIN WMS_DataStationTargets dst ON ls.StationID = dst.StationID
         LEFT JOIN WMS_Trips t ON dst.TripID = t.TripID
           AND t.Status IN ('WaitPick','Loading')
-          AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+          AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         WHERE ls.IsActive = 1
         GROUP BY ls.StationID, ls.StationName, ls.SortOrder
         HAVING COUNT(dst.TripID) > 0
@@ -92,13 +94,13 @@ router.get('/summary', authenticate, async (req, res) => {
                COUNT(*) as TotalTrips,
                SUM(CASE WHEN Status='Complete' THEN 1 ELSE 0 END) as Completed
         FROM WMS_Trips
-        WHERE TripDate >= DATEADD(DAY, -6, CAST(GETUTCDATE() AS DATE))
+        WHERE TripDate >= DATEADD(DAY, -6, CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
         GROUP BY CAST(TripDate AS DATE)
         ORDER BY TripDate
       `),
       pool.request().query(`
         SELECT
-          SUM(CASE WHEN CAST(TripDate AS DATE)=CAST(GETUTCDATE() AS DATE) THEN 1 ELSE 0 END) as TodayTotal,
+          SUM(CASE WHEN CAST(TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE) THEN 1 ELSE 0 END) as TodayTotal,
           SUM(CASE WHEN YEAR(TripDate)=YEAR(GETUTCDATE()) AND MONTH(TripDate)=MONTH(GETUTCDATE()) THEN 1 ELSE 0 END) as MonthTotal,
           SUM(CASE WHEN YEAR(TripDate)=YEAR(GETUTCDATE()) THEN 1 ELSE 0 END) as YearTotal
         FROM WMS_Trips
@@ -106,14 +108,14 @@ router.get('/summary', authenticate, async (req, res) => {
       pool.request().query(`
         SELECT
           SUM(CASE WHEN CAST(t.TripDate AS DATE)=
-            CASE DATEPART(WEEKDAY,GETUTCDATE()) WHEN 2 THEN DATEADD(DAY,-2,CAST(GETUTCDATE() AS DATE))
-            ELSE DATEADD(DAY,-1,CAST(GETUTCDATE() AS DATE)) END
+            CASE DATEPART(WEEKDAY,GETUTCDATE()) WHEN 2 THEN DATEADD(DAY,-2,CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
+            ELSE DATEADD(DAY,-1,CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)) END
           THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as YesterdayWeight,
           SUM(CASE WHEN CAST(t.TripDate AS DATE)=
             CASE DATEPART(WEEKDAY,GETUTCDATE())
-              WHEN 2 THEN DATEADD(DAY,-3,CAST(GETUTCDATE() AS DATE))
-              WHEN 3 THEN DATEADD(DAY,-3,CAST(GETUTCDATE() AS DATE))
-              ELSE DATEADD(DAY,-2,CAST(GETUTCDATE() AS DATE)) END
+              WHEN 2 THEN DATEADD(DAY,-3,CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
+              WHEN 3 THEN DATEADD(DAY,-3,CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
+              ELSE DATEADD(DAY,-2,CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)) END
           THEN ISNULL(wo.NetWeight,0) ELSE 0 END) as DayBeforeWeight
         FROM WMS_Trips t
         LEFT JOIN WMS_WeighOut wo ON wo.TripID = t.TripID
@@ -123,16 +125,16 @@ router.get('/summary', authenticate, async (req, res) => {
         SELECT vt.TypeName, COUNT(*) as Count
         FROM WMS_Trips t
         JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
-        WHERE CAST(t.TripDate AS DATE)=CAST(GETUTCDATE() AS DATE)
+        WHERE CAST(t.TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         GROUP BY vt.TypeName ORDER BY Count DESC
       `),
       pool.request().query(`
         SELECT
-          SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(GETUTCDATE() AS DATE)
+          SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
             AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) >= ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
             AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) <= ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
             THEN 1 ELSE 0 END) as TodayOnTime,
-          SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(GETUTCDATE() AS DATE)
+          SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
             AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
               OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
             THEN 1 ELSE 0 END) as TodayOvertime,
@@ -191,13 +193,13 @@ router.get('/summary', authenticate, async (req, res) => {
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
         LEFT JOIN WMS_WeighOut wo ON t.TripID=wo.TripID
         LEFT JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
-        WHERE t.Status='Complete' AND CAST(t.CompletedAt AS DATE)=CAST(GETUTCDATE() AS DATE)
+        WHERE t.Status='Complete' AND CAST(t.CompletedAt AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         ORDER BY t.CompletedAt DESC
       `),
       pool.request().query(`
         SELECT
           ISNULL(DeliveryType,'') as DeliveryType,
-          SUM(CASE WHEN CAST(TripDate AS DATE)=CAST(GETUTCDATE() AS DATE) THEN 1 ELSE 0 END) as TodayCount,
+          SUM(CASE WHEN CAST(TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE) THEN 1 ELSE 0 END) as TodayCount,
           SUM(CASE WHEN YEAR(TripDate)=YEAR(GETUTCDATE()) AND MONTH(TripDate)=MONTH(GETUTCDATE()) THEN 1 ELSE 0 END) as MonthCount,
           SUM(CASE WHEN YEAR(TripDate)=YEAR(GETUTCDATE()) THEN 1 ELSE 0 END) as YearCount
         FROM WMS_Trips
@@ -210,7 +212,7 @@ router.get('/summary', authenticate, async (req, res) => {
           AVG(lr.DurationMinutes) as AvgMinutes,
           MIN(lr.DurationMinutes) as MinMinutes,
           MAX(lr.DurationMinutes) as MaxMinutes,
-          SUM(CASE WHEN CAST(lr.EntryTime AS DATE)=CAST(GETUTCDATE() AS DATE) THEN 1 ELSE 0 END) as TodayTrips
+          SUM(CASE WHEN CAST(lr.EntryTime AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE) THEN 1 ELSE 0 END) as TodayTrips
         FROM WMS_LoadingRecord lr
         JOIN WMS_LoadingStations ls ON lr.StationID=ls.StationID
         WHERE lr.ExitTime IS NOT NULL
@@ -362,7 +364,7 @@ router.get('/live', authenticate, async (req, res) => {
         WHERE lr.ExitTime IS NULL
       ) cur ON cur.TripID = t.TripID AND cur.rn = 1
       WHERE t.Status NOT IN ('Complete','Cancelled')
-      AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+      AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
       ORDER BY t.CreatedAt DESC
     `);
     setCache('dashboard:live', result.recordset, 8000); // 8s cache
@@ -438,7 +440,7 @@ router.get('/station-vehicles', authenticate, async (req, res) => {
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         WHERE ls.StationName = @stationName
           AND lr.ExitTime IS NULL
-          AND CAST(t.TripDate AS DATE) = CAST(GETUTCDATE() AS DATE)
+          AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         ORDER BY lr.EntryTime
       `);
     res.json({ success: true, data: result.recordset, stationName });

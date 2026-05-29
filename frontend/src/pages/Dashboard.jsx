@@ -77,7 +77,10 @@ const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKe
         </div>
         {/* Back */}
         <div style={{ ...face, transform: 'rotateY(180deg)' }}>
-          <p className="text-xs font-semibold text-slate-600 mb-2">{title} — ประเภทขนส่ง</p>
+          <div className="mb-2">
+            <p className="text-xs font-semibold text-slate-600 leading-tight">{title}</p>
+            <p className="text-xs font-normal text-slate-400">ประเภทขนส่ง</p>
+          </div>
           <div className="space-y-2">
             {DELIVERY_TYPES.map(t => {
               const row = (deliveryStats || []).find(r => r.DeliveryType === t.key);
@@ -446,7 +449,7 @@ export default function Dashboard() {
                   <td className="table-cell hide-mobile">{trip.CustomerName || '-'}</td>
                   <td className="table-cell hide-mobile">{trip.WarehouseName || '-'}</td>
                   <td className="table-cell"><StatusBadge trip={trip} /></td>
-                  <td className="table-cell hide-mobile">{formatDateTime(trip.CreatedAt)}</td>
+                  <td className="table-cell hide-mobile">{formatDateTime(trip.WeighInTime)}</td>
                 </tr>
               ))}
               {!data?.recentActivity?.length && (
