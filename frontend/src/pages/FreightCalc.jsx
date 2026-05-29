@@ -89,13 +89,43 @@ export default function FreightCalc() {
 
   const [vehType, setVehType] = useState('4ล้อ');
   const [origin, setOrigin] = useState('');
+  const [originLat, setOriginLat] = useState('');
+  const [originLng, setOriginLng] = useState('');
   const [destination, setDestination] = useState('');
   const [distKm, setDistKm] = useState('');
-  const [fuelPrice, setFuelPrice] = useState('');
+  const [distLoading, setDistLoading] = useState(false);
   const [toll, setToll] = useState('');
   const [others, setOthers] = useState('');
   const [hasOT, setHasOT] = useState(false);
   const [result, setResult] = useState(null);
+
+  const handleOriginChange = (e) => {
+    const name = e.target.value;
+    const wh = warehouses.find(w => w.WarehouseName === name);
+    setOrigin(name);
+    setOriginLat(wh?.GpsLat ? String(wh.GpsLat) : '');
+    setOriginLng(wh?.GpsLng ? String(wh.GpsLng) : '');
+    setDistKm('');
+    setResult(null);
+  };
+
+  useEffect(() => {
+    if (!originLat || !originLng || !destLat || !destLng) return;
+    setDistLoading(true);
+    setDistKm('');
+    setResult(null);
+    fetch(
+      `https://router.project-osrm.org/route/v1/driving/${originLng},${originLat};${destLng},${destLat}?overview=false`
+    )
+      .then(r => r.json())
+      .then(data => {
+        if (data.routes?.[0]) {
+          setDistKm((data.routes[0].distance / 1000).toFixed(1));
+        }
+      })
+      .catch(() => {})
+      .finally(() => setDistLoading(false));
+  }, [originLat, originLng, destLat, destLng]);
 
   const saveStd = useCallback(() => {
     setStd(stdDraft);
@@ -142,15 +172,16 @@ export default function FreightCalc() {
   };
 
   const reset = () => {
-    setOrigin(''); setDestination(''); setDistKm('');
-    setFuelPrice(''); setToll(''); setOthers('');
+    setOrigin(''); setOriginLat(''); setOriginLng('');
+    setDestination(''); setDistKm('');
+    setToll(''); setOthers('');
     setHasOT(false); setResult(null);
     setDestQuery(''); setDestLat(''); setDestLng('');
   };
 
   const calculate = () => {
     const cfg = std.vehicles[vehType];
-    const fuel = num(fuelPrice) || std.fuelPrice;
+    const fuel = std.fuelPrice;
     const dist = num(distKm);
     const fuelCost = dist > 0 ? (dist * 2 / cfg.kmPerL) * fuel : 0;
     const laborCost = hasOT && cfg.laborOT > 0 ? cfg.laborOT : cfg.labor;
@@ -227,12 +258,15 @@ export default function FreightCalc() {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="label">ต้นทาง (คลังสินค้า)</label>
-                <select value={origin} onChange={e => setOrigin(e.target.value)} className="input-field">
+                <select value={origin} onChange={handleOriginChange} className="input-field">
                   <option value="">-- เลือกคลังสินค้า --</option>
                   {warehouses.map(w => (
                     <option key={w.WarehouseID} value={w.WarehouseName}>{w.WarehouseName}</option>
                   ))}
                 </select>
+                {origin && !originLat && (
+                  <p className="text-xs mt-1 text-amber-500">คลังนี้ยังไม่มีพิกัด GPS — กรุณาตั้งค่าใน Master</p>
+                )}
               </div>
               <div>
                 <label className="label">ปลายทาง <span className="text-red-500">*</span></label>
@@ -250,21 +284,24 @@ export default function FreightCalc() {
           {/* ค่าใช้จ่าย */}
           <div className="card">
             <p className="card-header">ค่าใช้จ่าย</p>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div>
-                <label className="label">ระยะทาง (กม. ทางเดียว)</label>
-                <input type="number" min="0" value={distKm}
-                  onChange={e => { setDistKm(e.target.value); setResult(null); }}
-                  className="input-field" placeholder="0" />
-                {num(distKm) > 0 && (
-                  <p className="text-xs mt-1 text-slate-400">ไป-กลับ {(num(distKm) * 2).toLocaleString()} กม.</p>
-                )}
-              </div>
-              <div>
-                <label className="label">น้ำมัน (บ./ลิตร)</label>
-                <input type="number" min="0" step="0.1" value={fuelPrice}
-                  onChange={e => { setFuelPrice(e.target.value); setResult(null); }}
-                  className="input-field" placeholder={`${std.fuelPrice} (STD)`} />
+                <label className="label">ระยะทาง (ไป-กลับ)</label>
+                <div className="input-field flex items-center gap-2 bg-slate-50 cursor-default select-none">
+                  {distLoading ? (
+                    <>
+                      <Loader size={13} className="text-slate-400 animate-spin flex-shrink-0" />
+                      <span className="text-slate-400 text-sm">กำลังคำนวณ...</span>
+                    </>
+                  ) : num(distKm) > 0 ? (
+                    <>
+                      <span className="font-semibold text-slate-800">{(num(distKm) * 2).toLocaleString()} กม.</span>
+                      <span className="text-slate-400 text-xs">({distKm} × 2)</span>
+                    </>
+                  ) : (
+                    <span className="text-slate-400 text-sm">เลือกต้นทาง + ปลายทาง</span>
+                  )}
+                </div>
               </div>
               <div>
                 <label className="label">ค่าทางด่วน (บ.)</label>
