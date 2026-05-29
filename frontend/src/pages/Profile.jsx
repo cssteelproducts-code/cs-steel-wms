@@ -2,7 +2,33 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { User, Lock, Eye, EyeOff, Save, ShieldCheck } from 'lucide-react';
+import { Lock, Eye, EyeOff, Save, ShieldCheck } from 'lucide-react';
+
+const FIELD_KEY = { current: 'currentPassword', new: 'newPassword', confirm: 'confirmPassword' };
+
+function PassInput({ field, label, form, setForm, show, setShow }) {
+  const key = FIELD_KEY[field];
+  return (
+    <div>
+      <label className="label">{label}</label>
+      <div className="relative">
+        <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+        <input
+          type={show[field] ? 'text' : 'password'}
+          value={form[key]}
+          onChange={e => setForm(p => ({ ...p, [key]: e.target.value }))}
+          className="input-field pl-9 pr-10"
+          placeholder={label}
+          autoComplete={field === 'current' ? 'current-password' : 'new-password'}
+        />
+        <button type="button" onClick={() => setShow(p => ({ ...p, [field]: !p[field] }))}
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors">
+          {show[field] ? <EyeOff size={15} /> : <Eye size={15} />}
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Profile() {
   const { user } = useAuth();
@@ -36,27 +62,6 @@ export default function Profile() {
     }
   };
 
-  const PassInput = ({ id, label, field }) => (
-    <div>
-      <label className="label">{label}</label>
-      <div className="relative">
-        <Lock size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-        <input
-          type={show[field] ? 'text' : 'password'}
-          value={form[field === 'current' ? 'currentPassword' : field === 'new' ? 'newPassword' : 'confirmPassword']}
-          onChange={e => setForm(p => ({ ...p, [field === 'current' ? 'currentPassword' : field === 'new' ? 'newPassword' : 'confirmPassword']: e.target.value }))}
-          className="input-field pl-9 pr-10"
-          placeholder={label}
-          autoComplete={field === 'current' ? 'current-password' : 'new-password'}
-        />
-        <button type="button" onClick={() => setShow(p => ({ ...p, [field]: !p[field] }))}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 transition-colors">
-          {show[field] ? <EyeOff size={15} /> : <Eye size={15} />}
-        </button>
-      </div>
-    </div>
-  );
-
   return (
     <div className="space-y-6">
 
@@ -88,11 +93,11 @@ export default function Profile() {
           <h3 className="card-header mb-0">เปลี่ยนรหัสผ่าน</h3>
         </div>
         <form onSubmit={handleChange} className="space-y-4">
-          <PassInput field="current" label="รหัสผ่านปัจจุบัน" />
+          <PassInput field="current" label="รหัสผ่านปัจจุบัน" form={form} setForm={setForm} show={show} setShow={setShow} />
           <div className="border-t border-slate-100 pt-4">
-            <PassInput field="new" label="รหัสผ่านใหม่" />
+            <PassInput field="new" label="รหัสผ่านใหม่" form={form} setForm={setForm} show={show} setShow={setShow} />
           </div>
-          <PassInput field="confirm" label="ยืนยันรหัสผ่านใหม่" />
+          <PassInput field="confirm" label="ยืนยันรหัสผ่านใหม่" form={form} setForm={setForm} show={show} setShow={setShow} />
           {form.confirmPassword && form.newPassword !== form.confirmPassword && (
             <p className="text-xs text-red-500">รหัสผ่านไม่ตรงกัน</p>
           )}
