@@ -7,20 +7,18 @@ import { formatDateTime, formatDuration, getStatusConfig, getEffectiveStatusConf
 import toast from 'react-hot-toast';
 
 const FLOW_STEPS = [
-  { key: 'WeighIn',  label: 'ชั่งเข้า',       shortLabel: '1.ชั่งเข้า' },
-  { key: 'Data',     label: 'บันทึกสถานี',     shortLabel: '2.DataStation' },
-  { key: 'WaitPick', label: 'รอเอกสาร Pick',   shortLabel: '3.รอPick' },
-  { key: 'Loading',  label: 'ขึ้นสินค้า',      shortLabel: '4.ขึ้นสินค้า' },
-  { key: 'WeighOut', label: 'รอชั่งออก',       shortLabel: '5.ชั่งออก' },
-  { key: 'Checker',  label: 'เช็คเกอร์',       shortLabel: '6.เช็คเกอร์' },
-  { key: 'Complete', label: 'เสร็จสิ้น',       shortLabel: '✓ เสร็จ' }
+  { keys: ['WeighIn'],          primaryKey: 'WeighIn',  shortLabel: '1.ชั่งเข้า',         showCount: false },
+  { keys: ['Data', 'WaitPick'], primaryKey: 'WaitPick', shortLabel: '2.เอกสาร Pick',      showCount: true  },
+  { keys: ['Loading'],          primaryKey: 'Loading',  shortLabel: '3.สถานีขึ้นสินค้า', showCount: true  },
+  { keys: ['WeighOut'],         primaryKey: 'WeighOut', shortLabel: '4.ชั่งออก',          showCount: false },
+  { keys: ['Checker'],          primaryKey: 'Checker',  shortLabel: '5.เช็คเกอร์',        showCount: true  },
 ];
 
 export default function TripMonitor() {
   const [trips, setTrips] = useState([]);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
-  const [filter, setFilter] = useState('all');
+  const [filter, setFilter] = useState(-1); // -1 = all; index into FLOW_STEPS
   const [statusFilter, setStatusFilter] = useState('all');
 
   const fetchTrips = async () => {
@@ -44,7 +42,7 @@ export default function TripMonitor() {
   }, []);
 
   const filtered = trips.filter(t => {
-    if (filter !== 'all' && t.Status !== filter) return false;
+    if (filter !== -1 && !FLOW_STEPS[filter].keys.includes(t.Status)) return false;
     if (statusFilter !== 'all') {
       const label = getEffectiveStatusConfig(t).label;
       if (label !== statusFilter) return false;
@@ -54,25 +52,24 @@ export default function TripMonitor() {
 
   const effectiveStatusOptions = [...new Set(trips.map(t => getEffectiveStatusConfig(t).label))].sort();
 
-  const statusCounts = FLOW_STEPS.slice(0, 6).reduce((acc, step) => {
-    acc[step.key] = trips.filter(t => t.Status === step.key).length;
-    return acc;
-  }, {});
+  const stepCounts = FLOW_STEPS.map(step =>
+    trips.filter(t => step.keys.includes(t.Status)).length
+  );
 
   return (
     <div className="space-y-6">
       {/* Header with stats */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
+      <div className="flex items-center justify-between gap-3">
+        <div className="min-w-0">
           <h2 className="page-title flex items-center gap-2">
-            <Activity size={24} className="text-emerald-500" />
+            <Activity size={20} className="text-emerald-500 flex-shrink-0" />
             Monitor รถในคลัง
           </h2>
-          <p className="text-slate-500 text-sm mt-1">
+          <p className="text-slate-500 text-xs mt-0.5">
             {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
           </p>
         </div>
-        <button onClick={fetchTrips} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white self-start">
+        <button onClick={fetchTrips} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white flex-shrink-0">
           <RefreshCw size={15} />
         </button>
       </div>
@@ -97,19 +94,26 @@ export default function TripMonitor() {
       </div>
 
       {/* Flow summary */}
-      <div className="grid grid-cols-3 sm:grid-cols-6 gap-2">
-        {FLOW_STEPS.slice(0, 6).map(step => {
-          const count = statusCounts[step.key] || 0;
-          const cfg = getStatusConfig(step.key);
+      <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+        {FLOW_STEPS.map((step, idx) => {
+          const count = stepCounts[idx];
+          const cfg = getStatusConfig(step.primaryKey);
+          const active = filter === idx;
           return (
-            <button key={step.key}
-              onClick={() => setFilter(filter === step.key ? 'all' : step.key)}
-              className={`p-2.5 rounded-xl border text-center transition-all ${filter === step.key
+            <button key={step.shortLabel}
+              onClick={() => setFilter(active ? -1 : idx)}
+              className={`p-2.5 rounded-xl border text-center transition-all ${active
                 ? `${cfg.color} scale-105`
                 : 'border-slate-200 bg-white hover:border-slate-300 hover:bg-slate-50'}`}>
-              <div className={`text-xl font-bold ${filter === step.key ? '' : count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
-                {count}
-              </div>
+              {step.showCount ? (
+                <div className={`text-xl font-bold ${active ? '' : count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>
+                  {count}
+                </div>
+              ) : (
+                <div className="h-7 flex items-center justify-center">
+                  <div className={`w-2 h-2 rounded-full ${active ? cfg.dot : 'bg-slate-300'}`} />
+                </div>
+              )}
               <div className="text-xs mt-0.5 text-slate-500 leading-tight">{step.shortLabel}</div>
             </button>
           );
@@ -128,7 +132,7 @@ export default function TripMonitor() {
         <div className="space-y-3">
           {filtered.map(trip => {
             const cfg = getStatusConfig(trip.Status);
-            const currentStep = FLOW_STEPS.findIndex(s => s.key === trip.Status);
+            const currentStep = FLOW_STEPS.findIndex(s => s.keys.includes(trip.Status));
 
             return (
               <div key={trip.TripID}
@@ -136,8 +140,11 @@ export default function TripMonitor() {
                 <div className="flex items-start justify-between gap-4">
                   {/* Main info */}
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-3 flex-wrap">
+                    {/* Row 1: ทะเบียน / ความเร่งด่วน / สถานะ */}
+                    <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-slate-900 font-bold text-xl">{trip.LicensePlate}</span>
+                      <span className="text-slate-400 text-xs font-mono">#{trip.TripID}</span>
+                      <PriorityBadge priority={trip.Priority} />
                       <StatusBadge trip={trip} />
                       {trip.CurrentStation && (
                         <span className="text-xs bg-amber-50 text-amber-600 border border-amber-200 px-2 py-0.5 rounded-full">
@@ -146,30 +153,28 @@ export default function TripMonitor() {
                       )}
                     </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-x-6 gap-y-1 mt-3 text-sm">
-                      <div><span className="text-slate-400">Trip:</span> <span className="text-slate-600">#{trip.TripID}</span></div>
-                      <div><span className="text-slate-400">ประเภท:</span> <span className="text-slate-600">{trip.VehicleType || '-'}</span></div>
-                      <div><span className="text-slate-400">คลัง:</span> <span className="text-slate-600">{trip.WarehouseName || '-'}</span></div>
-                      <div><span className="text-slate-400">ลูกค้า:</span> <span className="text-blue-500">{trip.CustomerName || '-'}</span></div>
-                      {trip.WeighInTime && (
-                        <div><span className="text-slate-400">ชั่งเข้า:</span> <span className="text-slate-600">{formatDateTime(trip.WeighInTime)}</span></div>
-                      )}
-                      {trip.DeliveryType && (
-                        <div><span className="text-slate-400">ขนส่ง:</span> <span className="text-indigo-500 font-medium">{trip.DeliveryType}</span></div>
-                      )}
-                      {trip.Priority && (
-                        <div className="flex items-center gap-2"><span className="text-slate-400">ความเร่งด่วน:</span> <PriorityBadge priority={trip.Priority} /></div>
-                      )}
-                      {trip.PickDocumentNo && (
-                        <div><span className="text-slate-400">เอกสาร:</span> <span className="text-purple-500 font-mono">{trip.PickDocumentNo}</span></div>
-                      )}
+                    {/* Row 2: ประเภทรถ | ขนส่ง | ลูกค้า */}
+                    <div className="grid grid-cols-3 gap-x-4 mt-2 text-sm">
+                      <div><span className="text-slate-400">ประเภทรถ: </span><span className="text-slate-600">{trip.VehicleType || '-'}</span></div>
+                      <div><span className="text-slate-400">ขนส่ง: </span><span className="text-indigo-500 font-medium">{trip.DeliveryType || '-'}</span></div>
+                      <div className="truncate"><span className="text-slate-400">ลูกค้า: </span><span className="text-blue-500">{trip.CustomerName || '-'}</span></div>
+                    </div>
+
+                    {/* Row 3: คลัง | ชั่งเข้า | เวลาในคลัง */}
+                    <div className="grid grid-cols-3 gap-x-4 mt-1 text-sm">
+                      <div><span className="text-slate-400">คลัง: </span><span className="text-slate-600">{trip.WarehouseName || '-'}</span></div>
+                      <div><span className="text-slate-400">ชั่งเข้า: </span><span className="text-slate-600">{trip.WeighInTime ? formatDateTime(trip.WeighInTime) : '-'}</span></div>
                       <div>
-                        <span className="text-slate-400">เวลาในคลัง:</span>
-                        <span className={`ml-1 font-medium ${trip.MinutesInWarehouse > 120 ? 'text-red-500' : trip.MinutesInWarehouse > 60 ? 'text-amber-500' : 'text-emerald-500'}`}>
+                        <span className="text-slate-400">เวลาในคลัง: </span>
+                        <span className={`font-medium ${trip.MinutesInWarehouse > 120 ? 'text-red-500' : trip.MinutesInWarehouse > 60 ? 'text-amber-500' : 'text-emerald-500'}`}>
                           {formatDuration(trip.MinutesInWarehouse)}
                         </span>
                       </div>
                     </div>
+
+                    {trip.PickDocumentNo && (
+                      <div className="mt-1 text-xs"><span className="text-slate-400">เอกสาร: </span><span className="text-purple-500 font-mono">{trip.PickDocumentNo}</span></div>
+                    )}
                     {trip.TargetStations && (
                       <div className="mt-2 flex flex-wrap gap-1.5 items-center">
                         <span className="text-slate-400 text-xs">สถานีขึ้นสินค้า:</span>
@@ -190,15 +195,15 @@ export default function TripMonitor() {
                   {/* Progress */}
                   <div className="hidden md:flex flex-col items-end gap-1">
                     <div className="flex items-center gap-1">
-                      {FLOW_STEPS.slice(0, 6).map((step, idx) => (
-                        <div key={step.key} className="flex items-center">
+                      {FLOW_STEPS.map((step, idx) => (
+                        <div key={step.shortLabel} className="flex items-center">
                           <div className={`w-2 h-2 rounded-full ${idx < currentStep ? 'bg-emerald-500' : idx === currentStep ? `${cfg.dot} animate-pulse` : 'bg-slate-300'}`} />
-                          {idx < 5 && <div className={`w-4 h-0.5 ${idx < currentStep ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
+                          {idx < 4 && <div className={`w-4 h-0.5 ${idx < currentStep ? 'bg-emerald-500' : 'bg-slate-200'}`} />}
                         </div>
                       ))}
                     </div>
                     <div className={`text-xs ${cfg.color.split(' ').find(c => c.startsWith('text')) || 'text-slate-400'}`}>
-                      ขั้นตอน {currentStep + 1}/6
+                      ขั้นตอน {currentStep + 1}/5
                     </div>
                   </div>
                 </div>
