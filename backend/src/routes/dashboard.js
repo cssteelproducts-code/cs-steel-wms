@@ -428,20 +428,24 @@ router.get('/station-vehicles', authenticate, async (req, res) => {
       .input('stationName', sql.NVarChar, stationName)
       .query(`
         SELECT
-          t.TripID, t.LicensePlate, t.VehicleTypeID,
+          t.TripID, t.LicensePlate, t.Status,
           c.CustomerName,
           vt.TypeName AS VehicleTypeName,
-          lr.EntryTime,
-          DATEDIFF(MINUTE, lr.EntryTime, GETUTCDATE()) AS MinutesIn
-        FROM WMS_LoadingRecord lr
-        JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
-        JOIN WMS_Trips t ON lr.TripID = t.TripID
+          wi.WeighDateTime AS WeighInTime,
+          DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) AS MinutesIn,
+          CASE WHEN lr_cur.TripID IS NOT NULL THEN 1 ELSE 0 END AS IsLoading
+        FROM WMS_DataStationTargets dst
+        JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
+        JOIN WMS_Trips t ON dst.TripID = t.TripID
         LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        LEFT JOIN WMS_LoadingRecord lr_cur ON lr_cur.TripID = t.TripID
+          AND lr_cur.StationID = ls.StationID AND lr_cur.ExitTime IS NULL
         WHERE ls.StationName = @stationName
-          AND lr.ExitTime IS NULL
+          AND t.Status IN ('WaitPick', 'Loading')
           AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
-        ORDER BY lr.EntryTime
+        ORDER BY t.CreatedAt
       `);
     res.json({ success: true, data: result.recordset, stationName });
   } catch (err) {

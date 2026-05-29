@@ -488,35 +488,29 @@ export default function Dashboard() {
                 <LoadingSpinner size="md" text="กำลังโหลด..." />
               </div>
             ) : stationPopup.vehicles.length === 0 ? (
-              <p className="text-center text-slate-400 py-8">ไม่มีรถในสถานีขณะนี้</p>
+              <p className="text-center text-slate-400 py-8">ไม่มีรถที่มอบหมายสถานีนี้</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200">
                     <th className="table-header text-left py-2 px-2">ทะเบียน</th>
-                    <th className="table-header text-left py-2 px-2">ชื่อลูกค้า</th>
-                    <th className="table-header text-left py-2 px-2">ประเภทรถ</th>
-                    <th className="table-header text-left py-2 px-2">เวลาเข้า</th>
-                    <th className="table-header text-right py-2 px-2">อยู่มา</th>
+                    <th className="table-header text-left py-2 px-2">ลูกค้า</th>
+                    <th className="table-header text-left py-2 px-2">ชั่งเข้า</th>
+                    <th className="table-header text-right py-2 px-2">สถานะ</th>
                   </tr>
                 </thead>
                 <tbody>
                   {stationPopup.vehicles.map(v => (
                     <tr key={v.TripID} className="border-b border-slate-100 hover:bg-slate-50">
-                      <td className="py-2 px-2 font-medium text-slate-800">{v.LicensePlate}</td>
-                      <td className="py-2 px-2 text-slate-600">{v.CustomerName || '-'}</td>
-                      <td className="py-2 px-2 text-slate-500 text-xs">{v.VehicleTypeName || '-'}</td>
+                      <td className="py-2 px-2 font-bold text-slate-800">{v.LicensePlate}</td>
+                      <td className="py-2 px-2 text-slate-600 text-xs">{v.CustomerName || '-'}</td>
                       <td className="py-2 px-2 text-slate-500 text-xs">
-                        {v.EntryTime ? dayjs(v.EntryTime).format('HH:mm') : '-'}
+                        {v.WeighInTime ? dayjs(v.WeighInTime).format('HH:mm') : '-'}
                       </td>
                       <td className="py-2 px-2 text-right">
-                        <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
-                          v.MinutesIn > 60 ? 'bg-red-50 text-red-600' :
-                          v.MinutesIn > 30 ? 'bg-amber-50 text-amber-600' :
-                          'bg-emerald-50 text-emerald-600'
-                        }`}>
-                          {v.MinutesIn != null ? `${v.MinutesIn} นาที` : '-'}
-                        </span>
+                        {v.IsLoading
+                          ? <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-amber-50 text-amber-600">กำลังขึ้นสินค้า</span>
+                          : <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-blue-50 text-blue-600">รอขึ้นสินค้า</span>}
                       </td>
                     </tr>
                   ))}
