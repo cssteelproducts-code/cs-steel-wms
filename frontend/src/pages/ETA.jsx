@@ -259,7 +259,7 @@ export default function ETA() {
                     <div className="text-right flex-shrink-0">
                       <div>{fmtEta(v)}</div>
                       {v.lastUpdate && (
-                        <div className="text-gray-300 text-[10px] mt-0.5">{formatDateTime(v.lastUpdate)}</div>
+                        <div className="text-gray-400 text-xs mt-0.5">{formatDateTime(v.lastUpdate)}</div>
                       )}
                     </div>
                   </div>
