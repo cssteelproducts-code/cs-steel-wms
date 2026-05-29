@@ -47,6 +47,7 @@ export default function Records() {
   const [editForm, setEditForm] = useState({});
   const [saving, setSaving] = useState(false);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [refreshingTimeline, setRefreshingTimeline] = useState({});
 
   // Customer search in edit modal
   const [custQuery, setCustQuery] = useState('');
@@ -172,11 +173,14 @@ export default function Records() {
   };
 
   const refreshTimeline = async (tripId) => {
+    setRefreshingTimeline(r => ({ ...r, [tripId]: true }));
     setTimeline(t => { const n = { ...t }; delete n[tripId]; return n; });
     try {
       const res = await api.get(`/records/${tripId}/timeline`);
       if (res.data.success) setTimeline(t => ({ ...t, [tripId]: res.data.data }));
-    } catch {}
+    } catch {} finally {
+      setRefreshingTimeline(r => ({ ...r, [tripId]: false }));
+    }
   };
 
   const handleDelete = async () => {
@@ -357,8 +361,10 @@ export default function Records() {
                                     ⏱ สรุปเวลาแต่ละขั้นตอน
                                   </p>
                                   <button onClick={() => refreshTimeline(row.TripID)}
-                                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors px-2 py-1 rounded-lg hover:bg-white">
-                                    <RefreshCw size={11} />คำนวณใหม่
+                                    disabled={refreshingTimeline[row.TripID]}
+                                    className="flex items-center gap-1 text-xs text-slate-400 hover:text-blue-500 transition-colors px-2 py-1 rounded-lg hover:bg-white disabled:opacity-50">
+                                    <RefreshCw size={11} className={refreshingTimeline[row.TripID] ? 'animate-spin' : ''} />
+                                    {refreshingTimeline[row.TripID] ? 'กำลังคำนวณ...' : 'คำนวณใหม่'}
                                   </button>
                                 </div>
                                 {!tl ? (
