@@ -342,7 +342,7 @@ router.get('/trips/active', async (req, res) => {
       .query(`
         SELECT t.*, j.JobCode, j.ProductDesc, j.SourceStationID, j.DestStationID,
           ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
-          j.PlannedBundles, j.PlannedWeightKg,
+          j.PlannedBundles, j.PlannedWeightKg, j.Priority,
           v.VehiclePlate
         FROM WMS_TransferTrips t
         JOIN WMS_TransferJobs j ON t.JobID=j.JobID

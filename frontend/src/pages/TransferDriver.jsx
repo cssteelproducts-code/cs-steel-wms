@@ -2,8 +2,13 @@ import { useState, useEffect, useCallback } from 'react';
 import api from '../services/api';
 import {
   ArrowRight, CheckCircle2, Circle, RefreshCw,
-  ChevronRight, Truck
+  ChevronRight, Truck, Star
 } from 'lucide-react';
+
+const PRIORITY_CONFIG = {
+  URGENT: { label: 'ด่วนมาก', color: '#ef4444', bg: '#fef2f2' },
+  HIGH:   { label: 'เร่งด่วน', color: '#f59e0b', bg: '#fffbeb' },
+};
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
@@ -126,16 +131,25 @@ export default function TransferDriver() {
           {/* Multiple trip selector */}
           {activeTrips.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
-              {activeTrips.map(t => (
-                <button key={t.TripID}
-                  onClick={() => { setSelectedTripId(t.TripID); setShowWeight(false); }}
-                  className="flex-shrink-0 px-3 h-8 rounded-xl text-xs font-bold transition-all"
-                  style={selectedTripId === t.TripID
-                    ? { background: '#dc2626', color: '#fff' }
-                    : { background: '#f3f4f6', color: '#6b7280' }}>
-                  {t.JobCode} รอบ {t.TripNo}
-                </button>
-              ))}
+              {[...activeTrips].sort((a, b) => {
+                const rank = { URGENT: 0, HIGH: 1, NORMAL: 2 };
+                return (rank[a.Priority] ?? 2) - (rank[b.Priority] ?? 2);
+              }).map(t => {
+                const pc = PRIORITY_CONFIG[t.Priority];
+                return (
+                  <button key={t.TripID}
+                    onClick={() => { setSelectedTripId(t.TripID); setShowWeight(false); }}
+                    className="flex-shrink-0 flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
+                    style={selectedTripId === t.TripID
+                      ? { background: '#dc2626', color: '#fff' }
+                      : pc
+                        ? { background: pc.bg, color: pc.color, border: `1.5px solid ${pc.color}40` }
+                        : { background: '#f3f4f6', color: '#6b7280' }}>
+                    {pc && <Star size={10} fill="currentColor" />}
+                    {t.JobCode} รอบ {t.TripNo}
+                  </button>
+                );
+              })}
             </div>
           )}
 
@@ -157,7 +171,16 @@ export default function TransferDriver() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#9ca3af' }}>งานหมายเลข</div>
-                  <div className="text-lg font-black" style={{ color: '#111827' }}>{trip.JobCode}</div>
+                  <div className="flex items-center gap-2">
+                    <div className="text-lg font-black" style={{ color: '#111827' }}>{trip.JobCode}</div>
+                    {PRIORITY_CONFIG[trip.Priority] && (
+                      <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-black"
+                        style={{ background: PRIORITY_CONFIG[trip.Priority].bg, color: PRIORITY_CONFIG[trip.Priority].color }}>
+                        <Star size={10} fill="currentColor" />
+                        {PRIORITY_CONFIG[trip.Priority].label}
+                      </span>
+                    )}
+                  </div>
                 </div>
                 {trip.VehiclePlate && (
                   <div className="text-right">
