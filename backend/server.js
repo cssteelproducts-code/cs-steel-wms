@@ -632,6 +632,10 @@ const runMigrations = async () => {
         CountedBy NVARCHAR(100), CountedAt DATETIME DEFAULT GETDATE(), Notes NVARCHAR(300)
       );
     `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_StockCountItems_SessionID' AND object_id=OBJECT_ID('WMS_StockCountItems'))
+        CREATE INDEX IX_StockCountItems_SessionID ON WMS_StockCountItems (SessionID);
+    `);
     console.log('✅ WMS_StockCountItems schema OK');
   } catch (e) {
     console.warn('⚠ WMS_StockCountItems schema migration:', e.message);
