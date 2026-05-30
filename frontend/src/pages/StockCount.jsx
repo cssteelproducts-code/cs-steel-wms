@@ -438,8 +438,8 @@ export default function StockCount() {
                         <button onClick={() => handleStatusChange('OPEN')} disabled={saving || !items.length}
                           className="btn-primary text-sm">
                           {selectedIds.size > 0 && selectedIds.size < items.length
-                            ? `เปิดรอบ (เลือก ${selectedIds.size} รายการ)`
-                            : 'เปิดรอบ (ส่งให้หน้างาน)'}
+                            ? `ส่งให้หน้างาน (เลือก ${selectedIds.size} รายการ)`
+                            : 'ส่งให้หน้างาน'}
                         </button>
                       </>
                     )}
