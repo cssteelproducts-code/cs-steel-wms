@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { ScanLine, MapPin, CheckCircle2, XCircle, RotateCcw, History } from 'lucide-react';
 import toast from 'react-hot-toast';
+import api from '../services/api';
 
 const SKU_TYPES = ['ขายดี', 'ขายน้อยต่อเนื่อง', 'ขายน้อยไม่ต่อเนื่อง'];
 
@@ -20,12 +21,8 @@ export default function LocationCheck() {
 
   const loadTodayLog = async () => {
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/location-check/today', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (data.success) setTodayLog(data.data);
+      const res = await api.get('/location-check/today');
+      if (res.data.success) setTodayLog(res.data.data);
     } catch {}
   };
 
@@ -36,20 +33,18 @@ export default function LocationCheck() {
     setLocationInfo(null);
     setResult(null);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch(`/api/location-check/lookup?code=${encodeURIComponent(code)}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      if (data.success) {
-        setLocationInfo(data.data);
+      const res = await api.get(`/location-check/lookup?code=${encodeURIComponent(code)}`);
+      if (res.data.success) {
+        setLocationInfo(res.data.data);
       } else {
-        toast.error(data.message);
+        toast.error(res.data.message);
         setLocationCode('');
         setTimeout(() => inputRef.current?.focus(), 50);
       }
-    } catch {
-      toast.error('เกิดข้อผิดพลาดในการเชื่อมต่อ');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ไม่พบ Location นี้ในระบบ');
+      setLocationCode('');
+      setTimeout(() => inputRef.current?.focus(), 50);
     }
     setSearching(false);
   };
@@ -58,15 +53,12 @@ export default function LocationCheck() {
     if (!locationInfo || saving) return;
     setSaving(true);
     try {
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/location-check/quick', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ locationCode: locationInfo.LocationCode, actualSKUType: skuType })
+      const res = await api.post('/location-check/quick', {
+        locationCode: locationInfo.LocationCode,
+        actualSKUType: skuType
       });
-      const data = await res.json();
-      if (data.success) {
-        setResult(data);
+      if (res.data.success) {
+        setResult(res.data);
         loadTodayLog();
         setTimeout(() => {
           setResult(null);
@@ -75,10 +67,10 @@ export default function LocationCheck() {
           setTimeout(() => inputRef.current?.focus(), 50);
         }, 2500);
       } else {
-        toast.error(data.message);
+        toast.error(res.data.message);
       }
-    } catch {
-      toast.error('เกิดข้อผิดพลาดในการบันทึก');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึก');
     }
     setSaving(false);
   };
@@ -109,7 +101,7 @@ export default function LocationCheck() {
             value={locationCode}
             onChange={e => setLocationCode(e.target.value.toUpperCase())}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            placeholder="เช่น PDC-003-006"
+            placeholder="เช่น 02-01-02"
             autoComplete="off"
             className="flex-1 text-lg font-mono rounded-xl px-4 py-3"
             style={{
