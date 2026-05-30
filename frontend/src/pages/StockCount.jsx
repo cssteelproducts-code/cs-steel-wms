@@ -48,6 +48,8 @@ export default function StockCount() {
   const [createModal, setCreateModal] = useState(false);
   const [createForm, setCreateForm] = useState({ countDate: dayjs().format('YYYY-MM-DD'), notes: '' });
   const [search, setSearch] = useState('');
+  const [filterWH, setFilterWH] = useState('');
+  const [filterLoc, setFilterLoc] = useState('');
   const [entriesModal, setEntriesModal] = useState(null); // item object
   const [entries, setEntries] = useState([]);
 
@@ -252,10 +254,16 @@ export default function StockCount() {
   // ── Derived data ──────────────────────────────────────
 
   const items = sessionData?.items || [];
+  const warehouses = [...new Set(items.map(i => i.Warehouse).filter(Boolean))].sort();
+  const locations = [...new Set(items.filter(i => !filterWH || i.Warehouse === filterWH).map(i => i.Location).filter(Boolean))].sort();
   const filteredItems = items.filter(i => {
-    if (!search) return true;
-    const q = search.toLowerCase();
-    return i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q) || i.Location?.toLowerCase().includes(q);
+    if (filterWH && i.Warehouse !== filterWH) return false;
+    if (filterLoc && i.Location !== filterLoc) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      if (!i.ItemCode?.toLowerCase().includes(q) && !i.ItemName?.toLowerCase().includes(q) && !i.Location?.toLowerCase().includes(q)) return false;
+    }
+    return true;
   });
 
   const stats = {
@@ -437,12 +445,30 @@ export default function StockCount() {
                 ))}
               </div>
 
-              {/* Search */}
-              <div className="relative">
-                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input value={search} onChange={e => setSearch(e.target.value)}
-                  placeholder="ค้นหา รหัส / ชื่อสินค้า / Location..."
-                  className="input-field pl-8 text-sm" />
+              {/* Filters */}
+              <div className="flex gap-2 flex-wrap">
+                <select value={filterWH} onChange={e => { setFilterWH(e.target.value); setFilterLoc(''); }}
+                  className="input-field py-1.5 text-sm w-auto min-w-36">
+                  <option value="">— คลังทั้งหมด —</option>
+                  {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
+                </select>
+                <select value={filterLoc} onChange={e => setFilterLoc(e.target.value)}
+                  className="input-field py-1.5 text-sm w-auto min-w-40">
+                  <option value="">— Location ทั้งหมด —</option>
+                  {locations.map(l => <option key={l} value={l}>{l}</option>)}
+                </select>
+                <div className="relative flex-1 min-w-48">
+                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input value={search} onChange={e => setSearch(e.target.value)}
+                    placeholder="ค้นหา รหัส / ชื่อสินค้า..."
+                    className="input-field pl-8 text-sm" />
+                </div>
+                {(filterWH || filterLoc || search) && (
+                  <button onClick={() => { setFilterWH(''); setFilterLoc(''); setSearch(''); }}
+                    className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors">
+                    ล้าง
+                  </button>
+                )}
               </div>
 
               {(importing || detailLoading) ? (
