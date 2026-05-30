@@ -788,14 +788,29 @@ router.get('/internal-vehicles/template', authenticate, (req, res) => {
   res.send(buf);
 });
 
+function parseExcelDate(val) {
+  if (!val && val !== 0) return null;
+  if (val instanceof Date) return isNaN(val) ? null : val.toISOString().split('T')[0];
+  const s = String(val).trim();
+  if (!s) return null;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+  // Excel serial number → date
+  if (/^\d+(\.\d+)?$/.test(s)) {
+    const parsed = XLSX.SSF.parse_date_code(parseFloat(s));
+    if (parsed) return `${parsed.y}-${String(parsed.m).padStart(2,'0')}-${String(parsed.d).padStart(2,'0')}`;
+  }
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d.toISOString().split('T')[0];
+}
+
 router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.single('file'), async (req, res) => {
   if (!req.file) return res.status(400).json({ success: false, message: 'ไม่พบไฟล์' });
   try {
     await ensureIVTable();
     const pool = getPool();
-    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer', cellDates: true });
     const ws = wb.Sheets[wb.SheetNames[0]];
-    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1, raw: false });
 
     const existingRes = await pool.request().query('SELECT LicensePlate FROM WMS_InternalVehicles');
     const existingPlates = new Set(existingRes.recordset.map(r => r.LicensePlate));
@@ -812,10 +827,10 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
         name: name ? String(name).trim() : null,
         category: category ? String(category).trim() : null,
         insuranceCompany: insuranceCompany ? String(insuranceCompany).trim() : null,
-        insuranceExpiry: insuranceExpiry ? String(insuranceExpiry).trim() : null,
+        insuranceExpiry: parseExcelDate(insuranceExpiry),
         actCompany: actCompany ? String(actCompany).trim() : null,
-        actExpiry: actExpiry ? String(actExpiry).trim() : null,
-        taxExpiry: taxExpiry ? String(taxExpiry).trim() : null,
+        actExpiry: parseExcelDate(actExpiry),
+        taxExpiry: parseExcelDate(taxExpiry),
       });
       existingPlates.add(p);
     }
