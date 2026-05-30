@@ -260,6 +260,8 @@ export default function Dashboard() {
             <div className="space-y-2">
               {[...data.stationLoad].filter(s => s.ActiveTrucks > 0).sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })).map(st => {
                 const pct = Math.min(st.ActiveTrucks * 20, 100);
+                const barColor = st.ActiveTrucks > 5 ? 'bg-red-400' : st.ActiveTrucks >= 3 ? 'bg-amber-400' : 'bg-emerald-400';
+                const textColor = st.ActiveTrucks > 5 ? 'text-red-600' : st.ActiveTrucks >= 3 ? 'text-amber-600' : 'text-emerald-600';
                 return (
                   <div key={st.StationName}
                     className={st.ActiveTrucks > 0 ? 'cursor-pointer hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors' : ''}
@@ -267,13 +269,13 @@ export default function Dashboard() {
                   >
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="text-sm text-slate-700">{st.StationName}</span>
-                      <span className={`text-sm font-semibold ${st.ActiveTrucks > 0 ? 'text-amber-600' : 'text-emerald-600'}`}>
+                      <span className={`text-sm font-semibold ${textColor}`}>
                         {st.ActiveTrucks > 0 ? `${st.ActiveTrucks} คัน` : '✓ ว่าง'}
                       </span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100">
                       <div
-                        className={`h-2 rounded-full transition-all ${st.ActiveTrucks > 0 ? 'bg-amber-400' : 'bg-emerald-400'}`}
+                        className={`h-2 rounded-full transition-all ${barColor}`}
                         style={{ width: `${st.ActiveTrucks > 0 ? Math.max(pct, 8) : 100}%` }}
                       />
                     </div>
