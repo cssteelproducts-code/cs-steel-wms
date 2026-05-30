@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck
+  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck, ArrowLeftRight
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -23,6 +23,8 @@ const menuItems = [
   { key: 'section.logistics', divider: true },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
+  { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
+  { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
   { key: 'section.system', divider: true },
   { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
   { path: '/users', icon: Users, key: 'nav.users', code: 'USERS' },
