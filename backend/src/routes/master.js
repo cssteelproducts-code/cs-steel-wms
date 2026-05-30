@@ -680,6 +680,7 @@ async function ensureIVTable() {
       )
     `);
     await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='InsuranceCompany') ALTER TABLE WMS_InternalVehicles ADD InsuranceCompany NVARCHAR(200)`);
+    await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='InsuranceType') ALTER TABLE WMS_InternalVehicles ADD InsuranceType NVARCHAR(100)`);
     await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='ActCompany') ALTER TABLE WMS_InternalVehicles ADD ActCompany NVARCHAR(200)`);
     await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='TaxExpiry') ALTER TABLE WMS_InternalVehicles ADD TaxExpiry DATE`);
     await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='BedWidth') ALTER TABLE WMS_InternalVehicles ADD BedWidth DECIMAL(8,2)`);
@@ -704,7 +705,7 @@ router.post('/internal-vehicles', authenticate, requireAdmin, async (req, res) =
     await ensureIVTable();
     const { licensePlate, vehicleName, vehicleCategory, actExpiry, insuranceExpiry, inspectionExpiry,
             otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes,
-            insuranceCompany, actCompany, taxExpiry, bedWidth, bedLength, bedHeight, payloadKg } = req.body;
+            insuranceCompany, actCompany, taxExpiry, bedWidth, bedLength, bedHeight, payloadKg, insuranceType } = req.body;
     if (!licensePlate) return res.status(400).json({ success: false, message: 'กรุณาระบุทะเบียนรถ' });
     await getPool().request()
       .input('LP', sql.NVarChar, licensePlate.trim())
@@ -721,6 +722,7 @@ router.post('/internal-vehicles', authenticate, requireAdmin, async (req, res) =
       .input('ECD', sql.Date, estimatedCompletionDate || null)
       .input('NT', sql.NVarChar, notes || null)
       .input('IC', sql.NVarChar, insuranceCompany || null)
+      .input('IT', sql.NVarChar, insuranceType || null)
       .input('AC', sql.NVarChar, actCompany || null)
       .input('TE', sql.Date, taxExpiry || null)
       .input('BW', sql.Decimal(8,2), bedWidth || null)
@@ -730,8 +732,8 @@ router.post('/internal-vehicles', authenticate, requireAdmin, async (req, res) =
       .query(`INSERT INTO WMS_InternalVehicles
         (LicensePlate,VehicleName,VehicleCategory,ActExpiry,InsuranceExpiry,InspectionExpiry,
          OtherDocName,OtherDocExpiry,VehicleStatus,Symptoms,RepairEntryDate,EstimatedCompletionDate,Notes,
-         InsuranceCompany,ActCompany,TaxExpiry,BedWidth,BedLength,BedHeight,PayloadKg)
-        VALUES(@LP,@VN,@VC,@AE,@IE,@IPE,@ODN,@ODE,@VS,@SY,@RED,@ECD,@NT,@IC,@AC,@TE,@BW,@BL,@BH,@PK)`);
+         InsuranceCompany,InsuranceType,ActCompany,TaxExpiry,BedWidth,BedLength,BedHeight,PayloadKg)
+        VALUES(@LP,@VN,@VC,@AE,@IE,@IPE,@ODN,@ODE,@VS,@SY,@RED,@ECD,@NT,@IC,@IT,@AC,@TE,@BW,@BL,@BH,@PK)`);
     res.json({ success: true, message: `เพิ่มรถ "${licensePlate}" สำเร็จ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -741,7 +743,7 @@ router.put('/internal-vehicles/:id', authenticate, requireAdmin, async (req, res
     await ensureIVTable();
     const { licensePlate, vehicleName, vehicleCategory, actExpiry, insuranceExpiry, inspectionExpiry,
             otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes, isActive,
-            insuranceCompany, actCompany, taxExpiry, bedWidth, bedLength, bedHeight, payloadKg } = req.body;
+            insuranceCompany, actCompany, taxExpiry, bedWidth, bedLength, bedHeight, payloadKg, insuranceType } = req.body;
     await getPool().request()
       .input('ID', sql.Int, req.params.id)
       .input('LP', sql.NVarChar, licensePlate)
@@ -759,6 +761,7 @@ router.put('/internal-vehicles/:id', authenticate, requireAdmin, async (req, res
       .input('NT', sql.NVarChar, notes || null)
       .input('IA', sql.Bit, isActive !== undefined ? isActive : 1)
       .input('IC', sql.NVarChar, insuranceCompany || null)
+      .input('IT', sql.NVarChar, insuranceType || null)
       .input('AC', sql.NVarChar, actCompany || null)
       .input('TE', sql.Date, taxExpiry || null)
       .input('BW', sql.Decimal(8,2), bedWidth || null)
@@ -770,7 +773,7 @@ router.put('/internal-vehicles/:id', authenticate, requireAdmin, async (req, res
         ActExpiry=@AE,InsuranceExpiry=@IE,InspectionExpiry=@IPE,
         OtherDocName=@ODN,OtherDocExpiry=@ODE,VehicleStatus=@VS,
         Symptoms=@SY,RepairEntryDate=@RED,EstimatedCompletionDate=@ECD,
-        Notes=@NT,IsActive=@IA,InsuranceCompany=@IC,ActCompany=@AC,TaxExpiry=@TE,
+        Notes=@NT,IsActive=@IA,InsuranceCompany=@IC,InsuranceType=@IT,ActCompany=@AC,TaxExpiry=@TE,
         BedWidth=@BW,BedLength=@BL,BedHeight=@BH,PayloadKg=@PK,UpdatedAt=GETDATE()
         WHERE VehicleID=@ID`);
     res.json({ success: true, message: 'แก้ไขข้อมูลรถสำเร็จ' });
@@ -789,11 +792,11 @@ router.delete('/internal-vehicles/:id', authenticate, requireAdmin, async (req, 
 router.get('/internal-vehicles/template', authenticate, (req, res) => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['ทะเบียนรถ*', 'ชื่อ/รุ่นรถ', 'ประเภทรถ', 'บริษัท ประกันภัย', 'ประกันภัย สิ้นอายุ (YYYY-MM-DD)', 'บริษัท พรบ.', 'พ.ร.บ. สิ้นอายุ (YYYY-MM-DD)', 'ภาษีรถ ต่อภาษี (YYYY-MM-DD)', 'กว้างกะบะ (ม.)', 'ยาวกะบะ (ม.)', 'สูงกะบะ (ม.)', 'น้ำหนักบรรทุก (กก.)'],
-    ['กก-1234', 'ISUZU NPR 130', 'รถยก', 'วิริยะประกันภัย', '2025-06-30', 'เมืองไทยประกันภัย', '2025-12-31', '2025-12-31', 2.0, 4.5, 1.8, 5000],
-    ['ขข-5678', 'HINO 300', 'รถลาก', 'ทิพยประกันภัย', '2026-03-31', 'กรุงไทยพานิชประกันภัย', '2026-03-31', '2026-03-31', 2.3, 6.0, 2.0, 8000],
+    ['ทะเบียนรถ*', 'ชื่อ/รุ่นรถ', 'ประเภทรถ', 'บริษัท ประกันภัย', 'ประเภทประกัน', 'ประกันภัย สิ้นอายุ (YYYY-MM-DD)', 'บริษัท พรบ.', 'พ.ร.บ. สิ้นอายุ (YYYY-MM-DD)', 'ภาษีรถ ต่อภาษี (YYYY-MM-DD)', 'กว้างกะบะ (ม.)', 'ยาวกะบะ (ม.)', 'สูงกะบะ (ม.)', 'น้ำหนักบรรทุก (กก.)'],
+    ['กก-1234', 'ISUZU NPR 130', 'รถยก', 'วิริยะประกันภัย', 'ชั้น 1', '2025-06-30', 'เมืองไทยประกันภัย', '2025-12-31', '2025-12-31', 2.0, 4.5, 1.8, 5000],
+    ['ขข-5678', 'HINO 300', 'รถลาก', 'ทิพยประกันภัย', 'ชั้น 2', '2026-03-31', 'กรุงไทยพานิชประกันภัย', '2026-03-31', '2026-03-31', 2.3, 6.0, 2.0, 8000],
   ]);
-  ws['!cols'] = [14, 20, 14, 22, 28, 22, 28, 28, 16, 14, 14, 20].map(w => ({ wch: w }));
+  ws['!cols'] = [14, 20, 14, 22, 14, 28, 22, 28, 28, 16, 14, 14, 20].map(w => ({ wch: w }));
   XLSX.utils.book_append_sheet(wb, ws, 'รถขนส่งภายใน');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   res.setHeader('Content-Disposition', 'attachment; filename="internal_vehicles_template.xlsx"');
@@ -831,7 +834,7 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
     const newRows = [];
     let skipped = 0;
     for (let i = 1; i < rows.length; i++) {
-      const [plate, name, category, insuranceCompany, insuranceExpiry, actCompany, actExpiry, taxExpiry, bedWidth, bedLength, bedHeight, payloadKg] = rows[i];
+      const [plate, name, category, insuranceCompany, insuranceType, insuranceExpiry, actCompany, actExpiry, taxExpiry, bedWidth, bedLength, bedHeight, payloadKg] = rows[i];
       if (!plate) { skipped++; continue; }
       const p = String(plate).trim();
       if (existingPlates.has(p)) { skipped++; continue; }
@@ -841,6 +844,7 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
         name: name ? String(name).trim() : null,
         category: category ? String(category).trim() : null,
         insuranceCompany: insuranceCompany ? String(insuranceCompany).trim() : null,
+        insuranceType: insuranceType ? String(insuranceType).trim() : null,
         insuranceExpiry: parseExcelDate(insuranceExpiry),
         actCompany: actCompany ? String(actCompany).trim() : null,
         actExpiry: parseExcelDate(actExpiry),
@@ -859,6 +863,7 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
         .input('VehicleName', sql.NVarChar, row.name)
         .input('VehicleCategory', sql.NVarChar, row.category)
         .input('InsuranceCompany', sql.NVarChar, row.insuranceCompany)
+        .input('InsuranceType', sql.NVarChar, row.insuranceType)
         .input('InsuranceExpiry', sql.Date, row.insuranceExpiry || null)
         .input('ActCompany', sql.NVarChar, row.actCompany)
         .input('ActExpiry', sql.Date, row.actExpiry || null)
@@ -868,9 +873,9 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
         .input('BedHeight', sql.Decimal(8,2), row.bedHeight)
         .input('PayloadKg', sql.Decimal(10,2), row.payloadKg)
         .query(`INSERT INTO WMS_InternalVehicles
-          (LicensePlate,VehicleName,VehicleCategory,InsuranceCompany,InsuranceExpiry,ActCompany,ActExpiry,TaxExpiry,
+          (LicensePlate,VehicleName,VehicleCategory,InsuranceCompany,InsuranceType,InsuranceExpiry,ActCompany,ActExpiry,TaxExpiry,
            BedWidth,BedLength,BedHeight,PayloadKg,VehicleStatus,IsActive)
-          VALUES (@LicensePlate,@VehicleName,@VehicleCategory,@InsuranceCompany,@InsuranceExpiry,@ActCompany,@ActExpiry,@TaxExpiry,
+          VALUES (@LicensePlate,@VehicleName,@VehicleCategory,@InsuranceCompany,@InsuranceType,@InsuranceExpiry,@ActCompany,@ActExpiry,@TaxExpiry,
            @BedWidth,@BedLength,@BedHeight,@PayloadKg,N'พร้อมใช้',1)`);
     }
 

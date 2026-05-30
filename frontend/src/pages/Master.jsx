@@ -384,6 +384,7 @@ export default function Master() {
         otherDocName: form.OtherDocName || null,
         otherDocExpiry: form.OtherDocExpiry || null,
         insuranceCompany: form.InsuranceCompany || null,
+        insuranceType: form.InsuranceType || null,
         actCompany: form.ActCompany || null,
         taxExpiry: form.TaxExpiry || null,
         bedWidth: form.BedWidth || null,
@@ -930,6 +931,11 @@ export default function Master() {
                   <label className="label text-amber-700">บริษัท ประกันภัย</label>
                   <input value={form.InsuranceCompany || ''} onChange={e => setForm(p => ({ ...p, InsuranceCompany: e.target.value }))}
                     className="input-field" placeholder="ชื่อบริษัทประกัน" />
+                </div>
+                <div>
+                  <label className="label text-amber-700">ประเภทประกัน</label>
+                  <input value={form.InsuranceType || ''} onChange={e => setForm(p => ({ ...p, InsuranceType: e.target.value }))}
+                    className="input-field" placeholder="เช่น ชั้น 1, ชั้น 2, ชั้น 3+" />
                 </div>
                 <div>
                   <label className="label text-amber-700">วันหมดอายุ (ประกัน)</label>
