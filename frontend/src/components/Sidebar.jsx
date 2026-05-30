@@ -4,9 +4,36 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit, CalendarClock, Truck, ScanLine
+  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
+
+const PIPE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="42">'
+  + '<defs>'
+  + '<radialGradient id="p" cx="35%" cy="28%" r="72%">'
+  + '<stop offset="0%" stop-color="#6b7685"/>'
+  + '<stop offset="35%" stop-color="#3e4a58"/>'
+  + '<stop offset="75%" stop-color="#232e3c"/>'
+  + '<stop offset="100%" stop-color="#131c27"/>'
+  + '</radialGradient>'
+  + '<radialGradient id="h" cx="42%" cy="36%" r="68%">'
+  + '<stop offset="0%" stop-color="#2e3d50"/>'
+  + '<stop offset="100%" stop-color="#080f18"/>'
+  + '</radialGradient>'
+  + '</defs>'
+  + '<rect width="48" height="42" fill="#0d1520"/>'
+  + '<circle cx="12" cy="12" r="11" fill="url(#p)"/>'
+  + '<circle cx="12" cy="12" r="5.5" fill="url(#h)"/>'
+  + '<circle cx="36" cy="12" r="11" fill="url(#p)"/>'
+  + '<circle cx="36" cy="12" r="5.5" fill="url(#h)"/>'
+  + '<circle cx="0" cy="30" r="11" fill="url(#p)"/>'
+  + '<circle cx="0" cy="30" r="5.5" fill="url(#h)"/>'
+  + '<circle cx="24" cy="30" r="11" fill="url(#p)"/>'
+  + '<circle cx="24" cy="30" r="5.5" fill="url(#h)"/>'
+  + '<circle cx="48" cy="30" r="11" fill="url(#p)"/>'
+  + '<circle cx="48" cy="30" r="5.5" fill="url(#h)"/>'
+  + '</svg>';
+const PIPE_BG = `url("data:image/svg+xml,${encodeURIComponent(PIPE_SVG)}") repeat`;
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, key: 'nav.dashboard', code: 'DASHBOARD' },
@@ -19,11 +46,7 @@ const menuItems = [
   { path: '/weigh-out', icon: TruckIcon, key: 'nav.weighOut', code: 'WEIGH_OUT' },
   { path: '/checker', icon: CheckSquare, key: 'nav.checker', code: 'CHECKER' },
   { path: '/records', icon: ClipboardList, key: 'nav.records', code: 'RECORDS' },
-  { key: 'section.warehouse', divider: true },
-  { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
-  { path: '/location-check', icon: ScanLine, key: 'nav.locationCheck', code: 'STOCK' },
-  { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
-  { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
+  { key: 'section.logistics', divider: true },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
   { key: 'section.system', divider: true },
@@ -56,7 +79,8 @@ export default function Sidebar({ isOpen, onClose }) {
         lg:translate-x-0 lg:static lg:z-auto
         ${isOpen ? 'translate-x-0' : '-translate-x-full'}
       `} style={{
-        background: '#1e293b',
+        background: PIPE_BG,
+        backgroundColor: '#0d1520',
         borderRight: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '2px 0 20px rgba(0,0,0,0.25)',
       }}>

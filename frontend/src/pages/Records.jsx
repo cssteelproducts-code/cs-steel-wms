@@ -62,6 +62,10 @@ export default function Records() {
   const [deleteRow, setDeleteRow] = useState(null);
   const [deleting, setDeleting] = useState(false);
 
+  // Bulk select
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
+
   // Expand / flip timeline
   const [expandedTripIds, setExpandedTripIds] = useState(new Set());
   const [loadingHistory, setLoadingHistory] = useState({});
@@ -87,6 +91,7 @@ export default function Records() {
       if (filterStatus) params.set('status', filterStatus);
       const res = await api.get(`/records?${params}`);
       setRecords(res.data.data || []);
+      setSelectedIds(new Set());
       setLastUpdate(new Date());
       setPagination(res.data.pagination || { total: 0, page: p, limit: 20, totalPages: 1 });
     } catch {
@@ -183,6 +188,32 @@ export default function Records() {
     }
   };
 
+  const toggleSelect = (id) => setSelectedIds(prev => {
+    const next = new Set(prev);
+    next.has(id) ? next.delete(id) : next.add(id);
+    return next;
+  });
+
+  const toggleSelectAll = () => {
+    const allSelected = records.length > 0 && records.every(r => selectedIds.has(r.TripID));
+    setSelectedIds(allSelected ? new Set() : new Set(records.map(r => r.TripID)));
+  };
+
+  const handleBulkDelete = async () => {
+    if (!confirm(`ยืนยันการลบ ${selectedIds.size} รายการ? การลบไม่สามารถกู้คืนได้`)) return;
+    setBulkDeleting(true);
+    let success = 0, fail = 0;
+    for (const id of selectedIds) {
+      try { await api.delete(`/records/${id}`); success++; }
+      catch { fail++; }
+    }
+    setBulkDeleting(false);
+    setSelectedIds(new Set());
+    if (success > 0) toast.success(`ลบสำเร็จ ${success} รายการ${fail ? ` (ล้มเหลว ${fail})` : ''}`);
+    else toast.error('ลบไม่สำเร็จ');
+    fetchRecords(page);
+  };
+
   const handleDelete = async () => {
     if (!deleteRow) return;
     setDeleting(true);
@@ -271,10 +302,27 @@ export default function Records() {
 
       {/* Table */}
       <div className="card p-0 overflow-hidden">
-        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+        <div className="px-4 py-3 border-b border-slate-100 flex items-center justify-between gap-3">
           <span className="text-sm font-semibold text-slate-700">
             ทั้งหมด <span className="text-emerald-600">{pagination.total}</span> รายการ
           </span>
+          {selectedIds.size > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-slate-500">เลือก {selectedIds.size} รายการ</span>
+              <button onClick={handleBulkDelete} disabled={bulkDeleting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-white transition-colors disabled:opacity-50"
+                style={{ background: '#dc2626' }}>
+                {bulkDeleting
+                  ? <span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                  : <Trash2 size={13} />}
+                ลบที่เลือก
+              </button>
+              <button onClick={() => setSelectedIds(new Set())}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors">
+                <X size={13} />
+              </button>
+            </div>
+          )}
         </div>
 
         {loading ? (
@@ -291,6 +339,12 @@ export default function Records() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
+                  <th className="table-header px-3 py-2 text-center w-8">
+                    <input type="checkbox"
+                      checked={records.length > 0 && records.every(r => selectedIds.has(r.TripID))}
+                      onChange={toggleSelectAll}
+                      className="w-3.5 h-3.5 cursor-pointer accent-red-600" />
+                  </th>
                   <th className="table-header px-4 py-2 text-left w-8"></th>
                   <th className="table-header px-4 py-2 text-left">#</th>
                   <th className="table-header px-4 py-2 text-left">วันที่</th>
@@ -307,7 +361,13 @@ export default function Records() {
               <tbody>
                 {records.map(row => (
                   <>
-                    <tr key={row.TripID} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
+                    <tr key={row.TripID} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${selectedIds.has(row.TripID) ? 'bg-red-50/50' : ''}`}>
+                      <td className="px-3 py-2 text-center">
+                        <input type="checkbox"
+                          checked={selectedIds.has(row.TripID)}
+                          onChange={() => toggleSelect(row.TripID)}
+                          className="w-3.5 h-3.5 cursor-pointer accent-red-600" />
+                      </td>
                       <td className="px-4 py-2 text-center">
                         <button onClick={() => toggleExpand(row.TripID)}
                           className="p-0.5 rounded text-slate-400 hover:text-blue-500 transition-colors">
@@ -356,7 +416,7 @@ export default function Records() {
                       const tl = timeline[row.TripID];
                       return (
                         <tr key={`exp-${row.TripID}`}>
-                          <td colSpan={11} className="p-0">
+                          <td colSpan={12} className="p-0">
                             <div className="mx-2 mb-2 rounded-xl border-2 border-blue-100 overflow-hidden"
                               style={{ background: 'linear-gradient(135deg,#eff6ff 0%,#f0fdf4 100%)', animation: 'fadeIn 0.25s ease-out' }}>
                               <div className="px-5 py-3">

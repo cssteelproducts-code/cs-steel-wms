@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw, Eye, EyeOff } from 'lucide-react';
+import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
@@ -17,31 +17,12 @@ const MENUS = [
   { code: 'WEIGH_OUT', name: 'สถานีชั่งออก' },
   { code: 'CHECKER', name: 'เช็คเกอร์' },
   { code: 'RECORDS', name: 'บันทึกการขึ้นสินค้า' },
-  { code: 'STOCK', name: 'สต็อกสินค้า', children: [
-    { code: 'STOCK_BALANCE', name: 'ยอดสต็อก' },
-    { code: 'STOCK_TRANSACTIONS', name: 'รับ-จ่ายสินค้า' },
-    { code: 'STOCK_COUNT', name: 'นับสต็อก' },
-    { code: 'STOCK_PRODUCTS', name: 'รายการสินค้า' },
-  ]},
   { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' },
-  { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน', children: [
-    { code: 'TRANSFER_JOBS', name: 'งาน' },
-    { code: 'TRANSFER_STATIONS', name: 'สถานี' },
-    { code: 'TRANSFER_VEHICLES', name: 'รถ' },
-    { code: 'TRANSFER_REPORT', name: 'รายงาน' },
-  ]},
   { code: 'ETA', name: 'ETA / GPS' },
   { code: 'ALERTS', name: 'การแจ้งเตือน' },
   { code: 'USERS', name: 'จัดการผู้ใช้' },
-  { code: 'MASTER', name: 'ข้อมูลหลัก', children: [
-    { code: 'MASTER_WAREHOUSES', name: 'คลังสินค้า' },
-    { code: 'MASTER_VEHICLE_TYPES', name: 'ประเภทรถ' },
-    { code: 'MASTER_CUSTOMERS', name: 'ลูกค้า' },
-    { code: 'MASTER_LOCATIONS', name: 'Location' },
-    { code: 'MASTER_PRODUCTS', name: 'สินค้า' },
-  ]},
+  { code: 'MASTER', name: 'ข้อมูลหลัก' },
   { code: 'REPORTS', name: 'รายงาน' },
-  { code: 'LOCATION_CHECK', name: 'ตรวจสอบ Location' },
 ];
 
 // Flatten all codes including children for permission init
@@ -135,6 +116,7 @@ export default function Users() {
     } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
   };
 
+  const [expandedMenus, setExpandedMenus] = useState(new Set());
   const [editingRole, setEditingRole] = useState(null);
 
   const openEditRole = (role) => {
@@ -182,15 +164,31 @@ export default function Users() {
     } finally { setSaving(false); }
   };
 
+  const toggleMenuExpand = (code) => {
+    setExpandedMenus(prev => {
+      const next = new Set(prev);
+      next.has(code) ? next.delete(code) : next.add(code);
+      return next;
+    });
+  };
+
   const togglePerm = (menuCode, children = []) => {
+    const willEnable = !permissions[menuCode];
     setPermissions(prev => {
-      const next = { ...prev, [menuCode]: prev[menuCode] ? 0 : 1 };
-      // If turning off parent, also turn off all children
-      if (!next[menuCode] && children.length) {
+      const next = { ...prev, [menuCode]: willEnable ? 1 : 0 };
+      if (!willEnable && children.length) {
         children.forEach(c => { next[c.code] = 0; });
       }
       return next;
     });
+    if (children.length) {
+      setExpandedMenus(prev => {
+        const next = new Set(prev);
+        if (willEnable) next.add(menuCode);
+        else next.delete(menuCode);
+        return next;
+      });
+    }
   };
 
   if (pageLoading) return (
@@ -491,9 +489,24 @@ export default function Users() {
                 <tbody>
                   {MENUS.map(menu => (
                     <React.Fragment key={menu.code}>
-                      {/* Parent row */}
                       <tr className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
-                        <td className="px-3 py-2 text-sm font-medium text-slate-800">{menu.name}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center gap-1.5">
+                            {menu.children?.length ? (
+                              <button onClick={() => toggleMenuExpand(menu.code)}
+                                className="text-slate-400 hover:text-red-400 transition-colors flex-shrink-0 p-0.5 rounded">
+                                {expandedMenus.has(menu.code)
+                                  ? <ChevronDown size={13} />
+                                  : <ChevronRight size={13} />}
+                              </button>
+                            ) : <span className="w-[17px]" />}
+                            <span
+                              className={`text-sm font-medium text-slate-800 leading-snug ${menu.children?.length ? 'cursor-pointer hover:text-red-500 transition-colors' : ''}`}
+                              onClick={() => menu.children?.length && toggleMenuExpand(menu.code)}>
+                              {menu.name}
+                            </span>
+                          </div>
+                        </td>
                         <td className="px-3 py-2 text-center">
                           <input type="checkbox"
                             checked={!!permissions[menu.code]}
@@ -501,11 +514,13 @@ export default function Users() {
                             className="w-4 h-4 cursor-pointer rounded accent-red-600" />
                         </td>
                       </tr>
-                      {/* Children rows — only show when parent is checked */}
-                      {!!permissions[menu.code] && menu.children?.map(child => (
-                        <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/50'}`}>
-                          <td className="pl-8 pr-3 py-1.5 text-xs text-slate-500 flex items-center gap-1.5">
-                            <span className="text-slate-300">└</span> {child.name}
+                      {expandedMenus.has(menu.code) && menu.children?.map(child => (
+                        <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/40'}`}>
+                          <td className="pl-10 pr-3 py-1.5">
+                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                              <span className="text-slate-300">└</span>
+                              <span>{child.name}</span>
+                            </div>
                           </td>
                           <td className="px-3 py-1.5 text-center">
                             <input type="checkbox"

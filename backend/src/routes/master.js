@@ -651,4 +651,112 @@ router.post('/products/import', authenticate, requireAdmin, upload.single('file'
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+// ==================== INTERNAL VEHICLES (รถขนส่งภายใน) ====================
+let _ivTableReady = false;
+async function ensureIVTable() {
+  if (_ivTableReady) return;
+  try {
+    await getPool().request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_InternalVehicles' AND xtype='U')
+      CREATE TABLE WMS_InternalVehicles (
+        VehicleID INT IDENTITY(1,1) PRIMARY KEY,
+        LicensePlate NVARCHAR(20) NOT NULL,
+        VehicleName NVARCHAR(100),
+        VehicleCategory NVARCHAR(50),
+        ActExpiry DATE,
+        InsuranceExpiry DATE,
+        InspectionExpiry DATE,
+        OtherDocName NVARCHAR(100),
+        OtherDocExpiry DATE,
+        VehicleStatus NVARCHAR(20) DEFAULT N'พร้อมใช้',
+        Symptoms NVARCHAR(500),
+        RepairEntryDate DATE,
+        EstimatedCompletionDate DATE,
+        Notes NVARCHAR(500),
+        IsActive BIT DEFAULT 1,
+        CreatedAt DATETIME DEFAULT GETDATE(),
+        UpdatedAt DATETIME
+      )
+    `);
+  } catch (_) {}
+  _ivTableReady = true;
+}
+
+router.get('/internal-vehicles', authenticate, async (req, res) => {
+  try {
+    await ensureIVTable();
+    const result = await getPool().request()
+      .query('SELECT * FROM WMS_InternalVehicles WHERE IsActive=1 ORDER BY LicensePlate');
+    res.json({ success: true, data: result.recordset });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.post('/internal-vehicles', authenticate, requireAdmin, async (req, res) => {
+  try {
+    await ensureIVTable();
+    const { licensePlate, vehicleName, vehicleCategory, actExpiry, insuranceExpiry, inspectionExpiry,
+            otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes } = req.body;
+    if (!licensePlate) return res.status(400).json({ success: false, message: 'กรุณาระบุทะเบียนรถ' });
+    await getPool().request()
+      .input('LP', sql.NVarChar, licensePlate.trim())
+      .input('VN', sql.NVarChar, vehicleName || null)
+      .input('VC', sql.NVarChar, vehicleCategory || null)
+      .input('AE', sql.Date, actExpiry || null)
+      .input('IE', sql.Date, insuranceExpiry || null)
+      .input('IPE', sql.Date, inspectionExpiry || null)
+      .input('ODN', sql.NVarChar, otherDocName || null)
+      .input('ODE', sql.Date, otherDocExpiry || null)
+      .input('VS', sql.NVarChar, vehicleStatus || 'พร้อมใช้')
+      .input('SY', sql.NVarChar, symptoms || null)
+      .input('RED', sql.Date, repairEntryDate || null)
+      .input('ECD', sql.Date, estimatedCompletionDate || null)
+      .input('NT', sql.NVarChar, notes || null)
+      .query(`INSERT INTO WMS_InternalVehicles
+        (LicensePlate,VehicleName,VehicleCategory,ActExpiry,InsuranceExpiry,InspectionExpiry,
+         OtherDocName,OtherDocExpiry,VehicleStatus,Symptoms,RepairEntryDate,EstimatedCompletionDate,Notes)
+        VALUES(@LP,@VN,@VC,@AE,@IE,@IPE,@ODN,@ODE,@VS,@SY,@RED,@ECD,@NT)`);
+    res.json({ success: true, message: `เพิ่มรถ "${licensePlate}" สำเร็จ` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.put('/internal-vehicles/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    await ensureIVTable();
+    const { licensePlate, vehicleName, vehicleCategory, actExpiry, insuranceExpiry, inspectionExpiry,
+            otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes, isActive } = req.body;
+    await getPool().request()
+      .input('ID', sql.Int, req.params.id)
+      .input('LP', sql.NVarChar, licensePlate)
+      .input('VN', sql.NVarChar, vehicleName || null)
+      .input('VC', sql.NVarChar, vehicleCategory || null)
+      .input('AE', sql.Date, actExpiry || null)
+      .input('IE', sql.Date, insuranceExpiry || null)
+      .input('IPE', sql.Date, inspectionExpiry || null)
+      .input('ODN', sql.NVarChar, otherDocName || null)
+      .input('ODE', sql.Date, otherDocExpiry || null)
+      .input('VS', sql.NVarChar, vehicleStatus || 'พร้อมใช้')
+      .input('SY', sql.NVarChar, symptoms || null)
+      .input('RED', sql.Date, repairEntryDate || null)
+      .input('ECD', sql.Date, estimatedCompletionDate || null)
+      .input('NT', sql.NVarChar, notes || null)
+      .input('IA', sql.Bit, isActive !== undefined ? isActive : 1)
+      .query(`UPDATE WMS_InternalVehicles SET
+        LicensePlate=@LP,VehicleName=@VN,VehicleCategory=@VC,
+        ActExpiry=@AE,InsuranceExpiry=@IE,InspectionExpiry=@IPE,
+        OtherDocName=@ODN,OtherDocExpiry=@ODE,VehicleStatus=@VS,
+        Symptoms=@SY,RepairEntryDate=@RED,EstimatedCompletionDate=@ECD,
+        Notes=@NT,IsActive=@IA,UpdatedAt=GETDATE()
+        WHERE VehicleID=@ID`);
+    res.json({ success: true, message: 'แก้ไขข้อมูลรถสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
+router.delete('/internal-vehicles/:id', authenticate, requireAdmin, async (req, res) => {
+  try {
+    await getPool().request().input('ID', sql.Int, req.params.id)
+      .query('UPDATE WMS_InternalVehicles SET IsActive=0 WHERE VehicleID=@ID');
+    res.json({ success: true, message: 'ลบสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 module.exports = router;

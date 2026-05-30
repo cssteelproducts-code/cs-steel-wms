@@ -121,7 +121,93 @@ async function runAlertCheck() {
     }
   }
 
+  // Vehicle expiry alerts
+  try { await checkVehicleExpiry(pool); } catch (e) { console.error('Vehicle expiry check failed:', e.message); }
+
   return newAlerts.length;
+}
+
+async function checkVehicleExpiry(pool) {
+  try {
+    // Table may not exist yet — skip gracefully
+    const tableCheck = await pool.request()
+      .query(`SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='WMS_InternalVehicles'`);
+    if (!tableCheck.recordset.length) return;
+
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    const vehicles = await pool.request()
+      .query('SELECT * FROM WMS_InternalVehicles WHERE IsActive=1');
+
+    const EXPIRY_FIELDS = [
+      { field: 'ActExpiry',        type: 'VEH_ACT_EXP',   label: 'พ.ร.บ.' },
+      { field: 'InsuranceExpiry',  type: 'VEH_INS_EXP',   label: 'ประกันภัย' },
+      { field: 'InspectionExpiry', type: 'VEH_INSP_EXP',  label: 'ตรวจสภาพ' },
+      { field: 'OtherDocExpiry',   type: 'VEH_OTHER_EXP', label: null },
+    ];
+    const MILESTONES = [90, 60, 30];
+
+    for (const v of vehicles.recordset) {
+      for (const ef of EXPIRY_FIELDS) {
+        const expiryDate = v[ef.field];
+        if (!expiryDate) continue;
+
+        const expiry = new Date(expiryDate);
+        expiry.setHours(0, 0, 0, 0);
+        const daysLeft = Math.round((expiry - today) / 86400000);
+        const label = ef.label || v.OtherDocName || 'เอกสาร';
+        const vName = v.VehicleName ? ` (${v.VehicleName})` : '';
+
+        if (daysLeft > 92) continue;
+
+        // Milestone alerts at 90, 60, 30 days
+        for (const m of MILESTONES) {
+          if (daysLeft >= m - 2 && daysLeft <= m + 2) {
+            const mType = `${ef.type}_M${m}`;
+            const since = new Date(Date.now() - 7 * 86400000);
+            const exists = await pool.request()
+              .input('vid', sql.Int, v.VehicleID)
+              .input('tp', sql.NVarChar, mType)
+              .input('since', sql.DateTime, since)
+              .query('SELECT 1 FROM WMS_Alerts WHERE AlertType=@tp AND TripID=@vid AND CreatedAt>=@since');
+            if (!exists.recordset.length) {
+              const expStr = expiry.toLocaleDateString('th-TH');
+              const msg = `รถ ${v.LicensePlate}${vName} — ${label} สิ้นอายุในอีก ${daysLeft} วัน (${expStr})`;
+              await pool.request()
+                .input('tp', sql.NVarChar, mType)
+                .input('vid', sql.Int, v.VehicleID)
+                .input('msg', sql.NVarChar, msg)
+                .input('sev', sql.NVarChar, m <= 30 ? 'CRITICAL' : 'WARNING')
+                .query(`INSERT INTO WMS_Alerts (AlertType,Severity,TripID,Message,CreatedAt)
+                        VALUES (@tp,@sev,@vid,@msg,DATEADD(HOUR,7,GETUTCDATE()))`);
+            }
+          }
+        }
+
+        // Daily alerts when < 30 days remaining (or expired)
+        if (daysLeft < 30) {
+          const todayExists = await pool.request()
+            .input('vid', sql.Int, v.VehicleID)
+            .input('tp', sql.NVarChar, ef.type)
+            .query(`SELECT 1 FROM WMS_Alerts WHERE AlertType=@tp AND TripID=@vid
+                    AND CAST(CreatedAt AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)`);
+          if (!todayExists.recordset.length) {
+            let msg;
+            if (daysLeft < 0) msg = `🚨 รถ ${v.LicensePlate}${vName} — ${label} หมดอายุไปแล้ว ${Math.abs(daysLeft)} วัน!`;
+            else if (daysLeft === 0) msg = `🚨 รถ ${v.LicensePlate}${vName} — ${label} หมดอายุวันนี้!`;
+            else msg = `รถ ${v.LicensePlate}${vName} — ${label} สิ้นอายุในอีก ${daysLeft} วัน`;
+            await pool.request()
+              .input('tp', sql.NVarChar, ef.type)
+              .input('vid', sql.Int, v.VehicleID)
+              .input('msg', sql.NVarChar, msg)
+              .query(`INSERT INTO WMS_Alerts (AlertType,Severity,TripID,Message,CreatedAt)
+                      VALUES (@tp,'CRITICAL',@vid,@msg,DATEADD(HOUR,7,GETUTCDATE()))`);
+          }
+        }
+      }
+    }
+  } catch (e) { console.error('checkVehicleExpiry error:', e.message); }
 }
 
 module.exports = { runAlertCheck };
