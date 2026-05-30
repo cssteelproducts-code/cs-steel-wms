@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw, Eye, EyeOff } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -473,14 +473,16 @@ export default function Users() {
 
       {/* Permissions Modal */}
       {modal === 'permissions' && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 overflow-y-auto">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl p-6 my-4 shadow-xl">
-            <h3 className="text-lg font-bold text-slate-900 mb-1">กำหนดสิทธิ์: {selectedRole?.RoleName}</h3>
-            <p className="text-slate-500 text-sm mb-4">{selectedRole?.Description}</p>
+        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-xl flex flex-col" style={{ maxHeight: '90vh' }}>
+            <div className="px-6 pt-6 pb-3 flex-shrink-0">
+              <h3 className="text-lg font-bold text-slate-900 mb-1">กำหนดสิทธิ์: {selectedRole?.RoleName}</h3>
+              <p className="text-slate-500 text-sm">{selectedRole?.Description}</p>
+            </div>
 
-            <div className="overflow-x-auto">
+            <div className="overflow-y-auto flex-1 px-6">
               <table className="w-full">
-                <thead>
+                <thead className="sticky top-0 bg-white">
                   <tr className="border-b border-slate-200">
                     <th className="table-header text-left px-3 py-2">เมนู</th>
                     <th className="table-header text-center px-3 py-2 w-20">เข้าถึง</th>
@@ -488,9 +490,9 @@ export default function Users() {
                 </thead>
                 <tbody>
                   {MENUS.map(menu => (
-                    <>
+                    <React.Fragment key={menu.code}>
                       {/* Parent row */}
-                      <tr key={menu.code} className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
+                      <tr className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
                         <td className="px-3 py-2 text-sm font-medium text-slate-800">{menu.name}</td>
                         <td className="px-3 py-2 text-center">
                           <input type="checkbox"
@@ -500,7 +502,7 @@ export default function Users() {
                         </td>
                       </tr>
                       {/* Children rows — only show when parent is checked */}
-                      {permissions[menu.code] && menu.children?.map(child => (
+                      {!!permissions[menu.code] && menu.children?.map(child => (
                         <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/50'}`}>
                           <td className="pl-8 pr-3 py-1.5 text-xs text-slate-500 flex items-center gap-1.5">
                             <span className="text-slate-300">└</span> {child.name}
@@ -513,13 +515,13 @@ export default function Users() {
                           </td>
                         </tr>
                       ))}
-                    </>
+                    </React.Fragment>
                   ))}
                 </tbody>
               </table>
             </div>
 
-            <div className="flex gap-3 mt-6">
+            <div className="flex gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
               <button onClick={handleSavePermissions} disabled={saving} className="btn-primary flex-1">
                 {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึกสิทธิ์</>}
               </button>
