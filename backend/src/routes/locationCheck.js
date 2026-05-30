@@ -174,6 +174,34 @@ router.get('/today', authenticate, async (req, res) => {
   }
 });
 
+// DELETE /api/location-check/item/:itemId – delete a single check item (draft only)
+router.delete('/item/:itemId', authenticate, async (req, res) => {
+  try {
+    await ensureTables();
+    const pool = getPool();
+    const item = await pool.request()
+      .input('ItemID', sql.Int, req.params.itemId)
+      .query(`SELECT i.ItemID, i.CheckID FROM WMS_LocationCheckItems i
+              JOIN WMS_LocationChecks c ON i.CheckID = c.CheckID
+              WHERE i.ItemID = @ItemID AND c.Status = 'Draft'`);
+    if (!item.recordset.length)
+      return res.status(404).json({ success: false, message: 'ไม่พบรายการ หรือรายการนี้ส่งแล้วแก้ไขไม่ได้' });
+    const checkId = item.recordset[0].CheckID;
+    await pool.request().input('ItemID', sql.Int, req.params.itemId)
+      .query(`DELETE FROM WMS_LocationCheckItems WHERE ItemID = @ItemID`);
+    await pool.request().input('CheckID', sql.Int, checkId).query(`
+      UPDATE WMS_LocationChecks SET
+        TotalLocations = (SELECT COUNT(*) FROM WMS_LocationCheckItems WHERE CheckID=@CheckID),
+        TotalMatch     = (SELECT COUNT(*) FROM WMS_LocationCheckItems WHERE CheckID=@CheckID AND IsMatch=1),
+        TotalMismatch  = (SELECT COUNT(*) FROM WMS_LocationCheckItems WHERE CheckID=@CheckID AND IsMatch=0 AND ActualSKUType IS NOT NULL AND ActualSKUType!='')
+      WHERE CheckID = @CheckID
+    `);
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/location-check/quick – scan one location and save immediately
 router.post('/quick', authenticate, async (req, res) => {
   try {

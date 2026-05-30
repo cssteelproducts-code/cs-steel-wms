@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScanLine, MapPin, CheckCircle2, XCircle, RotateCcw, History, Package } from 'lucide-react';
+import { ScanLine, MapPin, CheckCircle2, XCircle, RotateCcw, History, Package, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
 
@@ -127,6 +127,15 @@ export default function LocationCheck() {
       toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึก');
     }
     setSaving(false);
+  };
+
+  const handleDeleteItem = async (itemId) => {
+    try {
+      await api.delete(`/location-check/item/${itemId}`);
+      setTodayLog(prev => prev.filter(i => i.ItemID !== itemId));
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ');
+    }
   };
 
   const handleReset = () => {
@@ -411,8 +420,17 @@ export default function LocationCheck() {
                     )}
                   </div>
                 </div>
-                <div className="text-xs flex-shrink-0" style={{ color: '#475569' }}>
-                  {item.LocationTypeName || ''}
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  <div className="text-xs" style={{ color: '#475569' }}>{item.LocationTypeName || ''}</div>
+                  <button
+                    onClick={() => handleDeleteItem(item.ItemID)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, color: '#475569', lineHeight: 0 }}
+                    onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
+                    onMouseLeave={e => e.currentTarget.style.color = '#475569'}
+                    title="ลบรายการนี้"
+                  >
+                    <Trash2 size={14} />
+                  </button>
                 </div>
               </div>
             ))}
