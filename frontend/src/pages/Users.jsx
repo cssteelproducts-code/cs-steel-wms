@@ -18,6 +18,9 @@ const MENUS = [
   { code: 'RECORDS', name: 'บันทึกการขึ้นสินค้า' },
   { divider: true, section: 'คลังสินค้าสำเร็จรูป' },
   { code: 'STOCK', name: 'ตรวจสอบ Location' },
+  { code: 'STOCKCOUNT_OFFICE', name: 'นับสต็อก (จัดการรอบ)', children: [
+    { code: 'STOCKCOUNT_FIELD', name: 'ตรวจนับ (หน้างาน)' },
+  ]},
   { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน', children: [
     { code: 'TRANSFER_JOBS', name: 'งาน' },
     { code: 'TRANSFER_STATIONS', name: 'สถานี' },

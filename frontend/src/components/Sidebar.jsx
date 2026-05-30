@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine
+  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -24,6 +24,7 @@ const menuItems = [
   { path: '/location-check', icon: ScanLine, key: 'nav.locationCheck', code: 'STOCK' },
   { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
   { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
+  { path: '/stock-count', icon: ClipboardCheck, key: 'nav.stockCount', codes: ['STOCKCOUNT_OFFICE', 'STOCKCOUNT_FIELD'] },
   { key: 'section.logistics', divider: true },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
@@ -42,6 +43,7 @@ export default function Sidebar({ isOpen, onClose }) {
 
   const visibleItems = menuItems.filter(item => {
     if (item.divider) return true;
+    if (item.codes) return item.codes.some(c => hasPermission(c, 'canView'));
     return hasPermission(item.code, 'canView');
   });
 

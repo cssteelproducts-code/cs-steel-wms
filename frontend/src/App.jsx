@@ -26,8 +26,9 @@ import Transfer from './pages/Transfer';
 import TransferDriver from './pages/TransferDriver';
 import Records from './pages/Records';
 import LocationCheck from './pages/LocationCheck';
+import StockCount from './pages/StockCount';
 
-const ProtectedRoute = ({ children, menuCode }) => {
+const ProtectedRoute = ({ children, menuCode, menuCodeAny }) => {
   const { user, loading, hasPermission } = useAuth();
   if (loading) return (
     <div className="min-h-screen flex items-center justify-center" style={{ background: '#f1f5f9' }}>
@@ -35,7 +36,9 @@ const ProtectedRoute = ({ children, menuCode }) => {
     </div>
   );
   if (!user) return <Navigate to="/login" replace />;
-  if (menuCode && !hasPermission(menuCode)) {
+  const denied = (menuCode && !hasPermission(menuCode)) ||
+                 (menuCodeAny && !menuCodeAny.some(c => hasPermission(c)));
+  if (denied) {
     return (
       <div className="flex items-center justify-center h-64">
         <div className="text-center">
@@ -81,6 +84,7 @@ function AppRoutes() {
         <Route path="records" element={<ProtectedRoute menuCode="RECORDS"><Records /></ProtectedRoute>} />
         <Route path="location-check" element={<ProtectedRoute menuCode="STOCK"><LocationCheck /></ProtectedRoute>} />
         <Route path="freight-calc" element={<ProtectedRoute menuCode="FREIGHT_CALC"><FreightCalc /></ProtectedRoute>} />
+        <Route path="stock-count" element={<ProtectedRoute menuCodeAny={['STOCKCOUNT_OFFICE', 'STOCKCOUNT_FIELD']}><StockCount /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

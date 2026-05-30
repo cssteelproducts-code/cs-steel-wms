@@ -24,6 +24,7 @@ const translations = {
     'nav.eta': 'ETA / GPS รถ',
     'nav.transfer': 'ย้ายสินค้าภายใน',
     'nav.transferDriver': 'บันทึกเวลาขนย้าย',
+    'nav.stockCount': 'นับสต็อก',
     'nav.users': 'จัดการผู้ใช้',
     'nav.master': 'ข้อมูลหลัก',
     // ── Header ───────────────────────────────────────

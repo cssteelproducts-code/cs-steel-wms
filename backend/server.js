@@ -46,6 +46,7 @@ app.use('/api/eta', require('./src/routes/eta'));
 app.use('/api/users', require('./src/routes/users'));
 app.use('/api/alerts', require('./src/routes/alerts'));
 app.use('/api/stock', require('./src/routes/stock'));
+app.use('/api/stock-count', require('./src/routes/stockCount'));
 app.use('/api/delivery', require('./src/routes/deliveryPlan'));
 app.use('/api/transfer', require('./src/routes/transfer'));
 app.use('/api/search', require('./src/routes/search'));
@@ -305,6 +306,28 @@ const runMigrations = async () => {
       )
       INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
       SELECT r.RoleID, 'RECORDS', N'บันทึกการขึ้นสินค้า', 1, 1, 1, 1
+      FROM WMS_Roles r WHERE r.RoleName='Admin';
+    `);
+    // Ensure STOCKCOUNT_OFFICE permission exists for Admin role
+    await pool.request().query(`
+      IF NOT EXISTS (
+        SELECT 1 FROM WMS_MenuPermissions mp
+        JOIN WMS_Roles r ON mp.RoleID=r.RoleID
+        WHERE r.RoleName='Admin' AND mp.MenuCode='STOCKCOUNT_OFFICE'
+      )
+      INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
+      SELECT r.RoleID, 'STOCKCOUNT_OFFICE', N'จัดการรอบตรวจนับ', 1, 1, 1, 1
+      FROM WMS_Roles r WHERE r.RoleName='Admin';
+    `);
+    // Ensure STOCKCOUNT_FIELD permission exists for Admin role
+    await pool.request().query(`
+      IF NOT EXISTS (
+        SELECT 1 FROM WMS_MenuPermissions mp
+        JOIN WMS_Roles r ON mp.RoleID=r.RoleID
+        WHERE r.RoleName='Admin' AND mp.MenuCode='STOCKCOUNT_FIELD'
+      )
+      INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
+      SELECT r.RoleID, 'STOCKCOUNT_FIELD', N'ตรวจนับ (หน้างาน)', 1, 1, 1, 1
       FROM WMS_Roles r WHERE r.RoleName='Admin';
     `);
     // Ensure FREIGHT_CALC permission exists for Admin role
