@@ -135,28 +135,28 @@ router.get('/summary', authenticate, async (req, res) => {
       pool.request().query(`
         SELECT
           SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
-            AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) >= ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-            AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) <= ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
+            AND DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) >= ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            AND DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) <= ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
             THEN 1 ELSE 0 END) as TodayOnTime,
           SUM(CASE WHEN CAST(t.TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
-            AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-              OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+            AND (DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+              OR DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
             THEN 1 ELSE 0 END) as TodayOvertime,
           SUM(CASE WHEN YEAR(t.TripDate)=YEAR(GETUTCDATE()) AND MONTH(t.TripDate)=MONTH(GETUTCDATE())
-            AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) >= ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-            AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) <= ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
+            AND DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) >= ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            AND DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) <= ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
             THEN 1 ELSE 0 END) as MonthOnTime,
           SUM(CASE WHEN YEAR(t.TripDate)=YEAR(GETUTCDATE()) AND MONTH(t.TripDate)=MONTH(GETUTCDATE())
-            AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-              OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+            AND (DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+              OR DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
             THEN 1 ELSE 0 END) as MonthOvertime,
           SUM(CASE WHEN YEAR(t.TripDate)=YEAR(GETUTCDATE())
-            AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) >= ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-            AND DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) <= ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
+            AND DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) >= ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            AND DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) <= ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
             THEN 1 ELSE 0 END) as YearOnTime,
           SUM(CASE WHEN YEAR(t.TripDate)=YEAR(GETUTCDATE())
-            AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-              OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+            AND (DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+              OR DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
             THEN 1 ELSE 0 END) as YearOvertime
         FROM WMS_Trips t
         JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
@@ -231,8 +231,8 @@ router.get('/summary', authenticate, async (req, res) => {
         JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
         JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
         WHERE CAST(t.TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
-          AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-            OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+          AND (DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            OR DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
         GROUP BY vt.TypeName ORDER BY Count DESC
       `),
       pool.request().query(`
@@ -241,8 +241,8 @@ router.get('/summary', authenticate, async (req, res) => {
         JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
         JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
         WHERE YEAR(t.TripDate)=YEAR(GETUTCDATE()) AND MONTH(t.TripDate)=MONTH(GETUTCDATE())
-          AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-            OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+          AND (DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            OR DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
         GROUP BY vt.TypeName ORDER BY Count DESC
       `),
       pool.request().query(`
@@ -251,8 +251,8 @@ router.get('/summary', authenticate, async (req, res) => {
         JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
         JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
         WHERE YEAR(t.TripDate)=YEAR(GETUTCDATE())
-          AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-            OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+          AND (DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            OR DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
         GROUP BY vt.TypeName ORDER BY Count DESC
       `)
     ]);
