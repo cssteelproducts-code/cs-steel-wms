@@ -165,6 +165,10 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
           ? Math.max(0, Math.round((new Date(t.CheckTime) - new Date(t.WeighOutTime)) / 60000))
           : null;
 
+    const totalTripMinutes = t.WeighInTime && t.WeighOutTime
+      ? Math.max(0, Math.round((new Date(t.WeighOutTime) - new Date(t.WeighInTime)) / 60000))
+      : null;
+
     res.json({
       success: true,
       data: {
@@ -174,6 +178,7 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
         stations: loadingData.recordset,
         weighOutWaitMinutes,
         checkerMinutes,
+        totalTripMinutes,
       }
     });
   } catch (err) {

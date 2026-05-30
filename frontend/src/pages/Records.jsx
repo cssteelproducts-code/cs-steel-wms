@@ -442,7 +442,7 @@ export default function Records() {
                                       )}
                                     </div>
 
-                                    {/* รวมทั้งหมด */}
+                                    {/* รวมทุกสถานี */}
                                     {(() => {
                                       const total = (tl.pickWaitMinutes ?? 0)
                                         + (tl.hasSOWait ? (tl.soWaitMinutes ?? 0) : 0)
@@ -451,12 +451,26 @@ export default function Records() {
                                         + (tl.checkerMinutes ?? 0);
                                       if (total === 0) return null;
                                       return (
-                                        <div className="bg-blue-600 rounded-xl px-4 py-2.5 min-w-44 flex flex-col justify-center">
-                                          <p className="text-xs font-bold text-blue-100 mb-1">⏱ รวมทุกสถานี</p>
-                                          <p className="text-lg font-bold text-white leading-none">{fmtMin(total)}</p>
+                                        <div className="bg-white rounded-xl border-2 border-blue-200 px-4 py-2.5 min-w-44">
+                                          <p className="text-xs font-bold text-blue-600 mb-1.5">⏱ รวมทุกสถานี</p>
+                                          <div className="flex items-center justify-between gap-4 text-xs">
+                                            <span className="text-slate-500">เวลาทำงานรวม</span>
+                                            <span className="font-bold text-blue-700 text-sm">{fmtMin(total)}</span>
+                                          </div>
                                         </div>
                                       );
                                     })()}
+
+                                    {/* เวลาเข้า→ออก */}
+                                    {tl.totalTripMinutes != null && (
+                                      <div className="bg-white rounded-xl border border-indigo-100 px-4 py-2.5 min-w-44">
+                                        <p className="text-xs font-bold text-indigo-600 mb-1.5">🚛 ชั่งเข้า → ชั่งออก</p>
+                                        <div className="flex items-center justify-between gap-4 text-xs">
+                                          <span className="text-slate-500">เวลารวมในคลัง</span>
+                                          <span className="font-bold text-indigo-700 text-sm">{fmtMin(tl.totalTripMinutes)}</span>
+                                        </div>
+                                      </div>
+                                    )}
 
                                   </div>
                                 )}
