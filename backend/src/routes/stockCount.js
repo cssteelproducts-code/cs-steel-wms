@@ -169,41 +169,32 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
     await pool.request().input('ID', sql.Int, req.params.id)
       .query('DELETE FROM WMS_StockCountItems WHERE SessionID=@ID');
 
-    // Bulk insert — 6000+ rows via loop INSERT is too slow (times out)
-    const table = new sql.Table('WMS_StockCountItems');
-    table.create = false;
-    table.columns.add('SessionID',    sql.Int,           { nullable: false });
-    table.columns.add('Warehouse',    sql.NVarChar(20),  { nullable: true });
-    table.columns.add('Location',     sql.NVarChar(50),  { nullable: true });
-    table.columns.add('ItemCode',     sql.NVarChar(50),  { nullable: true });
-    table.columns.add('ItemName',     sql.NVarChar(300), { nullable: true });
-    table.columns.add('TypeSKU',      sql.NVarChar(50),  { nullable: true });
-    table.columns.add('CategoryCode', sql.NVarChar(20),  { nullable: true });
-    table.columns.add('CategoryName', sql.NVarChar(100), { nullable: true });
-    table.columns.add('SizeCode',     sql.NVarChar(100), { nullable: true });
-    table.columns.add('SystemQty',    sql.Decimal(12,2), { nullable: true });
-    table.columns.add('SystemWeight', sql.Decimal(12,2), { nullable: true });
-
-    let imported = 0;
-    for (const row of rows) {
-      const code = row['Itemcode'] || row['ItemCode'] || row['itemcode'] || '';
-      if (!code) continue;
-      table.rows.add(
-        parseInt(req.params.id),
-        row['Warehouse'] || null,
-        row['Location']  || null,
-        String(code).trim().substring(0, 50),
-        row['ItemName']  ? String(row['ItemName']).substring(0, 300)  : null,
-        row['TypeSUK']   ? String(row['TypeSUK']).substring(0, 50)   : null,
-        row['GategoryCode'] ? String(row['GategoryCode']).substring(0, 20) : null,
-        row['Gname']     ? String(row['Gname']).substring(0, 100)    : null,
-        row['SizeCode'] != null ? String(row['SizeCode']).substring(0, 100) : null,
-        parseFloat(row['Quantity']) || 0,
-        row['UnitNetWeight'] != null ? parseFloat(row['UnitNetWeight']) : null
-      );
-      imported++;
+    // Batch INSERT (200 rows/batch) — avoids single-row timeout
+    const sessionId = parseInt(req.params.id);
+    const validRows = rows.filter(r => r['Itemcode'] || r['ItemCode'] || r['itemcode']);
+    const BATCH = 200;
+    for (let b = 0; b < validRows.length; b += BATCH) {
+      const chunk = validRows.slice(b, b + BATCH);
+      const bReq = pool.request();
+      const vals = chunk.map((row, j) => {
+        const code = String(row['Itemcode'] || row['ItemCode'] || row['itemcode'] || '').trim();
+        bReq.input(`WH${j}`,   sql.NVarChar(20),  row['Warehouse'] || null);
+        bReq.input(`LOC${j}`,  sql.NVarChar(50),  row['Location']  || null);
+        bReq.input(`CODE${j}`, sql.NVarChar(50),  code.substring(0, 50));
+        bReq.input(`NAME${j}`, sql.NVarChar(300), row['ItemName']     ? String(row['ItemName']).substring(0, 300)     : null);
+        bReq.input(`SKU${j}`,  sql.NVarChar(50),  row['TypeSUK']      ? String(row['TypeSUK']).substring(0, 50)       : null);
+        bReq.input(`CC${j}`,   sql.NVarChar(20),  row['GategoryCode'] ? String(row['GategoryCode']).substring(0, 20)  : null);
+        bReq.input(`CN${j}`,   sql.NVarChar(100), row['Gname']        ? String(row['Gname']).substring(0, 100)        : null);
+        bReq.input(`SZ${j}`,   sql.NVarChar(100), row['SizeCode'] != null ? String(row['SizeCode']).substring(0, 100) : null);
+        bReq.input(`QTY${j}`,  sql.Decimal(12,2), parseFloat(row['Quantity']) || 0);
+        bReq.input(`WGT${j}`,  sql.Decimal(12,2), row['UnitNetWeight'] != null ? parseFloat(row['UnitNetWeight']) : null);
+        return `(${sessionId},@WH${j},@LOC${j},@CODE${j},@NAME${j},@SKU${j},@CC${j},@CN${j},@SZ${j},@QTY${j},@WGT${j})`;
+      });
+      await bReq.query(`INSERT INTO WMS_StockCountItems
+        (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,SystemQty,SystemWeight)
+        VALUES ${vals.join(',')}`);
     }
-    if (imported > 0) await pool.bulk(table);
+    const imported = validRows.length;
     res.json({ success: true, message: `นำเข้า ${imported} รายการสำเร็จ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
