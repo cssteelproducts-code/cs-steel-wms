@@ -324,6 +324,14 @@ const runMigrations = async () => {
         IsActive BIT DEFAULT 1
       );`);
     await pool.request().query(`
+      IF OBJECT_ID('WMS_StockCountItems','U') IS NOT NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM sys.columns
+          WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='SessionID'
+        )
+      BEGIN DROP TABLE WMS_StockCountItems; END;
+    `);
+    await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountItems' AND xtype='U')
       CREATE TABLE WMS_StockCountItems (
         ItemID INT IDENTITY(1,1) PRIMARY KEY,
