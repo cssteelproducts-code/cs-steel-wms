@@ -759,4 +759,73 @@ router.delete('/internal-vehicles/:id', authenticate, requireAdmin, async (req, 
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+// ==================== INTERNAL VEHICLES EXCEL IMPORT/EXPORT ====================
+router.get('/internal-vehicles/template', authenticate, (req, res) => {
+  const wb = XLSX.utils.book_new();
+  const ws = XLSX.utils.aoa_to_sheet([
+    ['ทะเบียนรถ*', 'ชื่อ/รุ่นรถ', 'ประเภทรถ', 'พ.ร.บ. สิ้นอายุ (YYYY-MM-DD)', 'ประกันภัย สิ้นอายุ (YYYY-MM-DD)', 'ตรวจสภาพ สิ้นอายุ (YYYY-MM-DD)', 'ชื่อเอกสารอื่น', 'เอกสารอื่น สิ้นอายุ (YYYY-MM-DD)'],
+    ['กก-1234', 'ISUZU NPR 130', 'รถยก', '2025-12-31', '2025-06-30', '2025-09-15', '', ''],
+    ['ขข-5678', 'HINO 300', 'รถลาก', '2026-03-31', '', '', 'ใบอนุญาต', '2026-01-01'],
+  ]);
+  ws['!cols'] = [14, 20, 14, 26, 26, 26, 18, 26].map(w => ({ wch: w }));
+  XLSX.utils.book_append_sheet(wb, ws, 'รถขนส่งภายใน');
+  const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+  res.setHeader('Content-Disposition', 'attachment; filename="internal_vehicles_template.xlsx"');
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.send(buf);
+});
+
+router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.single('file'), async (req, res) => {
+  if (!req.file) return res.status(400).json({ success: false, message: 'ไม่พบไฟล์' });
+  try {
+    await ensureIVTable();
+    const pool = getPool();
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+
+    const existingRes = await pool.request().query('SELECT LicensePlate FROM WMS_InternalVehicles');
+    const existingPlates = new Set(existingRes.recordset.map(r => r.LicensePlate));
+
+    const newRows = [];
+    let skipped = 0;
+    for (let i = 1; i < rows.length; i++) {
+      const [plate, name, category, actExpiry, insuranceExpiry, inspectionExpiry, otherDocName, otherDocExpiry] = rows[i];
+      if (!plate) { skipped++; continue; }
+      const p = String(plate).trim();
+      if (existingPlates.has(p)) { skipped++; continue; }
+      newRows.push({
+        plate: p,
+        name: name ? String(name).trim() : null,
+        category: category ? String(category).trim() : null,
+        actExpiry: actExpiry ? String(actExpiry).trim() : null,
+        insuranceExpiry: insuranceExpiry ? String(insuranceExpiry).trim() : null,
+        inspectionExpiry: inspectionExpiry ? String(inspectionExpiry).trim() : null,
+        otherDocName: otherDocName ? String(otherDocName).trim() : null,
+        otherDocExpiry: otherDocExpiry ? String(otherDocExpiry).trim() : null,
+      });
+      existingPlates.add(p);
+    }
+
+    for (const row of newRows) {
+      await pool.request()
+        .input('LicensePlate', sql.NVarChar, row.plate)
+        .input('VehicleName', sql.NVarChar, row.name)
+        .input('VehicleCategory', sql.NVarChar, row.category)
+        .input('ActExpiry', sql.Date, row.actExpiry || null)
+        .input('InsuranceExpiry', sql.Date, row.insuranceExpiry || null)
+        .input('InspectionExpiry', sql.Date, row.inspectionExpiry || null)
+        .input('OtherDocName', sql.NVarChar, row.otherDocName)
+        .input('OtherDocExpiry', sql.Date, row.otherDocExpiry || null)
+        .query(`INSERT INTO WMS_InternalVehicles
+          (LicensePlate,VehicleName,VehicleCategory,ActExpiry,InsuranceExpiry,InspectionExpiry,OtherDocName,OtherDocExpiry,VehicleStatus,IsActive)
+          VALUES (@LicensePlate,@VehicleName,@VehicleCategory,@ActExpiry,@InsuranceExpiry,@InspectionExpiry,@OtherDocName,@OtherDocExpiry,N'พร้อมใช้',1)`);
+    }
+
+    res.json({ success: true, message: `นำเข้าสำเร็จ ${newRows.length} รายการ (ข้ามซ้ำ ${skipped} รายการ)` });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

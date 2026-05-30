@@ -60,6 +60,7 @@ export default function Master() {
   const [productSKUFilter, setProductSKUFilter] = useState('');
   const productImportRef = useRef(null);
   const locationsImportRef = useRef(null);
+  const internalVehiclesImportRef = useRef(null);
   const [locationTypes, setLocationTypes] = useState([]);
   const [selected, setSelected] = useState(new Set());
   // Location search state
@@ -190,6 +191,30 @@ export default function Master() {
     } catch (err) {
       toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
     } finally { setImporting(false); }
+  };
+
+  const handleInternalVehiclesImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const formData = new FormData();
+    formData.append('file', file);
+    e.target.value = '';
+    setImporting(true);
+    try {
+      const res = await api.post('/master/internal-vehicles/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
+      if (res.data.success) { toast.success(res.data.message); fetchData('internalVehicles'); }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
+    } finally { setImporting(false); }
+  };
+
+  const handleDownloadInternalVehiclesTemplate = async () => {
+    try {
+      const res = await api.get('/master/internal-vehicles/template', { responseType: 'blob' });
+      const url = URL.createObjectURL(new Blob([res.data]));
+      const a = document.createElement('a'); a.href = url; a.download = 'internal_vehicles_template.xlsx'; a.click();
+      URL.revokeObjectURL(url);
+    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
   };
 
   const handleLocationsImport = async (e) => {
@@ -1026,6 +1051,14 @@ export default function Master() {
         <div className="flex items-center justify-between mb-4">
           <h3 className="card-header mb-0">{tabs.find(t => t.key === tab)?.label}</h3>
           <div className="flex items-center gap-2">
+            {tab === 'internalVehicles' && (<>
+              <input ref={internalVehiclesImportRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleInternalVehiclesImport} />
+              <button onClick={() => !importing && internalVehiclesImportRef.current?.click()} disabled={importing}
+                className="btn-secondary text-sm flex items-center gap-1.5">
+                {importing ? <><span className="w-3.5 h-3.5 border-2 border-gray-300 border-t-gray-600 rounded-full animate-spin flex-shrink-0" />กำลังนำเข้า...</> : <><Upload size={14} />Import Excel</>}
+              </button>
+              <button onClick={handleDownloadInternalVehiclesTemplate} className="btn-secondary text-sm flex items-center gap-1.5"><Download size={14} />Template</button>
+            </>)}
             {tab === 'customers' && (<>
               <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
               <button onClick={() => !importing && importRef.current?.click()} disabled={importing}
