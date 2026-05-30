@@ -183,7 +183,7 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
                   (SELECT ItemID FROM WMS_StockCountItems WHERE SessionID=@ID)`);
         await pool.request().input('ID', sql.Int, sessionId)
           .query('DELETE FROM WMS_StockCountItems WHERE SessionID=@ID');
-        const BATCH = 500;
+        const BATCH = 100;
         for (let b = 0; b < valStrings.length; b += BATCH) {
           await pool.request().query(
             `INSERT INTO WMS_StockCountItems (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,Thickness,SystemQty,SystemWeight) VALUES ${valStrings.slice(b, b + BATCH).join(',')}`

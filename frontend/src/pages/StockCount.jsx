@@ -167,7 +167,7 @@ export default function StockCount() {
             const detail = await api.get(`/stock-count/${sid}`);
             const count = detail?.data?.data?.items?.length ?? 0;
             await fetchDetail(sid);
-            if (count === 0 && ++attempts < 20) setTimeout(poll, 3000);
+            if (count === 0 && ++attempts < 80) setTimeout(poll, 3000);
           } catch { /* ignore poll errors */ }
         };
         setTimeout(poll, 3000);
