@@ -442,6 +442,22 @@ export default function Records() {
                                       )}
                                     </div>
 
+                                    {/* รวมทั้งหมด */}
+                                    {(() => {
+                                      const total = (tl.pickWaitMinutes ?? 0)
+                                        + (tl.hasSOWait ? (tl.soWaitMinutes ?? 0) : 0)
+                                        + (tl.stations || []).reduce((s, st) => s + (st.DurationMinutes ?? 0), 0)
+                                        + (tl.weighOutWaitMinutes ?? 0)
+                                        + (tl.checkerMinutes ?? 0);
+                                      if (total === 0) return null;
+                                      return (
+                                        <div className="bg-blue-600 rounded-xl px-4 py-2.5 min-w-44 flex flex-col justify-center">
+                                          <p className="text-xs font-bold text-blue-100 mb-1">⏱ รวมทุกสถานี</p>
+                                          <p className="text-lg font-bold text-white leading-none">{fmtMin(total)}</p>
+                                        </div>
+                                      );
+                                    })()}
+
                                   </div>
                                 )}
                                 {row.CheckerRemarks && (
