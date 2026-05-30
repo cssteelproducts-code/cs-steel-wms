@@ -325,11 +325,16 @@ const runMigrations = async () => {
       );`);
     await pool.request().query(`
       IF OBJECT_ID('WMS_StockCountItems','U') IS NOT NULL
-        AND NOT EXISTS (
+      BEGIN
+        IF NOT EXISTS (
           SELECT 1 FROM sys.columns
           WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='SessionID'
         )
-      BEGIN DROP TABLE WMS_StockCountItems; END;
+        BEGIN
+          IF OBJECT_ID('WMS_StockCountEntries','U') IS NOT NULL DROP TABLE WMS_StockCountEntries;
+          DROP TABLE WMS_StockCountItems;
+        END
+      END
     `);
     await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountItems' AND xtype='U')

@@ -13,13 +13,16 @@ async function ensureTables() {
   try {
     // Migrate: drop WMS_StockCountItems if SessionID column is missing (any old schema)
     await pool.request().query(`
-      IF OBJECT_ID('WMS_StockCountItems', 'U') IS NOT NULL
-        AND NOT EXISTS (
-          SELECT * FROM sys.columns
-          WHERE object_id = OBJECT_ID('WMS_StockCountItems') AND name = 'SessionID'
-        )
+      IF OBJECT_ID('WMS_StockCountItems','U') IS NOT NULL
       BEGIN
-        DROP TABLE WMS_StockCountItems;
+        IF NOT EXISTS (
+          SELECT 1 FROM sys.columns
+          WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='SessionID'
+        )
+        BEGIN
+          IF OBJECT_ID('WMS_StockCountEntries','U') IS NOT NULL DROP TABLE WMS_StockCountEntries;
+          DROP TABLE WMS_StockCountItems;
+        END
       END
     `);
     await pool.request().query(`
