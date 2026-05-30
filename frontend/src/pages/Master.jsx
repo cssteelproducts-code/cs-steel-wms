@@ -886,7 +886,7 @@ export default function Master() {
 
             {/* ข้อมูลประกันภัย / พรบ. / ภาษีรถ */}
             <div className="rounded-2xl p-4 space-y-3" style={{ background: '#fef9f0', border: '1px solid #fde68a' }}>
-              <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5"><Calendar size={13}/>ข้อมูลประกันภัย / พรบ. / ภาษีรถ — แจ้งเตือน 90 / 60 / 30 วัน และรายวันเมื่อ ≤ 30 วัน</p>
+              <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5"><Calendar size={13}/>ข้อมูลประกันภัย/พรบ./ภาษี</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label text-amber-700">บริษัท ประกันภัย</label>
