@@ -165,8 +165,9 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
           ? Math.max(0, Math.round((new Date(t.CheckTime) - new Date(t.WeighOutTime)) / 60000))
           : null;
 
-    const totalTripMinutes = t.WeighInTime && t.WeighOutTime
-      ? Math.max(0, Math.round((new Date(t.WeighOutTime) - new Date(t.WeighInTime)) / 60000))
+    const endTime = t.CheckTime || t.WeighOutTime;
+    const totalTripMinutes = t.WeighInTime && endTime
+      ? Math.max(0, Math.round((new Date(endTime) - new Date(t.WeighInTime)) / 60000))
       : null;
 
     res.json({

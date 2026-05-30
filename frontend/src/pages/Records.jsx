@@ -464,9 +464,9 @@ export default function Records() {
                                     {/* เวลาเข้า→ออก */}
                                     {tl.totalTripMinutes != null && (
                                       <div className="bg-white rounded-xl border border-indigo-100 px-4 py-2.5 min-w-44">
-                                        <p className="text-xs font-bold text-indigo-600 mb-1.5">🚛 ชั่งเข้า → ชั่งออก</p>
+                                        <p className="text-xs font-bold text-indigo-600 mb-1.5">🚛 เวลารวมในคลัง</p>
                                         <div className="flex items-center justify-between gap-4 text-xs">
-                                          <span className="text-slate-500">เวลารวมในคลัง</span>
+                                          <span className="text-slate-500">ชั่งเข้า → จบเช็คเกอร์</span>
                                           <span className="font-bold text-indigo-700 text-sm">{fmtMin(tl.totalTripMinutes)}</span>
                                         </div>
                                       </div>
