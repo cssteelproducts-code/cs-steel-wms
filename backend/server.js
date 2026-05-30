@@ -324,19 +324,6 @@ const runMigrations = async () => {
         IsActive BIT DEFAULT 1
       );`);
     await pool.request().query(`
-      IF OBJECT_ID('WMS_StockCountItems','U') IS NOT NULL
-      BEGIN
-        IF NOT EXISTS (
-          SELECT 1 FROM sys.columns
-          WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='SessionID'
-        )
-        BEGIN
-          IF OBJECT_ID('WMS_StockCountEntries','U') IS NOT NULL DROP TABLE WMS_StockCountEntries;
-          DROP TABLE WMS_StockCountItems;
-        END
-      END
-    `);
-    await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountItems' AND xtype='U')
       CREATE TABLE WMS_StockCountItems (
         ItemID INT IDENTITY(1,1) PRIMARY KEY,
@@ -569,6 +556,58 @@ const runMigrations = async () => {
     console.log('✅ WMS_Users.UserLevel column ready');
   } catch (e) {
     console.warn('⚠ WMS_Users.UserLevel migration:', e.message);
+  }
+
+  // Fix WMS_StockCountItems schema (old schema had CountID/ProductID, new needs SessionID)
+  try {
+    await pool.request().query(`
+      IF OBJECT_ID('WMS_StockCountItems','U') IS NOT NULL
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM sys.columns
+          WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='SessionID'
+        )
+        BEGIN
+          IF OBJECT_ID('WMS_StockCountEntries','U') IS NOT NULL
+          BEGIN
+            DROP TABLE WMS_StockCountEntries;
+          END
+          DROP TABLE WMS_StockCountItems;
+        END
+      END
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_StockCountSessions' AND xtype='U')
+      CREATE TABLE WMS_StockCountSessions (
+        SessionID INT IDENTITY(1,1) PRIMARY KEY, SessionName NVARCHAR(200) NOT NULL,
+        WarehouseCode NVARCHAR(20), Status NVARCHAR(20) DEFAULT 'DRAFT', Notes NVARCHAR(500),
+        CreatedBy NVARCHAR(100), CreatedAt DATETIME DEFAULT GETDATE(),
+        OpenedAt DATETIME, CompletedAt DATETIME, IsActive BIT DEFAULT 1
+      );
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_StockCountItems' AND xtype='U')
+      CREATE TABLE WMS_StockCountItems (
+        ItemID INT IDENTITY(1,1) PRIMARY KEY, SessionID INT NOT NULL,
+        Warehouse NVARCHAR(20), Location NVARCHAR(50), ItemCode NVARCHAR(50),
+        ItemName NVARCHAR(300), TypeSKU NVARCHAR(50), CategoryCode NVARCHAR(20),
+        CategoryName NVARCHAR(100), SizeCode NVARCHAR(100),
+        SystemQty DECIMAL(12,2) DEFAULT 0, SystemWeight DECIMAL(12,2),
+        IsLocked BIT DEFAULT 0, NeedsRecount BIT DEFAULT 0,
+        LockedAt DATETIME, LockedBy NVARCHAR(100)
+      );
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_StockCountEntries' AND xtype='U')
+      CREATE TABLE WMS_StockCountEntries (
+        EntryID INT IDENTITY(1,1) PRIMARY KEY, ItemID INT NOT NULL, SessionID INT NOT NULL,
+        Round INT DEFAULT 1, CountedQty DECIMAL(12,2) NOT NULL,
+        CountedBy NVARCHAR(100), CountedAt DATETIME DEFAULT GETDATE(), Notes NVARCHAR(300)
+      );
+    `);
+    console.log('✅ WMS_StockCountItems schema OK');
+  } catch (e) {
+    console.warn('⚠ WMS_StockCountItems schema migration:', e.message);
   }
 };
 
