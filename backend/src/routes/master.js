@@ -776,11 +776,11 @@ router.delete('/internal-vehicles/:id', authenticate, requireAdmin, async (req, 
 router.get('/internal-vehicles/template', authenticate, (req, res) => {
   const wb = XLSX.utils.book_new();
   const ws = XLSX.utils.aoa_to_sheet([
-    ['ทะเบียนรถ*', 'ชื่อ/รุ่นรถ', 'ประเภทรถ', 'พ.ร.บ. สิ้นอายุ (YYYY-MM-DD)', 'ประกันภัย สิ้นอายุ (YYYY-MM-DD)', 'ตรวจสภาพ สิ้นอายุ (YYYY-MM-DD)', 'ชื่อเอกสารอื่น', 'เอกสารอื่น สิ้นอายุ (YYYY-MM-DD)'],
-    ['กก-1234', 'ISUZU NPR 130', 'รถยก', '2025-12-31', '2025-06-30', '2025-09-15', '', ''],
-    ['ขข-5678', 'HINO 300', 'รถลาก', '2026-03-31', '', '', 'ใบอนุญาต', '2026-01-01'],
+    ['ทะเบียนรถ*', 'ชื่อ/รุ่นรถ', 'ประเภทรถ', 'บริษัท ประกันภัย', 'ประกันภัย สิ้นอายุ (YYYY-MM-DD)', 'บริษัท พรบ.', 'พ.ร.บ. สิ้นอายุ (YYYY-MM-DD)', 'ภาษีรถ ต่อภาษี (YYYY-MM-DD)'],
+    ['กก-1234', 'ISUZU NPR 130', 'รถยก', 'วิริยะประกันภัย', '2025-06-30', 'เมืองไทยประกันภัย', '2025-12-31', '2025-12-31'],
+    ['ขข-5678', 'HINO 300', 'รถลาก', 'ทิพยประกันภัย', '2026-03-31', 'กรุงไทยพานิชประกันภัย', '2026-03-31', '2026-03-31'],
   ]);
-  ws['!cols'] = [14, 20, 14, 26, 26, 26, 18, 26].map(w => ({ wch: w }));
+  ws['!cols'] = [14, 20, 14, 22, 28, 22, 28, 28].map(w => ({ wch: w }));
   XLSX.utils.book_append_sheet(wb, ws, 'รถขนส่งภายใน');
   const buf = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
   res.setHeader('Content-Disposition', 'attachment; filename="internal_vehicles_template.xlsx"');
@@ -803,7 +803,7 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
     const newRows = [];
     let skipped = 0;
     for (let i = 1; i < rows.length; i++) {
-      const [plate, name, category, actExpiry, insuranceExpiry, inspectionExpiry, otherDocName, otherDocExpiry] = rows[i];
+      const [plate, name, category, insuranceCompany, insuranceExpiry, actCompany, actExpiry, taxExpiry] = rows[i];
       if (!plate) { skipped++; continue; }
       const p = String(plate).trim();
       if (existingPlates.has(p)) { skipped++; continue; }
@@ -811,11 +811,11 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
         plate: p,
         name: name ? String(name).trim() : null,
         category: category ? String(category).trim() : null,
-        actExpiry: actExpiry ? String(actExpiry).trim() : null,
+        insuranceCompany: insuranceCompany ? String(insuranceCompany).trim() : null,
         insuranceExpiry: insuranceExpiry ? String(insuranceExpiry).trim() : null,
-        inspectionExpiry: inspectionExpiry ? String(inspectionExpiry).trim() : null,
-        otherDocName: otherDocName ? String(otherDocName).trim() : null,
-        otherDocExpiry: otherDocExpiry ? String(otherDocExpiry).trim() : null,
+        actCompany: actCompany ? String(actCompany).trim() : null,
+        actExpiry: actExpiry ? String(actExpiry).trim() : null,
+        taxExpiry: taxExpiry ? String(taxExpiry).trim() : null,
       });
       existingPlates.add(p);
     }
@@ -825,14 +825,14 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
         .input('LicensePlate', sql.NVarChar, row.plate)
         .input('VehicleName', sql.NVarChar, row.name)
         .input('VehicleCategory', sql.NVarChar, row.category)
-        .input('ActExpiry', sql.Date, row.actExpiry || null)
+        .input('InsuranceCompany', sql.NVarChar, row.insuranceCompany)
         .input('InsuranceExpiry', sql.Date, row.insuranceExpiry || null)
-        .input('InspectionExpiry', sql.Date, row.inspectionExpiry || null)
-        .input('OtherDocName', sql.NVarChar, row.otherDocName)
-        .input('OtherDocExpiry', sql.Date, row.otherDocExpiry || null)
+        .input('ActCompany', sql.NVarChar, row.actCompany)
+        .input('ActExpiry', sql.Date, row.actExpiry || null)
+        .input('TaxExpiry', sql.Date, row.taxExpiry || null)
         .query(`INSERT INTO WMS_InternalVehicles
-          (LicensePlate,VehicleName,VehicleCategory,ActExpiry,InsuranceExpiry,InspectionExpiry,OtherDocName,OtherDocExpiry,VehicleStatus,IsActive)
-          VALUES (@LicensePlate,@VehicleName,@VehicleCategory,@ActExpiry,@InsuranceExpiry,@InspectionExpiry,@OtherDocName,@OtherDocExpiry,N'พร้อมใช้',1)`);
+          (LicensePlate,VehicleName,VehicleCategory,InsuranceCompany,InsuranceExpiry,ActCompany,ActExpiry,TaxExpiry,VehicleStatus,IsActive)
+          VALUES (@LicensePlate,@VehicleName,@VehicleCategory,@InsuranceCompany,@InsuranceExpiry,@ActCompany,@ActExpiry,@TaxExpiry,N'พร้อมใช้',1)`);
     }
 
     res.json({ success: true, message: `นำเข้าสำเร็จ ${newRows.length} รายการ (ข้ามซ้ำ ${skipped} รายการ)` });
