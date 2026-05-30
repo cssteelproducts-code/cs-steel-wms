@@ -445,9 +445,9 @@ export default function Master() {
                       </div>
                     )}
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      <ExpiryBadge date={i.InsuranceExpiry} label="ประกัน" />
-                      <ExpiryBadge date={i.ActExpiry} label="พ.ร.บ." />
-                      <ExpiryBadge date={i.TaxExpiry} label="ภาษี" />
+                      <ExpiryBadge date={i.InsuranceExpiry} label="ประกันภัย คงเหลือ" />
+                      <ExpiryBadge date={i.ActExpiry} label="พ.ร.บ. คงเหลือ" />
+                      <ExpiryBadge date={i.TaxExpiry} label="ภาษีรถ คงเหลือ" />
                     </div>
                   </div>
                   <div className="flex-shrink-0"><VehicleStatusBadge status={i.VehicleStatus} /></div>
