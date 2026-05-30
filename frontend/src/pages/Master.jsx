@@ -26,15 +26,14 @@ const daysUntil = (dateStr) => {
 
 const ExpiryBadge = ({ date, label }) => {
   const days = daysUntil(date);
-  if (days === null) return null;
-  let cls, txt;
-  if (days < 0)   { cls = 'bg-gray-100 text-gray-400'; txt = `${label}: หมด`; }
-  else if (days === 0) { cls = 'bg-red-600 text-white'; txt = `${label}: วันนี้!`; }
-  else if (days <= 30) { cls = 'bg-red-100 text-red-700 ring-1 ring-red-200'; txt = `${label}: ${days}ว.`; }
-  else if (days <= 60) { cls = 'bg-orange-100 text-orange-700'; txt = `${label}: ${days}ว.`; }
-  else if (days <= 90) { cls = 'bg-amber-50 text-amber-600'; txt = `${label}: ${days}ว.`; }
-  else { cls = 'bg-emerald-50 text-emerald-600'; txt = `${label}: ${days}ว.`; }
-  return <span className={`inline-flex px-2 py-0.5 rounded-full text-[10px] font-semibold whitespace-nowrap ${cls}`}>{txt}</span>;
+  if (days === null || days > 90) return null;
+  let cls, icon, txt;
+  if (days < 0)        { cls = 'bg-gray-200 text-gray-500 ring-1 ring-gray-300';                        icon = '⚫'; txt = `${label}: หมดแล้ว ${Math.abs(days)}ว.`; }
+  else if (days === 0) { cls = 'bg-red-600 text-white ring-2 ring-red-400 shadow-md shadow-red-200';     icon = '🚨'; txt = `${label}: หมดวันนี้!`; }
+  else if (days <= 30) { cls = 'bg-red-500 text-white ring-2 ring-red-300 shadow-sm shadow-red-100';     icon = '🔴'; txt = `${label}: ${days}ว.`; }
+  else if (days <= 60) { cls = 'bg-orange-500 text-white ring-1 ring-orange-300 shadow-sm shadow-orange-100'; icon = '🟠'; txt = `${label}: ${days}ว.`; }
+  else                 { cls = 'bg-amber-400 text-white ring-1 ring-amber-300';                          icon = '🟡'; txt = `${label}: ${days}ว.`; }
+  return <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${cls}`}>{icon} {txt}</span>;
 };
 
 const VehicleStatusBadge = ({ status }) => {
@@ -430,9 +429,8 @@ export default function Master() {
               const sel = selected.has(i.VehicleID);
               const needsRepair = i.VehicleStatus === 'รอซ่อม' || i.VehicleStatus === 'อุบัติเหตุ';
               return (
-                <div key={i.VehicleID} className={`flex items-start gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${sel ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
-                  <div className="pt-0.5"><Checkbox id={i.VehicleID} checked={sel} onChange={() => toggleSelect(i.VehicleID)} /></div>
-                  <div className="flex-shrink-0 mt-0.5"><VehicleStatusBadge status={i.VehicleStatus} /></div>
+                <div key={i.VehicleID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${sel ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
+                  <div className="pt-0.5 flex-shrink-0"><Checkbox id={i.VehicleID} checked={sel} onChange={() => toggleSelect(i.VehicleID)} /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold text-slate-900 text-sm">{i.LicensePlate}</span>
@@ -446,13 +444,14 @@ export default function Master() {
                         {i.EstimatedCompletionDate && <span>คาดเสร็จ: {new Date(i.EstimatedCompletionDate).toLocaleDateString('th-TH')}</span>}
                       </div>
                     )}
-                    <div className="flex flex-wrap gap-1 mt-1.5">
+                    <div className="flex flex-wrap gap-1.5 mt-1.5">
                       <ExpiryBadge date={i.InsuranceExpiry} label={i.InsuranceCompany ? `ประกัน (${i.InsuranceCompany})` : 'ประกัน'} />
                       <ExpiryBadge date={i.ActExpiry} label={i.ActCompany ? `พ.ร.บ. (${i.ActCompany})` : 'พ.ร.บ.'} />
-                      {i.TaxExpiry && <ExpiryBadge date={i.TaxExpiry} label="ภาษีรถ" />}
+                      <ExpiryBadge date={i.TaxExpiry} label="ภาษีรถ" />
                     </div>
                   </div>
-                  <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pt-0.5">
+                  <div className="flex-shrink-0"><VehicleStatusBadge status={i.VehicleStatus} /></div>
+                  <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                     <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
