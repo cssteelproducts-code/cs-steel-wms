@@ -17,15 +17,36 @@ const MENUS = [
   { code: 'WEIGH_OUT', name: 'สถานีชั่งออก' },
   { code: 'CHECKER', name: 'เช็คเกอร์' },
   { code: 'RECORDS', name: 'บันทึกการขึ้นสินค้า' },
-  { code: 'STOCK', name: 'สต็อกสินค้า' },
+  { code: 'STOCK', name: 'สต็อกสินค้า', children: [
+    { code: 'STOCK_BALANCE', name: 'ยอดสต็อก' },
+    { code: 'STOCK_TRANSACTIONS', name: 'รับ-จ่ายสินค้า' },
+    { code: 'STOCK_COUNT', name: 'นับสต็อก' },
+    { code: 'STOCK_PRODUCTS', name: 'รายการสินค้า' },
+  ]},
   { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' },
-  { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน' },
+  { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน', children: [
+    { code: 'TRANSFER_JOBS', name: 'งาน' },
+    { code: 'TRANSFER_STATIONS', name: 'สถานี' },
+    { code: 'TRANSFER_VEHICLES', name: 'รถ' },
+    { code: 'TRANSFER_REPORT', name: 'รายงาน' },
+  ]},
   { code: 'ETA', name: 'ETA / GPS' },
   { code: 'ALERTS', name: 'การแจ้งเตือน' },
   { code: 'USERS', name: 'จัดการผู้ใช้' },
-  { code: 'MASTER', name: 'ข้อมูลหลัก' },
-  { code: 'REPORTS', name: 'รายงาน' }
+  { code: 'MASTER', name: 'ข้อมูลหลัก', children: [
+    { code: 'MASTER_WAREHOUSES', name: 'คลังสินค้า' },
+    { code: 'MASTER_VEHICLE_TYPES', name: 'ประเภทรถ' },
+    { code: 'MASTER_CUSTOMERS', name: 'ลูกค้า' },
+    { code: 'MASTER_LOCATIONS', name: 'Location' },
+    { code: 'MASTER_PRODUCTS', name: 'สินค้า' },
+  ]},
+  { code: 'REPORTS', name: 'รายงาน' },
+  { code: 'LOCATION_CHECK', name: 'ตรวจสอบ Location' },
 ];
+
+// Flatten all codes including children for permission init
+const ALL_MENU_CODES = MENUS.flatMap(m => [m, ...(m.children || [])]);
+
 
 export default function Users() {
   const [users, setUsers] = useState([]);
@@ -62,7 +83,7 @@ export default function Users() {
     try {
       const res = await api.get(`/users/permissions/${roleId}`);
       const perms = {};
-      MENUS.forEach(m => {
+      ALL_MENU_CODES.forEach(m => {
         const p = res.data.data?.find(p => p.MenuCode === m.code);
         perms[m.code] = p?.CanView ? 1 : 0;
       });
@@ -153,7 +174,7 @@ export default function Users() {
     setSaving(true);
     try {
       const v = (m) => permissions[m.code] ? 1 : 0;
-      const permsArr = MENUS.map(m => ({ menuCode: m.code, menuName: m.name, canView: v(m), canCreate: v(m), canEdit: v(m), canDelete: v(m) }));
+      const permsArr = ALL_MENU_CODES.map(m => ({ menuCode: m.code, menuName: m.name, canView: v(m), canCreate: v(m), canEdit: v(m), canDelete: v(m) }));
       const res = await api.post('/users/permissions', { roleId: selectedRole.RoleID, permissions: permsArr });
       if (res.data.success) { toast.success(res.data.message); setModal(null); }
     } catch (err) {
@@ -161,8 +182,15 @@ export default function Users() {
     } finally { setSaving(false); }
   };
 
-  const togglePerm = (menuCode) => {
-    setPermissions(p => ({ ...p, [menuCode]: p[menuCode] ? 0 : 1 }));
+  const togglePerm = (menuCode, children = []) => {
+    setPermissions(prev => {
+      const next = { ...prev, [menuCode]: prev[menuCode] ? 0 : 1 };
+      // If turning off parent, also turn off all children
+      if (!next[menuCode] && children.length) {
+        children.forEach(c => { next[c.code] = 0; });
+      }
+      return next;
+    });
   };
 
   if (pageLoading) return (
@@ -460,15 +488,32 @@ export default function Users() {
                 </thead>
                 <tbody>
                   {MENUS.map(menu => (
-                    <tr key={menu.code} className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
-                      <td className="px-3 py-2 text-sm text-slate-700">{menu.name}</td>
-                      <td className="px-3 py-2 text-center">
-                        <input type="checkbox"
-                          checked={!!permissions[menu.code]}
-                          onChange={() => togglePerm(menu.code)}
-                          className="w-4 h-4 cursor-pointer rounded accent-red-600" />
-                      </td>
-                    </tr>
+                    <>
+                      {/* Parent row */}
+                      <tr key={menu.code} className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
+                        <td className="px-3 py-2 text-sm font-medium text-slate-800">{menu.name}</td>
+                        <td className="px-3 py-2 text-center">
+                          <input type="checkbox"
+                            checked={!!permissions[menu.code]}
+                            onChange={() => togglePerm(menu.code, menu.children || [])}
+                            className="w-4 h-4 cursor-pointer rounded accent-red-600" />
+                        </td>
+                      </tr>
+                      {/* Children rows — only show when parent is checked */}
+                      {permissions[menu.code] && menu.children?.map(child => (
+                        <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/50'}`}>
+                          <td className="pl-8 pr-3 py-1.5 text-xs text-slate-500 flex items-center gap-1.5">
+                            <span className="text-slate-300">└</span> {child.name}
+                          </td>
+                          <td className="px-3 py-1.5 text-center">
+                            <input type="checkbox"
+                              checked={!!permissions[child.code]}
+                              onChange={() => togglePerm(child.code)}
+                              className="w-3.5 h-3.5 cursor-pointer rounded accent-red-600" />
+                          </td>
+                        </tr>
+                      ))}
+                    </>
                   ))}
                 </tbody>
               </table>
