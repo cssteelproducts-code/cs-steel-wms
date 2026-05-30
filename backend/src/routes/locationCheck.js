@@ -157,7 +157,7 @@ router.get('/today', authenticate, async (req, res) => {
   try {
     await ensureTables();
     const pool = getPool();
-    const checkMonth = new Date().toISOString().slice(0, 7);
+    const checkMonth = req.query.month || new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 7);
     const result = await pool.request()
       .input('CheckMonth', sql.NVarChar, checkMonth)
       .query(`
@@ -207,7 +207,7 @@ router.post('/quick', authenticate, async (req, res) => {
   try {
     await ensureTables();
     const pool = getPool();
-    const { locationCode, actualSKUType, productCode, productFoundName } = req.body;
+    const { locationCode, actualSKUType, productCode, productFoundName, month } = req.body;
     if (!locationCode || !actualSKUType)
       return res.status(400).json({ success: false, message: 'กรุณาระบุ LocationCode และ ActualSKUType' });
 
@@ -229,8 +229,8 @@ router.post('/quick', authenticate, async (req, res) => {
     const isMatch = expectedSKUType && actualSKUType
       ? (actualSKUType.trim() === expectedSKUType.trim() ? 1 : 0) : 0;
 
-    const today = new Date();
-    const checkMonth = today.toISOString().slice(0, 7);
+    const today = new Date(Date.now() + 7 * 3600000);
+    const checkMonth = month || today.toISOString().slice(0, 7);
     const checkDate = today.toISOString().slice(0, 10);
 
     let checkId;

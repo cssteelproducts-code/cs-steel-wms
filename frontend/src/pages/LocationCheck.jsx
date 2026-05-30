@@ -25,7 +25,18 @@ const LABEL_STYLE = {
   display: 'block'
 };
 
+const currentMonth = () => new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 7);
+
+const MONTH_TH = ['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน',
+                  'กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+
+function fmtMonth(ym) {
+  const [y, m] = ym.split('-');
+  return `${MONTH_TH[parseInt(m) - 1]} ${parseInt(y) + 543}`;
+}
+
 export default function LocationCheck() {
+  const [selectedMonth, setSelectedMonth] = useState(currentMonth());
   const [locationCode, setLocationCode] = useState('');
   const [locationInfo, setLocationInfo] = useState(null);
   const [searching, setSearching] = useState(false);
@@ -44,6 +55,15 @@ export default function LocationCheck() {
     loadTodayLog();
     setTimeout(() => locationInputRef.current?.focus(), 100);
   }, []);
+
+  useEffect(() => {
+    loadTodayLog();
+    setResult(null);
+    setLocationInfo(null);
+    setLocationCode('');
+    setFilters({ category: '', size: '', thickness: '' });
+    setProductResults([]);
+  }, [selectedMonth]);
 
   // debounced product search — triggers when any filter changes
   useEffect(() => {
@@ -68,7 +88,7 @@ export default function LocationCheck() {
 
   const loadTodayLog = async () => {
     try {
-      const res = await api.get('/location-check/today');
+      const res = await api.get(`/location-check/today?month=${selectedMonth}`);
       if (res.data.success) setTodayLog(res.data.data);
     } catch {}
   };
@@ -107,7 +127,8 @@ export default function LocationCheck() {
         locationCode: locationInfo.LocationCode,
         actualSKUType: product.SKUType,
         productCode: product.ProductCode,
-        productFoundName: product.ProductName
+        productFoundName: product.ProductName,
+        month: selectedMonth
       });
       if (res.data.success) {
         setResult(res.data);
@@ -162,6 +183,35 @@ export default function LocationCheck() {
 
   return (
     <div className="max-w-lg mx-auto space-y-4 pb-6">
+
+      {/* Month selector */}
+      <div className="rounded-2xl px-5 py-4 flex items-center gap-3"
+        style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}>
+        <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
+          รอบตรวจนับเดือน
+        </div>
+        <div style={{ flex: 1 }}>
+          <input
+            type="month"
+            value={selectedMonth}
+            onChange={e => e.target.value && setSelectedMonth(e.target.value)}
+            style={{
+              background: '#0f172a',
+              border: '2px solid rgba(255,255,255,0.1)',
+              borderRadius: 10,
+              color: '#f1f5f9',
+              padding: '7px 12px',
+              fontSize: '0.9rem',
+              outline: 'none',
+              width: '100%',
+              colorScheme: 'dark'
+            }}
+          />
+        </div>
+        <div className="text-sm font-semibold" style={{ color: '#dc2626', whiteSpace: 'nowrap' }}>
+          {fmtMonth(selectedMonth)}
+        </div>
+      </div>
 
       {/* Scan location */}
       <div className="rounded-2xl p-5" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}>
@@ -389,7 +439,7 @@ export default function LocationCheck() {
             <div className="flex items-center gap-2">
               <History size={15} style={{ color: '#64748b' }} />
               <span className="text-sm font-semibold" style={{ color: '#94a3b8' }}>
-                รายการวันนี้ ({todayLog.length} location)
+                รายการรอบ {fmtMonth(selectedMonth)} ({todayLog.length} location)
               </span>
             </div>
             <div className="flex gap-3 text-xs font-semibold">
