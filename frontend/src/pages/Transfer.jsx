@@ -434,6 +434,7 @@ export default function Transfer() {
               { v: 'ASSIGNED', l: 'มอบหมาย' },
               { v: 'IN_PROGRESS', l: 'กำลังดำเนินการ' },
               { v: 'COMPLETE', l: 'เสร็จสิ้น' },
+              { v: 'CANCELLED', l: 'ยกเลิก' },
             ].map(({ v, l }) => (
               <button key={v} onClick={() => setStatusFilter(v)}
                 className="px-3 h-8 rounded-xl text-xs font-bold transition-all"
