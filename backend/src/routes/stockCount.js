@@ -24,7 +24,7 @@ async function ensureTables() {
         OpenedAt DATETIME,
         CompletedAt DATETIME,
         IsActive BIT DEFAULT 1
-      )`);
+      );`);
     await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountItems' AND xtype='U')
       CREATE TABLE WMS_StockCountItems (
@@ -44,7 +44,7 @@ async function ensureTables() {
         NeedsRecount BIT DEFAULT 0,
         LockedAt DATETIME,
         LockedBy NVARCHAR(100)
-      )`);
+      );`);
     await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountEntries' AND xtype='U')
       CREATE TABLE WMS_StockCountEntries (
@@ -56,9 +56,11 @@ async function ensureTables() {
         CountedBy NVARCHAR(100),
         CountedAt DATETIME DEFAULT GETDATE(),
         Notes NVARCHAR(300)
-      )`);
-  } catch (e) { console.error('StockCount ensureTables:', e.message); }
-  _ready = true;
+      );`);
+    _ready = true;
+  } catch (e) {
+    console.error('StockCount ensureTables:', e.message);
+  }
 }
 
 // ── Sessions ──────────────────────────────────────────────
