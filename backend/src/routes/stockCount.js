@@ -162,9 +162,11 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
     const rows = XLSX.utils.sheet_to_json(ws);
     if (!rows.length) return res.status(400).json({ success: false, message: 'ไม่พบข้อมูล' });
 
-    // Clear previous import for this session
+    // Clear previous import — join through items to avoid SessionID dependency on entries table
     await pool.request().input('ID', sql.Int, req.params.id)
-      .query('DELETE FROM WMS_StockCountEntries WHERE SessionID=@ID');
+      .query(`DELETE e FROM WMS_StockCountEntries e
+              INNER JOIN WMS_StockCountItems i ON e.ItemID=i.ItemID
+              WHERE i.SessionID=@ID`);
     await pool.request().input('ID', sql.Int, req.params.id)
       .query('DELETE FROM WMS_StockCountItems WHERE SessionID=@ID');
 

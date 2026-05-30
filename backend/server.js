@@ -558,6 +558,33 @@ const runMigrations = async () => {
     console.warn('⚠ WMS_Users.UserLevel migration:', e.message);
   }
 
+  // Fix WMS_StockCountEntries schema (drop if missing SessionID column so it recreates correctly)
+  try {
+    await pool.request().query(`
+      IF OBJECT_ID('WMS_StockCountEntries','U') IS NOT NULL
+      BEGIN
+        IF NOT EXISTS (
+          SELECT 1 FROM sys.columns
+          WHERE object_id=OBJECT_ID('WMS_StockCountEntries') AND name='SessionID'
+        )
+        BEGIN
+          DROP TABLE WMS_StockCountEntries;
+        END
+      END
+    `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_StockCountEntries' AND xtype='U')
+      CREATE TABLE WMS_StockCountEntries (
+        EntryID INT IDENTITY(1,1) PRIMARY KEY, ItemID INT NOT NULL, SessionID INT NOT NULL,
+        Round INT DEFAULT 1, CountedQty DECIMAL(12,2) NOT NULL,
+        CountedBy NVARCHAR(100), CountedAt DATETIME DEFAULT GETDATE(), Notes NVARCHAR(300)
+      );
+    `);
+    console.log('✅ WMS_StockCountEntries schema OK');
+  } catch (e) {
+    console.warn('⚠ WMS_StockCountEntries schema migration:', e.message);
+  }
+
   // Fix WMS_StockCountItems schema (old schema had CountID/ProductID, new needs SessionID)
   try {
     await pool.request().query(`
