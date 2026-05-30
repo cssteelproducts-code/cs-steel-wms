@@ -403,23 +403,16 @@ export default function Transfer() {
 
   return (
     <div className="space-y-5">
-      {/* Page header */}
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <h2 className="text-xl font-black" style={{ color: '#111827' }}>ระบบย้ายสินค้าภายใน</h2>
-          <p className="text-sm font-medium mt-0.5" style={{ color: '#9ca3af' }}>ควบคุมการขนย้ายสินค้าจากฝ่ายผลิตไปยังคลังสินค้า</p>
-        </div>
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <button onClick={() => setShowCreateJob(true)}
-            className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
-            style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.30)' }}>
-            <Plus size={15} /> สร้างงาน
-          </button>
-          <button onClick={loadJobs} className="p-2.5 rounded-2xl transition-colors"
-            style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6', color: '#6b7280' }}>
-            <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
-          </button>
-        </div>
+      <div className="flex items-center gap-2 justify-end">
+        <button onClick={() => setShowCreateJob(true)}
+          className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
+          style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.30)' }}>
+          <Plus size={15} /> สร้างงาน
+        </button>
+        <button onClick={loadJobs} className="p-2.5 rounded-2xl transition-colors"
+          style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6', color: '#6b7280' }}>
+          <RefreshCw size={15} className={loading ? 'animate-spin' : ''} />
+        </button>
       </div>
 
       {/* Tabs */}
