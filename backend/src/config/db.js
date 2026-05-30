@@ -12,7 +12,7 @@ const dbConfig = {
     enableArithAbort: true,
     useUTC: false,
     connectTimeout: 30000,
-    requestTimeout: 30000
+    requestTimeout: 60000
   },
   pool: {
     max: 30,
