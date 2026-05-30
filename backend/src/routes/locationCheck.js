@@ -284,25 +284,36 @@ router.post('/quick', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/location-check/products/search?q= – search products for field workers
+// GET /api/location-check/products/search?category=&size=&thickness= – search products for field workers
 router.get('/products/search', authenticate, async (req, res) => {
   try {
     const pool = getPool();
-    const { q } = req.query;
-    if (!q || q.trim().length < 2) return res.json({ success: true, data: [] });
+    const { category, size, thickness } = req.query;
 
-    const terms = q.trim().split(/\s+/).filter(t => t.length > 0).slice(0, 5);
+    const hasFilter = [category, size, thickness].some(v => v && v.trim().length >= 1);
+    if (!hasFilter) return res.json({ success: true, data: [] });
+
     const req2 = pool.request();
-    const whereClauses = terms.map((term, i) => {
-      req2.input(`T${i}`, sql.NVarChar, `%${term}%`);
-      return `(ProductName LIKE @T${i} OR SizeCode LIKE @T${i} OR CategoryName LIKE @T${i})`;
-    });
+    const where = [];
+
+    if (category && category.trim()) {
+      req2.input('Cat', sql.NVarChar, `%${category.trim()}%`);
+      where.push(`(CategoryName LIKE @Cat OR ProductName LIKE @Cat)`);
+    }
+    if (size && size.trim()) {
+      req2.input('Sz', sql.NVarChar, `%${size.trim()}%`);
+      where.push(`(SizeCode LIKE @Sz OR ProductName LIKE @Sz)`);
+    }
+    if (thickness && thickness.trim()) {
+      req2.input('Th', sql.NVarChar, `%${thickness.trim()}%`);
+      where.push(`(CAST(Thickness AS NVARCHAR(20)) LIKE @Th OR ProductName LIKE @Th)`);
+    }
 
     const result = await req2.query(`
-      SELECT TOP 15 ProductCode, ProductName, SizeCode, SKUType, CategoryName
+      SELECT TOP 20 ProductCode, ProductName, CategoryName, SizeCode, Thickness, SKUType
       FROM WMS_Products
-      WHERE IsActive = 1 AND ${whereClauses.join(' AND ')}
-      ORDER BY ProductName
+      WHERE IsActive = 1 AND ${where.join(' AND ')}
+      ORDER BY CategoryName, SizeCode, Thickness
     `);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
