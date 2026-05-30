@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck, ArrowLeftRight
+  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -20,11 +20,13 @@ const menuItems = [
   { path: '/weigh-out', icon: TruckIcon, key: 'nav.weighOut', code: 'WEIGH_OUT' },
   { path: '/checker', icon: CheckSquare, key: 'nav.checker', code: 'CHECKER' },
   { path: '/records', icon: ClipboardList, key: 'nav.records', code: 'RECORDS' },
+  { key: 'section.warehouse', divider: true },
+  { path: '/location-check', icon: ScanLine, key: 'nav.locationCheck', code: 'STOCK' },
+  { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
+  { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
   { key: 'section.logistics', divider: true },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
-  { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
-  { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
   { key: 'section.system', divider: true },
   { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
   { path: '/users', icon: Users, key: 'nav.users', code: 'USERS' },
