@@ -137,7 +137,7 @@ export default function Transfer() {
   };
 
   const deleteJob = async (jobId, jobCode, status) => {
-    const msg = status === 'PENDING'
+    const msg = (status === 'PENDING' || status === 'CANCELLED')
       ? `ลบงาน ${jobCode} ?\nการกระทำนี้ไม่สามารถยกเลิกได้`
       : `ยกเลิกงาน ${jobCode} ?\nรอบที่ยังไม่เสร็จจะถูกยกเลิกทั้งหมด`;
     if (!confirm(msg)) return;
@@ -556,11 +556,11 @@ export default function Transfer() {
                             <CheckCircle2 size={13} /> ปิดงาน
                           </button>
                         )}
-                        {!['COMPLETE', 'CANCELLED'].includes(job.Status) && (
+                        {job.Status !== 'COMPLETE' && (
                           <button onClick={() => deleteJob(job.JobID, job.JobCode, job.Status)}
                             className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
                             style={{ background: '#fef2f2', color: '#ef4444', border: '1.5px solid #fecaca' }}>
-                            <Trash2 size={13} /> {job.Status === 'PENDING' ? 'ลบ' : 'ยกเลิก'}
+                            <Trash2 size={13} /> {['PENDING', 'CANCELLED'].includes(job.Status) ? 'ลบ' : 'ยกเลิก'}
                           </button>
                         )}
                       </div>

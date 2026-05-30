@@ -186,7 +186,7 @@ export default function TransferDriver() {
                   <div className="text-right">
                     <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#9ca3af' }}>รถ</div>
                     <div className="px-2 py-1 rounded-xl text-sm font-black" style={{ background: '#eff6ff', color: '#3b82f6' }}>
-                      {trip.VehiclePlate}
+                      {trip.VehicleCode ? `[${trip.VehicleCode}] ` : ''}{trip.VehiclePlate}
                     </div>
                   </div>
                 )}

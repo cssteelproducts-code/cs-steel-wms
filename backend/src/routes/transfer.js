@@ -307,10 +307,11 @@ router.delete('/jobs/:id', async (req, res) => {
       .input('id', sql.Int, req.params.id)
       .query("SELECT Status FROM WMS_TransferJobs WHERE JobID=@id");
     if (!check.recordset[0]) return res.status(404).json({ success: false, message: 'ไม่พบงาน' });
-    if (['COMPLETE', 'CANCELLED'].includes(check.recordset[0].Status)) {
-      return res.status(400).json({ success: false, message: 'ไม่สามารถลบงานที่เสร็จแล้วหรือถูกยกเลิกแล้ว' });
+    const currentStatus = check.recordset[0].Status;
+    if (currentStatus === 'COMPLETE') {
+      return res.status(400).json({ success: false, message: 'ไม่สามารถลบงานที่เสร็จสิ้นแล้ว' });
     }
-    if (check.recordset[0].Status === 'PENDING') {
+    if (currentStatus === 'PENDING' || currentStatus === 'CANCELLED') {
       await pool.request().input('id', sql.Int, req.params.id)
         .query("DELETE FROM WMS_TransferTrips WHERE JobID=@id");
       await pool.request().input('id', sql.Int, req.params.id)
@@ -353,7 +354,7 @@ router.get('/trips/active', async (req, res) => {
         SELECT t.*, j.JobCode, j.ProductDesc, j.SourceStationID, j.DestStationID,
           ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
           j.PlannedBundles, j.PlannedWeightKg, j.Priority,
-          v.VehiclePlate
+          v.VehiclePlate, v.VehicleCode
         FROM WMS_TransferTrips t
         JOIN WMS_TransferJobs j ON t.JobID=j.JobID
         LEFT JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
