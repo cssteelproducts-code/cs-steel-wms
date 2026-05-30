@@ -41,14 +41,16 @@ export default function TripMonitor() {
     return () => clearInterval(interval);
   }, []);
 
-  const filtered = trips.filter(t => {
-    if (filter !== -1 && !FLOW_STEPS[filter].keys.includes(t.Status)) return false;
-    if (statusFilter !== 'all') {
-      const label = getEffectiveStatusConfig(t).label;
-      if (label !== statusFilter) return false;
-    }
-    return true;
-  });
+  const filtered = trips
+    .filter(t => {
+      if (filter !== -1 && !FLOW_STEPS[filter].keys.includes(t.Status)) return false;
+      if (statusFilter !== 'all') {
+        const label = getEffectiveStatusConfig(t).label;
+        if (label !== statusFilter) return false;
+      }
+      return true;
+    })
+    .sort((a, b) => (b.MinutesInWarehouse || 0) - (a.MinutesInWarehouse || 0));
 
   const effectiveStatusOptions = [...new Set(trips.map(t => getEffectiveStatusConfig(t).label))].sort();
 
