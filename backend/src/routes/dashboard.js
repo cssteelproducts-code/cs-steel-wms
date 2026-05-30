@@ -224,6 +224,36 @@ router.get('/summary', authenticate, async (req, res) => {
           AND lr.EntryTime >= DATEADD(DAY,-30,GETUTCDATE())
         GROUP BY ls.StationID, ls.StationName, ls.StationCode
         ORDER BY AVG(lr.DurationMinutes) DESC
+      `),
+      pool.request().query(`
+        SELECT vt.TypeName, COUNT(*) as Count
+        FROM WMS_Trips t
+        JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
+        JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
+        WHERE CAST(t.TripDate AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+          AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+        GROUP BY vt.TypeName ORDER BY Count DESC
+      `),
+      pool.request().query(`
+        SELECT vt.TypeName, COUNT(*) as Count
+        FROM WMS_Trips t
+        JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
+        JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
+        WHERE YEAR(t.TripDate)=YEAR(GETUTCDATE()) AND MONTH(t.TripDate)=MONTH(GETUTCDATE())
+          AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+        GROUP BY vt.TypeName ORDER BY Count DESC
+      `),
+      pool.request().query(`
+        SELECT vt.TypeName, COUNT(*) as Count
+        FROM WMS_Trips t
+        JOIN WMS_VehicleTypes vt ON t.VehicleTypeID=vt.TypeID
+        JOIN WMS_WeighIn wi ON t.TripID=wi.TripID
+        WHERE YEAR(t.TripDate)=YEAR(GETUTCDATE())
+          AND (DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+            OR DATEPART(HOUR,DATEADD(MINUTE,420,wi.WeighDateTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,wi.WeighDateTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
+        GROUP BY vt.TypeName ORDER BY Count DESC
       `)
     ]);
 
@@ -231,7 +261,8 @@ router.get('/summary', authenticate, async (req, res) => {
       todayStats, weightStats, statusFlow, avgTime, recentActivity,
       stationLoad, weeklyTrend, tripCounts, weightHistory,
       vehicleTypesToday, onTimeStats, vtBreakdownMonth, vtBreakdownYear,
-      incompleteLoading, completedToday, deliveryTypeResult, stationAvgTimeResult
+      incompleteLoading, completedToday, deliveryTypeResult, stationAvgTimeResult,
+      overtimeByTypeToday, overtimeByTypeMonth, overtimeByTypeYear
     ] = results.map(settle);
 
     // Log any failed queries for debugging
@@ -258,7 +289,10 @@ router.get('/summary', authenticate, async (req, res) => {
       incompleteLoading: incompleteLoading?.recordset || [],
       completedToday: completedToday?.recordset || [],
       deliveryTypeStats,
-      stationAvgTime: stationAvgTimeResult?.recordset || []
+      stationAvgTime: stationAvgTimeResult?.recordset || [],
+      overtimeByTypeToday: overtimeByTypeToday?.recordset || [],
+      overtimeByTypeMonth: overtimeByTypeMonth?.recordset || [],
+      overtimeByTypeYear:  overtimeByTypeYear?.recordset  || []
     };
     setCache('dashboard:summary', responseData, 12000); // 12s cache
     res.json({ success: true, data: responseData });

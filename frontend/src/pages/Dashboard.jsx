@@ -139,6 +139,7 @@ export default function Dashboard() {
   const [collapsed, setCollapsed] = useState(() => {
     try { return JSON.parse(localStorage.getItem('dash_collapsed') || '{}'); } catch { return {}; }
   });
+  const [overtimeFlipped, setOvertimeFlipped] = useState({});
   const toggleSection = (key) => setCollapsed(prev => {
     const next = { ...prev, [key]: !prev[key] };
     localStorage.setItem('dash_collapsed', JSON.stringify(next));
@@ -364,21 +365,67 @@ export default function Dashboard() {
           const allTypes  = [...new Set([...Object.keys(todayMap), ...Object.keys(monthMap), ...Object.keys(yearMap)])].sort();
           return (
             <div className="space-y-3">
-              {/* ในเวลา/นอกเวลา row */}
+              {/* ในเวลา/นอกเวลา row — flip to see overtime vehicle breakdown */}
               <div className="grid grid-cols-3 gap-3">
                 {[
-                  { label: 'วันนี้',   inTime: ot.TodayOnTime,  overtime: ot.TodayOvertime  },
-                  { label: 'เดือนนี้', inTime: ot.MonthOnTime,  overtime: ot.MonthOvertime  },
-                  { label: 'ปีนี้',    inTime: ot.YearOnTime,   overtime: ot.YearOvertime   },
-                ].map(({ label, inTime, overtime }) => (
-                  <div key={label} className="rounded-xl p-3 text-center" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-                    <p className="text-xs font-semibold text-slate-400 mb-2">{label}</p>
-                    <div className="flex justify-center gap-4">
-                      <div><p className="text-lg font-bold text-emerald-600">{inTime ?? 0}</p><p className="text-xs text-slate-400">ในเวลา</p></div>
-                      <div><p className="text-lg font-bold text-amber-500">{overtime ?? 0}</p><p className="text-xs text-slate-400">นอกเวลา</p></div>
+                  { label: 'วันนี้',   inTime: ot.TodayOnTime,  overtime: ot.TodayOvertime,  types: data?.overtimeByTypeToday  || [] },
+                  { label: 'เดือนนี้', inTime: ot.MonthOnTime,  overtime: ot.MonthOvertime,  types: data?.overtimeByTypeMonth || [] },
+                  { label: 'ปีนี้',    inTime: ot.YearOnTime,   overtime: ot.YearOvertime,   types: data?.overtimeByTypeYear  || [] },
+                ].map(({ label, inTime, overtime, types }) => {
+                  const isFlipped = !!overtimeFlipped[label];
+                  const face = {
+                    borderRadius: 12, padding: 12,
+                    backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
+                    position: 'absolute', inset: 0, overflow: 'hidden', boxSizing: 'border-box'
+                  };
+                  return (
+                    <div key={label}
+                      style={{ perspective: '1000px', minHeight: 100, cursor: 'pointer', borderRadius: 12 }}
+                      onClick={() => setOvertimeFlipped(f => ({ ...f, [label]: !f[label] }))}>
+                      <div style={{
+                        position: 'relative', minHeight: 100,
+                        transformStyle: 'preserve-3d',
+                        transition: 'transform 0.4s ease',
+                        transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0)'
+                      }}>
+                        {/* Front */}
+                        <div style={{ ...face, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
+                          <p className="text-xs font-semibold text-slate-400 mb-2 text-center">{label}</p>
+                          <div className="flex justify-center gap-4">
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-emerald-600">{inTime ?? 0}</p>
+                              <p className="text-xs text-slate-400">ในเวลา</p>
+                            </div>
+                            <div className="text-center">
+                              <p className="text-lg font-bold text-amber-500">{overtime ?? 0}</p>
+                              <p className="text-xs text-slate-400">นอกเวลา</p>
+                            </div>
+                          </div>
+                          {(overtime ?? 0) > 0 && (
+                            <p className="text-xs text-slate-300 text-right mt-1.5">กดดูรถ →</p>
+                          )}
+                        </div>
+                        {/* Back — overtime vehicle type breakdown */}
+                        <div style={{ ...face, transform: 'rotateY(180deg)', background: '#fffbeb', border: '1px solid #fde68a' }}>
+                          <p className="text-xs font-semibold text-amber-700 mb-2">{label} — นอกเวลา</p>
+                          {types.length > 0 ? (
+                            <div className="space-y-1.5">
+                              {types.map(item => (
+                                <div key={item.TypeName} className="flex justify-between items-center">
+                                  <span className="text-xs text-slate-600 truncate mr-1">{item.TypeName}</span>
+                                  <span className="text-xs font-bold text-amber-600 flex-shrink-0">{item.Count} คัน</span>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <p className="text-xs text-slate-400 text-center mt-2">ไม่มีรถนอกเวลา ✓</p>
+                          )}
+                          <p className="text-xs text-slate-400 text-right mt-1.5">← กลับ</p>
+                        </div>
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
               {/* ประเภทรถ table */}
               {allTypes.length > 0 && (
