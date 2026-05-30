@@ -15,7 +15,7 @@ const translations = {
     'nav.weighOut': 'สถานีชั่งออก',
     'nav.records': 'บันทึกการขึ้นสินค้า',
     'section.warehouse': 'คลัง & จัดส่ง',
-    'section.logistics': 'จัดส่ง & GPS',
+    'section.logistics': 'จัดส่ง',
     'nav.stock': 'สต็อกสินค้า',
     'nav.locationCheck': 'ตรวจสอบ Location',
     'nav.delivery': 'แผนจัดส่ง',
