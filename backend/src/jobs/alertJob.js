@@ -145,6 +145,7 @@ async function checkVehicleExpiry(pool) {
       { field: 'InsuranceExpiry',  type: 'VEH_INS_EXP',   label: 'ประกันภัย' },
       { field: 'InspectionExpiry', type: 'VEH_INSP_EXP',  label: 'ตรวจสภาพ' },
       { field: 'OtherDocExpiry',   type: 'VEH_OTHER_EXP', label: null },
+      { field: 'TaxExpiry',        type: 'VEH_TAX_EXP',   label: 'ภาษีรถ' },
     ];
     const MILESTONES = [90, 60, 30];
 

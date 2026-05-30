@@ -9,24 +9,36 @@ const MENUS = [
   { code: 'DASHBOARD', name: 'Dashboard' },
   { code: 'TRIP_MONITOR', name: 'Monitor รถ' },
   { code: 'FORECAST', name: 'วิเคราะห์และวางแผน' },
-  { code: 'SHIFT_PLANNING', name: 'วางแผนกะพนักงาน' },
-  { code: 'FREIGHT_CALC', name: 'คำนวณค่าขนส่ง' },
+  { divider: true, section: 'สถานี' },
   { code: 'WEIGH_IN', name: 'สถานีชั่งเข้า' },
   { code: 'DATA_STATION', name: 'สถานี Data' },
   { code: 'LOADING_STATION', name: 'สถานีขึ้นสินค้า' },
   { code: 'WEIGH_OUT', name: 'สถานีชั่งออก' },
   { code: 'CHECKER', name: 'เช็คเกอร์' },
   { code: 'RECORDS', name: 'บันทึกการขึ้นสินค้า' },
-  { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' },
+  { divider: true, section: 'คลังสินค้าสำเร็จรูป' },
+  { code: 'STOCK', name: 'ตรวจสอบ Location' },
+  { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน', children: [
+    { code: 'TRANSFER_JOBS', name: 'งาน' },
+    { code: 'TRANSFER_STATIONS', name: 'สถานี' },
+    { code: 'TRANSFER_VEHICLES', name: 'รถ' },
+    { code: 'TRANSFER_REPORTS', name: 'รายงาน' },
+  ]},
+  { divider: true, section: 'จัดส่ง' },
   { code: 'ETA', name: 'ETA / GPS' },
+  { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' },
+  { divider: true, section: 'ระบบ' },
   { code: 'ALERTS', name: 'การแจ้งเตือน' },
   { code: 'USERS', name: 'จัดการผู้ใช้' },
   { code: 'MASTER', name: 'ข้อมูลหลัก' },
+  { divider: true, section: 'เครื่องมือ' },
+  { code: 'SHIFT_PLANNING', name: 'วางแผนกะพนักงาน' },
+  { code: 'FREIGHT_CALC', name: 'คำนวณค่าขนส่ง' },
   { code: 'REPORTS', name: 'รายงาน' },
 ];
 
-// Flatten all codes including children for permission init
-const ALL_MENU_CODES = MENUS.flatMap(m => [m, ...(m.children || [])]);
+// Flatten only real menu items (no section dividers)
+const ALL_MENU_CODES = MENUS.filter(m => !m.divider).flatMap(m => [m, ...(m.children || [])]);
 
 
 export default function Users() {
@@ -176,8 +188,8 @@ export default function Users() {
     const willEnable = !permissions[menuCode];
     setPermissions(prev => {
       const next = { ...prev, [menuCode]: willEnable ? 1 : 0 };
-      if (!willEnable && children.length) {
-        children.forEach(c => { next[c.code] = 0; });
+      if (children.length) {
+        children.forEach(c => { next[c.code] = willEnable ? 1 : 0; });
       }
       return next;
     });
@@ -487,51 +499,62 @@ export default function Users() {
                   </tr>
                 </thead>
                 <tbody>
-                  {MENUS.map(menu => (
-                    <React.Fragment key={menu.code}>
-                      <tr className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
-                        <td className="px-3 py-2">
-                          <div className="flex items-center gap-1.5">
-                            {menu.children?.length ? (
-                              <button onClick={() => toggleMenuExpand(menu.code)}
-                                className="text-slate-400 hover:text-red-400 transition-colors flex-shrink-0 p-0.5 rounded">
-                                {expandedMenus.has(menu.code)
-                                  ? <ChevronDown size={13} />
-                                  : <ChevronRight size={13} />}
-                              </button>
-                            ) : <span className="w-[17px]" />}
-                            <span
-                              className={`text-sm font-medium text-slate-800 leading-snug ${menu.children?.length ? 'cursor-pointer hover:text-red-500 transition-colors' : ''}`}
-                              onClick={() => menu.children?.length && toggleMenuExpand(menu.code)}>
-                              {menu.name}
-                            </span>
-                          </div>
-                        </td>
-                        <td className="px-3 py-2 text-center">
-                          <input type="checkbox"
-                            checked={!!permissions[menu.code]}
-                            onChange={() => togglePerm(menu.code, menu.children || [])}
-                            className="w-4 h-4 cursor-pointer rounded accent-red-600" />
-                        </td>
-                      </tr>
-                      {expandedMenus.has(menu.code) && menu.children?.map(child => (
-                        <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/40'}`}>
-                          <td className="pl-10 pr-3 py-1.5">
-                            <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                              <span className="text-slate-300">└</span>
-                              <span>{child.name}</span>
-                            </div>
-                          </td>
-                          <td className="px-3 py-1.5 text-center">
-                            <input type="checkbox"
-                              checked={!!permissions[child.code]}
-                              onChange={() => togglePerm(child.code)}
-                              className="w-3.5 h-3.5 cursor-pointer rounded accent-red-600" />
+                  {MENUS.map((menu, idx) => {
+                    if (menu.divider) {
+                      return (
+                        <tr key={`divider-${idx}`}>
+                          <td colSpan={2} className="px-3 pt-4 pb-1">
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{menu.section}</span>
                           </td>
                         </tr>
-                      ))}
-                    </React.Fragment>
-                  ))}
+                      );
+                    }
+                    return (
+                      <React.Fragment key={menu.code}>
+                        <tr className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
+                          <td className="px-3 py-2">
+                            <div className="flex items-center gap-1.5">
+                              {menu.children?.length ? (
+                                <button onClick={() => toggleMenuExpand(menu.code)}
+                                  className="text-slate-400 hover:text-red-400 transition-colors flex-shrink-0 p-0.5 rounded">
+                                  {expandedMenus.has(menu.code)
+                                    ? <ChevronDown size={13} />
+                                    : <ChevronRight size={13} />}
+                                </button>
+                              ) : <span className="w-[17px]" />}
+                              <span
+                                className={`text-sm font-medium text-slate-800 leading-snug ${menu.children?.length ? 'cursor-pointer hover:text-red-500 transition-colors' : ''}`}
+                                onClick={() => menu.children?.length && toggleMenuExpand(menu.code)}>
+                                {menu.name}
+                              </span>
+                            </div>
+                          </td>
+                          <td className="px-3 py-2 text-center">
+                            <input type="checkbox"
+                              checked={!!permissions[menu.code]}
+                              onChange={() => togglePerm(menu.code, menu.children || [])}
+                              className="w-4 h-4 cursor-pointer rounded accent-red-600" />
+                          </td>
+                        </tr>
+                        {expandedMenus.has(menu.code) && menu.children?.map(child => (
+                          <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/40'}`}>
+                            <td className="pl-10 pr-3 py-1.5">
+                              <div className="flex items-center gap-1.5 text-xs text-slate-500">
+                                <span className="text-slate-300">└</span>
+                                <span>{child.name}</span>
+                              </div>
+                            </td>
+                            <td className="px-3 py-1.5 text-center">
+                              <input type="checkbox"
+                                checked={!!permissions[child.code]}
+                                onChange={() => togglePerm(child.code)}
+                                className="w-3.5 h-3.5 cursor-pointer rounded accent-red-600" />
+                            </td>
+                          </tr>
+                        ))}
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>

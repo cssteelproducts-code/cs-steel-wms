@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import {
   ArrowRight, Package, CheckCircle2, Plus,
@@ -29,7 +30,10 @@ const TRIP_STATUS = {
 const PRIORITY_LABEL = { NORMAL: 'ปกติ', HIGH: 'เร่งด่วน', URGENT: 'ด่วนมาก' };
 const PRIORITY_COLOR = { NORMAL: '#6b7280', HIGH: '#f59e0b', URGENT: '#ef4444' };
 
+const TRANSFER_SUB_CODES = ['TRANSFER_JOBS', 'TRANSFER_STATIONS', 'TRANSFER_VEHICLES', 'TRANSFER_REPORTS'];
+
 export default function Transfer() {
+  const { permissions, user } = useAuth();
   const [activeTab, setActiveTab] = useState('jobs');
   const [jobs, setJobs] = useState([]);
   const [stations, setStations] = useState([]);
@@ -419,22 +423,33 @@ export default function Transfer() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 p-1 rounded-2xl" style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6' }}>
-        {[
-          { key: 'jobs', label: 'งาน', icon: Layers },
-          { key: 'stations', label: 'สถานี', icon: Building2 },
-          { key: 'vehicles', label: 'รถ', icon: Truck },
-          { key: 'report', label: 'รายงาน', icon: BarChart2 },
-        ].map(({ key, label, icon: Icon }) => (
-          <button key={key} onClick={() => setActiveTab(key)}
-            className="flex items-center justify-center gap-2 flex-1 h-9 rounded-xl text-sm font-semibold transition-all"
-            style={activeTab === key
-              ? { background: '#ffffff', color: '#dc2626', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
-              : { color: '#6b7280' }}>
-            <Icon size={14} /> {label}
-          </button>
-        ))}
-      </div>
+      {(() => {
+        const anySubSet = user?.roleName !== 'Admin' && TRANSFER_SUB_CODES.some(c => permissions[c]);
+        const tabVisible = (code) => {
+          if (user?.roleName === 'Admin') return true;
+          if (!anySubSet) return true;
+          return !!(permissions[code]?.canView === 1 || permissions[code]?.canView === true);
+        };
+        const visibleTabs = [
+          { key: 'jobs', label: 'งาน', icon: Layers, code: 'TRANSFER_JOBS' },
+          { key: 'stations', label: 'สถานี', icon: Building2, code: 'TRANSFER_STATIONS' },
+          { key: 'vehicles', label: 'รถ', icon: Truck, code: 'TRANSFER_VEHICLES' },
+          { key: 'report', label: 'รายงาน', icon: BarChart2, code: 'TRANSFER_REPORTS' },
+        ].filter(t => tabVisible(t.code));
+        return (
+          <div className="flex gap-1 p-1 rounded-2xl" style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6' }}>
+            {visibleTabs.map(({ key, label, icon: Icon }) => (
+              <button key={key} onClick={() => setActiveTab(key)}
+                className="flex items-center justify-center gap-2 flex-1 h-9 rounded-xl text-sm font-semibold transition-all"
+                style={activeTab === key
+                  ? { background: '#ffffff', color: '#dc2626', boxShadow: '0 2px 8px rgba(0,0,0,0.08)' }
+                  : { color: '#6b7280' }}>
+                <Icon size={14} /> {label}
+              </button>
+            ))}
+          </div>
+        );
+      })()}
 
       {/* ── JOBS TAB ── */}
       {activeTab === 'jobs' && (

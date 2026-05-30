@@ -383,6 +383,9 @@ export default function Master() {
         inspectionExpiry: form.InspectionExpiry || null,
         otherDocName: form.OtherDocName || null,
         otherDocExpiry: form.OtherDocExpiry || null,
+        insuranceCompany: form.InsuranceCompany || null,
+        actCompany: form.ActCompany || null,
+        taxExpiry: form.TaxExpiry || null,
         vehicleStatus: form.VehicleStatus || 'พร้อมใช้',
         symptoms: form.Symptoms || null,
         repairEntryDate: form.RepairEntryDate || null,
@@ -439,10 +442,9 @@ export default function Master() {
                       </div>
                     )}
                     <div className="flex flex-wrap gap-1 mt-1.5">
-                      <ExpiryBadge date={i.ActExpiry} label="พ.ร.บ." />
-                      <ExpiryBadge date={i.InsuranceExpiry} label="ประกัน" />
-                      <ExpiryBadge date={i.InspectionExpiry} label="ตรวจสภาพ" />
-                      {i.OtherDocExpiry && <ExpiryBadge date={i.OtherDocExpiry} label={i.OtherDocName || 'เอกสารอื่น'} />}
+                      <ExpiryBadge date={i.InsuranceExpiry} label={i.InsuranceCompany ? `ประกัน (${i.InsuranceCompany})` : 'ประกัน'} />
+                      <ExpiryBadge date={i.ActExpiry} label={i.ActCompany ? `พ.ร.บ. (${i.ActCompany})` : 'พ.ร.บ.'} />
+                      {i.TaxExpiry && <ExpiryBadge date={i.TaxExpiry} label="ภาษีรถ" />}
                     </div>
                   </div>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity pt-0.5">
@@ -882,42 +884,43 @@ export default function Master() {
               </div>
             </div>
 
-            {/* เอกสารสิ้นอายุ */}
+            {/* ข้อมูลประกันภัย / พรบ. / ภาษีรถ */}
             <div className="rounded-2xl p-4 space-y-3" style={{ background: '#fef9f0', border: '1px solid #fde68a' }}>
-              <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5"><Calendar size={13}/>วันสิ้นอายุเอกสาร — แจ้งเตือน 90 / 60 / 30 วัน และรายวันเมื่อ ≤ 30 วัน</p>
+              <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5"><Calendar size={13}/>ข้อมูลประกันภัย / พรบ. / ภาษีรถ</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label text-amber-700">พ.ร.บ. สิ้นอายุ</label>
-                  <input type="date" value={form.ActExpiry ? form.ActExpiry.split('T')[0] : ''}
-                    onChange={e => setForm(p => ({ ...p, ActExpiry: e.target.value }))}
-                    className="input-field" />
-                  {form.ActExpiry && <p className="text-[10px] mt-0.5"><ExpiryBadge date={form.ActExpiry} label="พ.ร.บ." /></p>}
+                  <label className="label text-amber-700">บริษัท ประกันภัย</label>
+                  <input value={form.InsuranceCompany || ''} onChange={e => setForm(p => ({ ...p, InsuranceCompany: e.target.value }))}
+                    className="input-field" placeholder="ชื่อบริษัทประกัน" />
                 </div>
                 <div>
-                  <label className="label text-amber-700">ประกันภัย สิ้นอายุ</label>
+                  <label className="label text-amber-700">วันหมดอายุ (ประกัน)</label>
                   <input type="date" value={form.InsuranceExpiry ? form.InsuranceExpiry.split('T')[0] : ''}
                     onChange={e => setForm(p => ({ ...p, InsuranceExpiry: e.target.value }))}
                     className="input-field" />
                   {form.InsuranceExpiry && <p className="text-[10px] mt-0.5"><ExpiryBadge date={form.InsuranceExpiry} label="ประกัน" /></p>}
                 </div>
                 <div>
-                  <label className="label text-amber-700">ตรวจสภาพรถ สิ้นอายุ</label>
-                  <input type="date" value={form.InspectionExpiry ? form.InspectionExpiry.split('T')[0] : ''}
-                    onChange={e => setForm(p => ({ ...p, InspectionExpiry: e.target.value }))}
-                    className="input-field" />
-                  {form.InspectionExpiry && <p className="text-[10px] mt-0.5"><ExpiryBadge date={form.InspectionExpiry} label="ตรวจสภาพ" /></p>}
+                  <label className="label text-amber-700">บริษัท พรบ.</label>
+                  <input value={form.ActCompany || ''} onChange={e => setForm(p => ({ ...p, ActCompany: e.target.value }))}
+                    className="input-field" placeholder="ชื่อบริษัท พรบ." />
                 </div>
                 <div>
-                  <label className="label text-amber-700">ชื่อเอกสารอื่น</label>
-                  <input value={form.OtherDocName || ''} onChange={e => setForm(p => ({ ...p, OtherDocName: e.target.value }))}
-                    className="input-field" placeholder="เช่น ใบขับขี่, ใบอนุญาต" />
+                  <label className="label text-amber-700">วันหมดอายุ (พรบ.)</label>
+                  <input type="date" value={form.ActExpiry ? form.ActExpiry.split('T')[0] : ''}
+                    onChange={e => setForm(p => ({ ...p, ActExpiry: e.target.value }))}
+                    className="input-field" />
+                  {form.ActExpiry && <p className="text-[10px] mt-0.5"><ExpiryBadge date={form.ActExpiry} label="พ.ร.บ." /></p>}
                 </div>
                 <div className="col-span-2">
-                  <label className="label text-amber-700">เอกสารอื่น สิ้นอายุ</label>
-                  <input type="date" value={form.OtherDocExpiry ? form.OtherDocExpiry.split('T')[0] : ''}
-                    onChange={e => setForm(p => ({ ...p, OtherDocExpiry: e.target.value }))}
+                  <label className="label text-amber-700 flex items-center gap-1.5">
+                    วันต่อภาษีรถ
+                    <span className="text-[10px] font-normal text-amber-600">ระบบแจ้งเตือน 90 / 60 / 30 วัน</span>
+                  </label>
+                  <input type="date" value={form.TaxExpiry ? form.TaxExpiry.split('T')[0] : ''}
+                    onChange={e => setForm(p => ({ ...p, TaxExpiry: e.target.value }))}
                     className="input-field" />
-                  {form.OtherDocExpiry && <p className="text-[10px] mt-0.5"><ExpiryBadge date={form.OtherDocExpiry} label={form.OtherDocName || 'เอกสารอื่น'} /></p>}
+                  {form.TaxExpiry && <p className="text-[10px] mt-0.5"><ExpiryBadge date={form.TaxExpiry} label="ภาษีรถ" /></p>}
                 </div>
               </div>
             </div>

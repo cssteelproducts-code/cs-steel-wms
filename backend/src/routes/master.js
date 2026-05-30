@@ -655,8 +655,9 @@ router.post('/products/import', authenticate, requireAdmin, upload.single('file'
 let _ivTableReady = false;
 async function ensureIVTable() {
   if (_ivTableReady) return;
+  const pool = getPool();
   try {
-    await getPool().request().query(`
+    await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_InternalVehicles' AND xtype='U')
       CREATE TABLE WMS_InternalVehicles (
         VehicleID INT IDENTITY(1,1) PRIMARY KEY,
@@ -678,6 +679,9 @@ async function ensureIVTable() {
         UpdatedAt DATETIME
       )
     `);
+    await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='InsuranceCompany') ALTER TABLE WMS_InternalVehicles ADD InsuranceCompany NVARCHAR(200)`);
+    await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='ActCompany') ALTER TABLE WMS_InternalVehicles ADD ActCompany NVARCHAR(200)`);
+    await pool.request().query(`IF NOT EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_InternalVehicles') AND name='TaxExpiry') ALTER TABLE WMS_InternalVehicles ADD TaxExpiry DATE`);
   } catch (_) {}
   _ivTableReady = true;
 }
@@ -695,7 +699,8 @@ router.post('/internal-vehicles', authenticate, requireAdmin, async (req, res) =
   try {
     await ensureIVTable();
     const { licensePlate, vehicleName, vehicleCategory, actExpiry, insuranceExpiry, inspectionExpiry,
-            otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes } = req.body;
+            otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes,
+            insuranceCompany, actCompany, taxExpiry } = req.body;
     if (!licensePlate) return res.status(400).json({ success: false, message: 'กรุณาระบุทะเบียนรถ' });
     await getPool().request()
       .input('LP', sql.NVarChar, licensePlate.trim())
@@ -711,10 +716,14 @@ router.post('/internal-vehicles', authenticate, requireAdmin, async (req, res) =
       .input('RED', sql.Date, repairEntryDate || null)
       .input('ECD', sql.Date, estimatedCompletionDate || null)
       .input('NT', sql.NVarChar, notes || null)
+      .input('IC', sql.NVarChar, insuranceCompany || null)
+      .input('AC', sql.NVarChar, actCompany || null)
+      .input('TE', sql.Date, taxExpiry || null)
       .query(`INSERT INTO WMS_InternalVehicles
         (LicensePlate,VehicleName,VehicleCategory,ActExpiry,InsuranceExpiry,InspectionExpiry,
-         OtherDocName,OtherDocExpiry,VehicleStatus,Symptoms,RepairEntryDate,EstimatedCompletionDate,Notes)
-        VALUES(@LP,@VN,@VC,@AE,@IE,@IPE,@ODN,@ODE,@VS,@SY,@RED,@ECD,@NT)`);
+         OtherDocName,OtherDocExpiry,VehicleStatus,Symptoms,RepairEntryDate,EstimatedCompletionDate,Notes,
+         InsuranceCompany,ActCompany,TaxExpiry)
+        VALUES(@LP,@VN,@VC,@AE,@IE,@IPE,@ODN,@ODE,@VS,@SY,@RED,@ECD,@NT,@IC,@AC,@TE)`);
     res.json({ success: true, message: `เพิ่มรถ "${licensePlate}" สำเร็จ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -723,7 +732,8 @@ router.put('/internal-vehicles/:id', authenticate, requireAdmin, async (req, res
   try {
     await ensureIVTable();
     const { licensePlate, vehicleName, vehicleCategory, actExpiry, insuranceExpiry, inspectionExpiry,
-            otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes, isActive } = req.body;
+            otherDocName, otherDocExpiry, vehicleStatus, symptoms, repairEntryDate, estimatedCompletionDate, notes, isActive,
+            insuranceCompany, actCompany, taxExpiry } = req.body;
     await getPool().request()
       .input('ID', sql.Int, req.params.id)
       .input('LP', sql.NVarChar, licensePlate)
@@ -740,12 +750,15 @@ router.put('/internal-vehicles/:id', authenticate, requireAdmin, async (req, res
       .input('ECD', sql.Date, estimatedCompletionDate || null)
       .input('NT', sql.NVarChar, notes || null)
       .input('IA', sql.Bit, isActive !== undefined ? isActive : 1)
+      .input('IC', sql.NVarChar, insuranceCompany || null)
+      .input('AC', sql.NVarChar, actCompany || null)
+      .input('TE', sql.Date, taxExpiry || null)
       .query(`UPDATE WMS_InternalVehicles SET
         LicensePlate=@LP,VehicleName=@VN,VehicleCategory=@VC,
         ActExpiry=@AE,InsuranceExpiry=@IE,InspectionExpiry=@IPE,
         OtherDocName=@ODN,OtherDocExpiry=@ODE,VehicleStatus=@VS,
         Symptoms=@SY,RepairEntryDate=@RED,EstimatedCompletionDate=@ECD,
-        Notes=@NT,IsActive=@IA,UpdatedAt=GETDATE()
+        Notes=@NT,IsActive=@IA,InsuranceCompany=@IC,ActCompany=@AC,TaxExpiry=@TE,UpdatedAt=GETDATE()
         WHERE VehicleID=@ID`);
     res.json({ success: true, message: 'แก้ไขข้อมูลรถสำเร็จ' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
