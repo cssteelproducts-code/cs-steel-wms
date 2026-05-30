@@ -235,11 +235,21 @@ const initDatabase = async () => {
     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountItems' AND xtype='U')
     CREATE TABLE WMS_StockCountItems (
       ItemID INT IDENTITY(1,1) PRIMARY KEY,
-      CountID INT NOT NULL,
-      ProductID INT NOT NULL,
-      SystemQty DECIMAL(12,3) DEFAULT 0,
-      ActualQty DECIMAL(12,3) NULL,
-      Remark NVARCHAR(200)
+      SessionID INT NOT NULL,
+      Warehouse NVARCHAR(20),
+      Location NVARCHAR(50),
+      ItemCode NVARCHAR(50),
+      ItemName NVARCHAR(300),
+      TypeSKU NVARCHAR(50),
+      CategoryCode NVARCHAR(20),
+      CategoryName NVARCHAR(100),
+      SizeCode NVARCHAR(100),
+      SystemQty DECIMAL(12,2) DEFAULT 0,
+      SystemWeight DECIMAL(12,2),
+      IsLocked BIT DEFAULT 0,
+      NeedsRecount BIT DEFAULT 0,
+      LockedAt DATETIME,
+      LockedBy NVARCHAR(100)
     );
 
     IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_DeliveryOrders' AND xtype='U')

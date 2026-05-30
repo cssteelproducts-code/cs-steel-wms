@@ -11,6 +11,11 @@ async function ensureTables() {
   if (_ready) return;
   const pool = getPool();
   try {
+    // Migrate: drop WMS_StockCountItems if it has the old schema (CountID column)
+    await pool.request().query(`
+      IF EXISTS (SELECT * FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='CountID')
+        DROP TABLE WMS_StockCountItems;
+    `);
     await pool.request().query(`
       IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountSessions' AND xtype='U')
       CREATE TABLE WMS_StockCountSessions (
@@ -200,7 +205,7 @@ router.post('/:id/count', authenticate, async (req, res) => {
       .input('RND',  sql.Int,          (rnd.recordset[0].R || 0) + 1)
       .input('NT',   sql.NVarChar,     notes || null)
       .query(`INSERT INTO WMS_StockCountEntries (ItemID,SessionID,Round,CountedQty,CountedBy,Notes)
-              VALUES(@IID,@SID,@QTY,@BY,@RND,@NT)`);
+              VALUES(@IID,@SID,@RND,@QTY,@BY,@NT)`);
     await pool.request().input('IID', sql.Int, itemId)
       .query('UPDATE WMS_StockCountItems SET NeedsRecount=0 WHERE ItemID=@IID');
     res.json({ success: true, message: 'บันทึกยอดนับสำเร็จ' });
