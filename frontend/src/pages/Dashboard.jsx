@@ -373,6 +373,7 @@ export default function Dashboard() {
                   { label: 'ปีนี้',    inTime: ot.YearOnTime,   overtime: ot.YearOvertime,   types: data?.overtimeByTypeYear  || [] },
                 ].map(({ label, inTime, overtime, types }) => {
                   const isFlipped = !!overtimeFlipped[label];
+                  const cardMinH = Math.max(100, types.length > 0 ? types.length * 28 + 52 : 100);
                   const face = {
                     borderRadius: 12, padding: 12,
                     backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
@@ -380,10 +381,10 @@ export default function Dashboard() {
                   };
                   return (
                     <div key={label}
-                      style={{ perspective: '1000px', minHeight: 100, cursor: 'pointer', borderRadius: 12 }}
+                      style={{ perspective: '1000px', minHeight: cardMinH, cursor: 'pointer', borderRadius: 12 }}
                       onClick={() => setOvertimeFlipped(f => ({ ...f, [label]: !f[label] }))}>
                       <div style={{
-                        position: 'relative', minHeight: 100,
+                        position: 'relative', minHeight: cardMinH,
                         transformStyle: 'preserve-3d',
                         transition: 'transform 0.4s ease',
                         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0)'
