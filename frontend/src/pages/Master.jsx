@@ -386,6 +386,10 @@ export default function Master() {
         insuranceCompany: form.InsuranceCompany || null,
         actCompany: form.ActCompany || null,
         taxExpiry: form.TaxExpiry || null,
+        bedWidth: form.BedWidth || null,
+        bedLength: form.BedLength || null,
+        bedHeight: form.BedHeight || null,
+        payloadKg: form.PayloadKg || null,
         vehicleStatus: form.VehicleStatus || 'พร้อมใช้',
         symptoms: form.Symptoms || null,
         repairEntryDate: form.RepairEntryDate || null,
@@ -881,6 +885,40 @@ export default function Master() {
                 <label className="label">ประเภทรถ</label>
                 <input value={form.VehicleCategory || ''} onChange={e => setForm(p => ({ ...p, VehicleCategory: e.target.value }))}
                   className="input-field" placeholder="รถยก, รถลาก, รถดั้ม..." />
+              </div>
+            </div>
+
+            {/* ขนาดกะบะบรรทุก */}
+            <div className="rounded-2xl p-4 space-y-3" style={{ background: '#f0f9ff', border: '1px solid #bae6fd' }}>
+              <p className="text-xs font-bold text-sky-700 flex items-center gap-1.5">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 7V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v2"/></svg>
+                ขนาดกะบะบรรทุก (เมตร) และน้ำหนักบรรทุก
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="label text-sky-700">กว้าง (ม.)</label>
+                  <input type="number" step="0.01" min="0" value={form.BedWidth || ''}
+                    onChange={e => setForm(p => ({ ...p, BedWidth: e.target.value }))}
+                    className="input-field" placeholder="2.00" />
+                </div>
+                <div>
+                  <label className="label text-sky-700">ยาว (ม.)</label>
+                  <input type="number" step="0.01" min="0" value={form.BedLength || ''}
+                    onChange={e => setForm(p => ({ ...p, BedLength: e.target.value }))}
+                    className="input-field" placeholder="4.50" />
+                </div>
+                <div>
+                  <label className="label text-sky-700">สูง (ม.)</label>
+                  <input type="number" step="0.01" min="0" value={form.BedHeight || ''}
+                    onChange={e => setForm(p => ({ ...p, BedHeight: e.target.value }))}
+                    className="input-field" placeholder="1.80" />
+                </div>
+                <div>
+                  <label className="label text-sky-700">น้ำหนักบรรทุก (กก.)</label>
+                  <input type="number" step="1" min="0" value={form.PayloadKg || ''}
+                    onChange={e => setForm(p => ({ ...p, PayloadKg: e.target.value }))}
+                    className="input-field" placeholder="5000" />
+                </div>
               </div>
             </div>
 
