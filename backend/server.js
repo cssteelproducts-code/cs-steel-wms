@@ -636,6 +636,10 @@ const runMigrations = async () => {
       IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_StockCountItems_SessionID' AND object_id=OBJECT_ID('WMS_StockCountItems'))
         CREATE INDEX IX_StockCountItems_SessionID ON WMS_StockCountItems (SessionID);
     `);
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='Thickness')
+        ALTER TABLE WMS_StockCountItems ADD Thickness NVARCHAR(50) NULL;
+    `);
     console.log('✅ WMS_StockCountItems schema OK');
   } catch (e) {
     console.warn('⚠ WMS_StockCountItems schema migration:', e.message);

@@ -50,6 +50,9 @@ export default function StockCount() {
   const [search, setSearch] = useState('');
   const [filterWH, setFilterWH] = useState('');
   const [filterLoc, setFilterLoc] = useState('');
+  const [filterGname, setFilterGname] = useState('');
+  const [filterSize, setFilterSize] = useState('');
+  const [filterThick, setFilterThick] = useState('');
   const [entriesModal, setEntriesModal] = useState(null); // item object
   const [entries, setEntries] = useState([]);
 
@@ -254,16 +257,22 @@ export default function StockCount() {
   // ── Derived data ──────────────────────────────────────
 
   const items = sessionData?.items || [];
+  const baseFiltered = items.filter(i =>
+    (!filterWH    || i.Warehouse    === filterWH)    &&
+    (!filterLoc   || i.Location     === filterLoc)   &&
+    (!filterGname || i.CategoryName === filterGname) &&
+    (!filterSize  || i.SizeCode     === filterSize)  &&
+    (!filterThick || i.Thickness    === filterThick)
+  );
   const warehouses = [...new Set(items.map(i => i.Warehouse).filter(Boolean))].sort();
-  const locations = [...new Set(items.filter(i => !filterWH || i.Warehouse === filterWH).map(i => i.Location).filter(Boolean))].sort();
-  const filteredItems = items.filter(i => {
-    if (filterWH && i.Warehouse !== filterWH) return false;
-    if (filterLoc && i.Location !== filterLoc) return false;
-    if (search) {
-      const q = search.toLowerCase();
-      if (!i.ItemCode?.toLowerCase().includes(q) && !i.ItemName?.toLowerCase().includes(q) && !i.Location?.toLowerCase().includes(q)) return false;
-    }
-    return true;
+  const locations  = [...new Set(items.filter(i => !filterWH || i.Warehouse === filterWH).map(i => i.Location).filter(Boolean))].sort();
+  const gnames     = [...new Set(items.map(i => i.CategoryName).filter(Boolean))].sort();
+  const sizes      = [...new Set(baseFiltered.map(i => i.SizeCode).filter(Boolean))].sort();
+  const thicks     = [...new Set(baseFiltered.map(i => i.Thickness).filter(v => v != null && String(v) !== '0' && String(v) !== '')).map(String)].sort();
+  const filteredItems = baseFiltered.filter(i => {
+    if (!search) return true;
+    const q = search.toLowerCase();
+    return i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q);
   });
 
   const stats = {
@@ -448,25 +457,40 @@ export default function StockCount() {
               {/* Filters */}
               <div className="flex gap-2 flex-wrap">
                 <select value={filterWH} onChange={e => { setFilterWH(e.target.value); setFilterLoc(''); }}
-                  className="input-field py-1.5 text-sm w-auto min-w-36">
-                  <option value="">— คลังทั้งหมด —</option>
+                  className="input-field py-1.5 text-sm w-auto min-w-32">
+                  <option value="">— คลัง —</option>
                   {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
                 <select value={filterLoc} onChange={e => setFilterLoc(e.target.value)}
-                  className="input-field py-1.5 text-sm w-auto min-w-40">
-                  <option value="">— Location ทั้งหมด —</option>
+                  className="input-field py-1.5 text-sm w-auto min-w-36">
+                  <option value="">— Location —</option>
                   {locations.map(l => <option key={l} value={l}>{l}</option>)}
                 </select>
-                <div className="relative flex-1 min-w-48">
+                <select value={filterGname} onChange={e => setFilterGname(e.target.value)}
+                  className="input-field py-1.5 text-sm w-auto min-w-36">
+                  <option value="">— หมวดหมู่ —</option>
+                  {gnames.map(g => <option key={g} value={g}>{g}</option>)}
+                </select>
+                <select value={filterSize} onChange={e => setFilterSize(e.target.value)}
+                  className="input-field py-1.5 text-sm w-auto min-w-36">
+                  <option value="">— SizeCode —</option>
+                  {sizes.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                <select value={filterThick} onChange={e => setFilterThick(e.target.value)}
+                  className="input-field py-1.5 text-sm w-auto min-w-32">
+                  <option value="">— Thickness —</option>
+                  {thicks.map(t => <option key={t} value={t}>{t}</option>)}
+                </select>
+                <div className="relative flex-1 min-w-40">
                   <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input value={search} onChange={e => setSearch(e.target.value)}
                     placeholder="ค้นหา รหัส / ชื่อสินค้า..."
                     className="input-field pl-8 text-sm" />
                 </div>
-                {(filterWH || filterLoc || search) && (
-                  <button onClick={() => { setFilterWH(''); setFilterLoc(''); setSearch(''); }}
-                    className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors">
-                    ล้าง
+                {(filterWH || filterLoc || filterGname || filterSize || filterThick || search) && (
+                  <button onClick={() => { setFilterWH(''); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); setSearch(''); }}
+                    className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors whitespace-nowrap">
+                    ล้างทั้งหมด
                   </button>
                 )}
               </div>

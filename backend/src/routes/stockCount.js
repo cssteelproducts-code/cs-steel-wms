@@ -52,6 +52,7 @@ async function ensureTables() {
         CategoryCode NVARCHAR(20),
         CategoryName NVARCHAR(100),
         SizeCode NVARCHAR(100),
+        Thickness NVARCHAR(50),
         SystemQty DECIMAL(12,2) DEFAULT 0,
         SystemWeight DECIMAL(12,2),
         IsLocked BIT DEFAULT 0,
@@ -168,7 +169,7 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
     const validRows = rows.filter(r => r['Itemcode'] || r['ItemCode'] || r['itemcode']);
     const valStrings = validRows.map(row => {
       const code = esc(String(row['Itemcode'] || row['ItemCode'] || row['itemcode'] || '').trim().substring(0, 50));
-      return `(${sessionId},${esc(row['Warehouse'])},${esc(row['Location'])},${code},${esc(String(row['ItemName']||'').substring(0,300))},${esc(String(row['TypeSUK']||'').substring(0,50))},${esc(String(row['GategoryCode']||'').substring(0,20))},${esc(String(row['Gname']||'').substring(0,100))},${esc(row['SizeCode']!=null?String(row['SizeCode']).substring(0,100):null)},${parseFloat(row['Quantity'])||0},${num(row['UnitNetWeight'])})`;
+      return `(${sessionId},${esc(row['Warehouse'])},${esc(row['Location'])},${code},${esc(String(row['ItemName']||'').substring(0,300))},${esc(String(row['TypeSUK']||'').substring(0,50))},${esc(String(row['GategoryCode']||'').substring(0,20))},${esc(String(row['Gname']||'').substring(0,100))},${esc(row['SizeCode']!=null?String(row['SizeCode']).substring(0,100):null)},${esc(row['Thickness']!=null?String(row['Thickness']).substring(0,50):null)},${parseFloat(row['Quantity'])||0},${num(row['UnitNetWeight'])})`;
     });
 
     // Respond immediately — HTTP proxy may timeout if we wait for all INSERTs
@@ -185,7 +186,7 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
         const BATCH = 1000;
         for (let b = 0; b < valStrings.length; b += BATCH) {
           await pool.request().query(
-            `INSERT INTO WMS_StockCountItems (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,SystemQty,SystemWeight) VALUES ${valStrings.slice(b, b + BATCH).join(',')}`
+            `INSERT INTO WMS_StockCountItems (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,Thickness,SystemQty,SystemWeight) VALUES ${valStrings.slice(b, b + BATCH).join(',')}`
           );
         }
         console.log(`✅ Import session ${sessionId}: ${validRows.length} rows done`);
