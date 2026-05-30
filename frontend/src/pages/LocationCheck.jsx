@@ -1,9 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
-import { ScanLine, MapPin, CheckCircle2, XCircle, RotateCcw, History } from 'lucide-react';
+import { ScanLine, MapPin, CheckCircle2, XCircle, RotateCcw, History, Search, Package } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
-
-const SKU_TYPES = ['ขายดี', 'ขายน้อยต่อเนื่อง', 'ขายน้อยไม่ต่อเนื่อง'];
 
 export default function LocationCheck() {
   const [locationCode, setLocationCode] = useState('');
@@ -12,12 +10,32 @@ export default function LocationCheck() {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
   const [todayLog, setTodayLog] = useState([]);
-  const inputRef = useRef(null);
+
+  const [productQuery, setProductQuery] = useState('');
+  const [productResults, setProductResults] = useState([]);
+  const [productSearching, setProductSearching] = useState(false);
+
+  const locationInputRef = useRef(null);
+  const productInputRef = useRef(null);
 
   useEffect(() => {
     loadTodayLog();
-    setTimeout(() => inputRef.current?.focus(), 100);
+    setTimeout(() => locationInputRef.current?.focus(), 100);
   }, []);
+
+  // debounced product search
+  useEffect(() => {
+    if (productQuery.trim().length < 2) { setProductResults([]); return; }
+    const timer = setTimeout(async () => {
+      setProductSearching(true);
+      try {
+        const res = await api.get(`/location-check/products/search?q=${encodeURIComponent(productQuery.trim())}`);
+        if (res.data.success) setProductResults(res.data.data);
+      } catch {}
+      setProductSearching(false);
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [productQuery]);
 
   const loadTodayLog = async () => {
     try {
@@ -32,30 +50,35 @@ export default function LocationCheck() {
     setSearching(true);
     setLocationInfo(null);
     setResult(null);
+    setProductQuery('');
+    setProductResults([]);
     try {
       const res = await api.get(`/location-check/lookup?code=${encodeURIComponent(code)}`);
       if (res.data.success) {
         setLocationInfo(res.data.data);
+        setTimeout(() => productInputRef.current?.focus(), 100);
       } else {
         toast.error(res.data.message);
         setLocationCode('');
-        setTimeout(() => inputRef.current?.focus(), 50);
+        setTimeout(() => locationInputRef.current?.focus(), 50);
       }
     } catch (err) {
       toast.error(err.response?.data?.message || 'ไม่พบ Location นี้ในระบบ');
       setLocationCode('');
-      setTimeout(() => inputRef.current?.focus(), 50);
+      setTimeout(() => locationInputRef.current?.focus(), 50);
     }
     setSearching(false);
   };
 
-  const handleSKUSelect = async (skuType) => {
+  const handleProductSelect = async (product) => {
     if (!locationInfo || saving) return;
     setSaving(true);
     try {
       const res = await api.post('/location-check/quick', {
         locationCode: locationInfo.LocationCode,
-        actualSKUType: skuType
+        actualSKUType: product.SKUType,
+        productCode: product.ProductCode,
+        productFoundName: product.ProductName
       });
       if (res.data.success) {
         setResult(res.data);
@@ -64,7 +87,9 @@ export default function LocationCheck() {
           setResult(null);
           setLocationInfo(null);
           setLocationCode('');
-          setTimeout(() => inputRef.current?.focus(), 50);
+          setProductQuery('');
+          setProductResults([]);
+          setTimeout(() => locationInputRef.current?.focus(), 50);
         }, 2500);
       } else {
         toast.error(res.data.message);
@@ -79,16 +104,26 @@ export default function LocationCheck() {
     setResult(null);
     setLocationInfo(null);
     setLocationCode('');
-    setTimeout(() => inputRef.current?.focus(), 50);
+    setProductQuery('');
+    setProductResults([]);
+    setTimeout(() => locationInputRef.current?.focus(), 50);
   };
 
   const matchCount = todayLog.filter(i => i.IsMatch).length;
   const mismatchCount = todayLog.filter(i => !i.IsMatch).length;
 
+  const skuColor = (sku) => {
+    if (!sku) return '#64748b';
+    if (sku === 'ขายดี') return '#10b981';
+    if (sku.includes('ต่อเนื่อง') && !sku.includes('ไม่')) return '#f59e0b';
+    if (sku.includes('ไม่ต่อเนื่อง')) return '#ef4444';
+    return '#94a3b8';
+  };
+
   return (
     <div className="max-w-lg mx-auto space-y-4 pb-6">
 
-      {/* Scan input */}
+      {/* Scan location input */}
       <div className="rounded-2xl p-5" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-2 mb-4">
           <ScanLine size={18} style={{ color: '#dc2626' }} />
@@ -96,7 +131,7 @@ export default function LocationCheck() {
         </div>
         <div className="flex gap-2">
           <input
-            ref={inputRef}
+            ref={locationInputRef}
             type="text"
             value={locationCode}
             onChange={e => setLocationCode(e.target.value.toUpperCase())}
@@ -128,14 +163,12 @@ export default function LocationCheck() {
             {searching ? '...' : 'ค้นหา'}
           </button>
         </div>
-        <p className="text-xs mt-2" style={{ color: '#475569' }}>
-          พิมพ์รหัสจากป้ายสินค้า แล้วกด Enter หรือใช้ Barcode Scanner
-        </p>
       </div>
 
-      {/* Location info + SKU selection */}
+      {/* Location info + product search */}
       {locationInfo && !result && (
         <div className="rounded-2xl p-5 space-y-4" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}>
+          {/* Location header */}
           <div className="flex items-start gap-3 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <div className="p-2 rounded-lg flex-shrink-0" style={{ background: 'rgba(220,38,38,0.15)' }}>
               <MapPin size={18} style={{ color: '#dc2626' }} />
@@ -149,13 +182,13 @@ export default function LocationCheck() {
               )}
               {locationInfo.LocationTypeName && (
                 <div className="text-sm" style={{ color: '#94a3b8' }}>
-                  ประเภท Location: <span style={{ color: '#e2e8f0' }}>{locationInfo.LocationTypeName}</span>
+                  ประเภท: <span style={{ color: '#e2e8f0' }}>{locationInfo.LocationTypeName}</span>
                 </div>
               )}
               {locationInfo.AllowedSKUType ? (
                 <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
                   style={{ background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }}>
-                  Expected TypeSKU: {locationInfo.AllowedSKUType}
+                  ควรเป็น: {locationInfo.AllowedSKUType}
                 </div>
               ) : (
                 <div className="mt-1.5 text-xs" style={{ color: '#64748b' }}>ยังไม่กำหนด Expected TypeSKU</div>
@@ -163,43 +196,96 @@ export default function LocationCheck() {
             </div>
           </div>
 
+          {/* Product search */}
           <div>
-            <p className="text-sm font-medium mb-3" style={{ color: '#94a3b8' }}>
-              สินค้าที่เห็นจริงเป็น TypeSKU ใด?
+            <p className="text-sm font-medium mb-2" style={{ color: '#94a3b8' }}>
+              ค้นหาสินค้าที่วางอยู่ในช่องนี้
             </p>
-            <div className="flex flex-col gap-3">
-              {SKU_TYPES.map(sku => {
-                const isExpected = locationInfo.AllowedSKUType === sku;
-                return (
-                  <button
-                    key={sku}
-                    onClick={() => handleSKUSelect(sku)}
-                    disabled={saving}
-                    style={{
-                      width: '100%',
-                      minHeight: 60,
-                      borderRadius: 14,
-                      fontSize: '1rem',
-                      fontWeight: 600,
-                      cursor: saving ? 'wait' : 'pointer',
-                      background: isExpected ? 'rgba(16,185,129,0.18)' : 'rgba(255,255,255,0.06)',
-                      border: isExpected ? '2px solid #10b981' : '2px solid rgba(255,255,255,0.1)',
-                      color: isExpected ? '#6ee7b7' : '#e2e8f0',
-                      transition: 'all 0.15s',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: 8
-                    }}
-                  >
-                    {sku}
-                    {isExpected && (
-                      <span style={{ fontSize: '0.75rem', opacity: 0.75 }}>(ตรงตามที่คาดไว้)</span>
-                    )}
-                  </button>
-                );
-              })}
+            <div className="relative">
+              <Search size={16} style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: '#64748b' }} />
+              <input
+                ref={productInputRef}
+                type="text"
+                value={productQuery}
+                onChange={e => setProductQuery(e.target.value)}
+                placeholder="เช่น แป๊บแบน 100x50 หรือ ท่อกลม 50"
+                autoComplete="off"
+                style={{
+                  width: '100%',
+                  background: '#0f172a',
+                  border: '2px solid rgba(255,255,255,0.12)',
+                  borderRadius: 12,
+                  color: '#f1f5f9',
+                  padding: '10px 14px 10px 38px',
+                  fontSize: '0.95rem',
+                  outline: 'none',
+                  boxSizing: 'border-box'
+                }}
+              />
+              {productSearching && (
+                <div style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '0.75rem' }}>
+                  กำลังค้นหา...
+                </div>
+              )}
             </div>
+            <p className="text-xs mt-1.5" style={{ color: '#475569' }}>
+              พิมพ์ชื่อหรือขนาดสินค้าจากป้าย แล้วเลือกรายการที่ตรงกัน
+            </p>
+
+            {/* Search results */}
+            {productResults.length > 0 && (
+              <div className="mt-3 space-y-2">
+                {productResults.map(p => {
+                  const isExpected = locationInfo.AllowedSKUType && p.SKUType === locationInfo.AllowedSKUType;
+                  return (
+                    <button
+                      key={p.ProductCode}
+                      onClick={() => handleProductSelect(p)}
+                      disabled={saving}
+                      style={{
+                        width: '100%',
+                        background: isExpected ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)',
+                        border: isExpected ? '1.5px solid rgba(16,185,129,0.5)' : '1.5px solid rgba(255,255,255,0.08)',
+                        borderRadius: 12,
+                        padding: '10px 14px',
+                        cursor: saving ? 'wait' : 'pointer',
+                        textAlign: 'left',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 10
+                      }}
+                    >
+                      <Package size={16} style={{ color: isExpected ? '#6ee7b7' : '#64748b', flexShrink: 0 }} />
+                      <div className="flex-1 min-w-0">
+                        <div className="text-sm font-medium truncate" style={{ color: isExpected ? '#d1fae5' : '#e2e8f0' }}>
+                          {p.ProductName}
+                        </div>
+                        {p.CategoryName && (
+                          <div className="text-xs" style={{ color: '#64748b' }}>{p.CategoryName}</div>
+                        )}
+                      </div>
+                      {p.SKUType && (
+                        <div className="flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
+                          style={{
+                            background: `${skuColor(p.SKUType)}22`,
+                            color: skuColor(p.SKUType),
+                            border: `1px solid ${skuColor(p.SKUType)}44`
+                          }}>
+                          {p.SKUType}
+                          {isExpected && ' ✓'}
+                        </div>
+                      )}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {productQuery.trim().length >= 2 && !productSearching && productResults.length === 0 && (
+              <div className="mt-3 text-center py-4 text-sm" style={{ color: '#475569' }}>
+                ไม่พบสินค้าที่ตรงกัน — ลองพิมพ์ชื่อหรือขนาดใหม่
+              </div>
+            )}
           </div>
 
           <button onClick={handleReset} className="flex items-center gap-1.5 text-sm mx-auto"
@@ -274,6 +360,11 @@ export default function LocationCheck() {
                   <div className="font-mono text-sm font-medium" style={{ color: '#e2e8f0' }}>
                     {item.LocationCode}
                   </div>
+                  {item.ProductFoundName && (
+                    <div className="text-xs truncate" style={{ color: '#94a3b8' }}>
+                      {item.ProductFoundName}
+                    </div>
+                  )}
                   <div className="text-xs truncate" style={{ color: '#64748b' }}>
                     {item.ActualSKUType || '-'}
                     {!item.IsMatch && item.ExpectedSKUType && (

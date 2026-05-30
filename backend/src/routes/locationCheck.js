@@ -46,6 +46,14 @@ async function ensureTables() {
       Notes            NVARCHAR(500)
     )
   `);
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_LocationCheckItems') AND name='ProductCode')
+      ALTER TABLE WMS_LocationCheckItems ADD ProductCode NVARCHAR(50) NULL
+  `);
+  await pool.request().query(`
+    IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_LocationCheckItems') AND name='ProductFoundName')
+      ALTER TABLE WMS_LocationCheckItems ADD ProductFoundName NVARCHAR(200) NULL
+  `);
   _ready = true;
 }
 
@@ -154,7 +162,7 @@ router.get('/today', authenticate, async (req, res) => {
       .input('CheckMonth', sql.NVarChar, checkMonth)
       .query(`
         SELECT i.ItemID, i.LocationCode, i.LocationName, i.LocationTypeName,
-               i.ExpectedSKUType, i.ActualSKUType, i.IsMatch
+               i.ExpectedSKUType, i.ActualSKUType, i.IsMatch, i.ProductFoundName
         FROM WMS_LocationCheckItems i
         JOIN WMS_LocationChecks c ON i.CheckID = c.CheckID
         WHERE c.CheckMonth = @CheckMonth AND c.Status = 'Draft'
@@ -171,7 +179,7 @@ router.post('/quick', authenticate, async (req, res) => {
   try {
     await ensureTables();
     const pool = getPool();
-    const { locationCode, actualSKUType } = req.body;
+    const { locationCode, actualSKUType, productCode, productFoundName } = req.body;
     if (!locationCode || !actualSKUType)
       return res.status(400).json({ success: false, message: 'กรุณาระบุ LocationCode และ ActualSKUType' });
 
@@ -227,7 +235,9 @@ router.post('/quick', authenticate, async (req, res) => {
         .input('ItemID', sql.Int, existItem.recordset[0].ItemID)
         .input('Actual', sql.NVarChar, actualSKUType)
         .input('IsMatch', sql.Bit, isMatch)
-        .query(`UPDATE WMS_LocationCheckItems SET ActualSKUType = @Actual, IsMatch = @IsMatch WHERE ItemID = @ItemID`);
+        .input('PC', sql.NVarChar, productCode || null)
+        .input('PFN', sql.NVarChar, productFoundName || null)
+        .query(`UPDATE WMS_LocationCheckItems SET ActualSKUType=@Actual, IsMatch=@IsMatch, ProductCode=@PC, ProductFoundName=@PFN WHERE ItemID=@ItemID`);
     } else {
       await pool.request()
         .input('CheckID', sql.Int, checkId)
@@ -239,10 +249,12 @@ router.post('/quick', authenticate, async (req, res) => {
         .input('EST', sql.NVarChar, expectedSKUType)
         .input('AST', sql.NVarChar, actualSKUType)
         .input('IsMatch', sql.Bit, isMatch)
+        .input('PC', sql.NVarChar, productCode || null)
+        .input('PFN', sql.NVarChar, productFoundName || null)
         .query(`
           INSERT INTO WMS_LocationCheckItems
-          (CheckID,LocationID,LocationCode,LocationName,LocationTypeID,LocationTypeName,ExpectedSKUType,ActualSKUType,IsMatch)
-          VALUES (@CheckID,@LocationID,@LC,@LN,@LTID,@LTN,@EST,@AST,@IsMatch)
+          (CheckID,LocationID,LocationCode,LocationName,LocationTypeID,LocationTypeName,ExpectedSKUType,ActualSKUType,IsMatch,ProductCode,ProductFoundName)
+          VALUES (@CheckID,@LocationID,@LC,@LN,@LTID,@LTN,@EST,@AST,@IsMatch,@PC,@PFN)
         `);
     }
 
@@ -268,6 +280,32 @@ router.post('/quick', authenticate, async (req, res) => {
     });
   } catch (err) {
     console.error('LocationCheck quick:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+// GET /api/location-check/products/search?q= – search products for field workers
+router.get('/products/search', authenticate, async (req, res) => {
+  try {
+    const pool = getPool();
+    const { q } = req.query;
+    if (!q || q.trim().length < 2) return res.json({ success: true, data: [] });
+
+    const terms = q.trim().split(/\s+/).filter(t => t.length > 0).slice(0, 5);
+    const req2 = pool.request();
+    const whereClauses = terms.map((term, i) => {
+      req2.input(`T${i}`, sql.NVarChar, `%${term}%`);
+      return `(ProductName LIKE @T${i} OR SizeCode LIKE @T${i} OR CategoryName LIKE @T${i})`;
+    });
+
+    const result = await req2.query(`
+      SELECT TOP 15 ProductCode, ProductName, SizeCode, SKUType, CategoryName
+      FROM WMS_Products
+      WHERE IsActive = 1 AND ${whereClauses.join(' AND ')}
+      ORDER BY ProductName
+    `);
+    res.json({ success: true, data: result.recordset });
+  } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
