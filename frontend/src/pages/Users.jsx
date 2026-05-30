@@ -64,7 +64,7 @@ export default function Users() {
       const perms = {};
       MENUS.forEach(m => {
         const p = res.data.data?.find(p => p.MenuCode === m.code);
-        perms[m.code] = { canView: p?.CanView || 0, canCreate: p?.CanCreate || 0, canEdit: p?.CanEdit || 0, canDelete: p?.CanDelete || 0 };
+        perms[m.code] = p?.CanView ? 1 : 0;
       });
       setPermissions(perms);
     } catch {}
@@ -152,7 +152,8 @@ export default function Users() {
   const handleSavePermissions = async () => {
     setSaving(true);
     try {
-      const permsArr = MENUS.map(m => ({ menuCode: m.code, menuName: m.name, ...permissions[m.code] }));
+      const v = (m) => permissions[m.code] ? 1 : 0;
+      const permsArr = MENUS.map(m => ({ menuCode: m.code, menuName: m.name, canView: v(m), canCreate: v(m), canEdit: v(m), canDelete: v(m) }));
       const res = await api.post('/users/permissions', { roleId: selectedRole.RoleID, permissions: permsArr });
       if (res.data.success) { toast.success(res.data.message); setModal(null); }
     } catch (err) {
@@ -160,11 +161,8 @@ export default function Users() {
     } finally { setSaving(false); }
   };
 
-  const togglePerm = (menuCode, action) => {
-    setPermissions(p => ({
-      ...p,
-      [menuCode]: { ...p[menuCode], [action]: p[menuCode]?.[action] ? 0 : 1 }
-    }));
+  const togglePerm = (menuCode) => {
+    setPermissions(p => ({ ...p, [menuCode]: p[menuCode] ? 0 : 1 }));
   };
 
   if (pageLoading) return (
@@ -457,24 +455,19 @@ export default function Users() {
                 <thead>
                   <tr className="border-b border-slate-200">
                     <th className="table-header text-left px-3 py-2">เมนู</th>
-                    <th className="table-header text-center px-3 py-2">ดู</th>
-                    <th className="table-header text-center px-3 py-2">สร้าง</th>
-                    <th className="table-header text-center px-3 py-2">แก้ไข</th>
-                    <th className="table-header text-center px-3 py-2">ลบ</th>
+                    <th className="table-header text-center px-3 py-2 w-20">เข้าถึง</th>
                   </tr>
                 </thead>
                 <tbody>
                   {MENUS.map(menu => (
-                    <tr key={menu.code} className="border-b border-slate-100">
+                    <tr key={menu.code} className={`border-b border-slate-100 ${permissions[menu.code] ? 'bg-red-50/30' : ''}`}>
                       <td className="px-3 py-2 text-sm text-slate-700">{menu.name}</td>
-                      {['canView', 'canCreate', 'canEdit', 'canDelete'].map(action => (
-                        <td key={action} className="px-3 py-2 text-center">
-                          <input type="checkbox"
-                            checked={!!permissions[menu.code]?.[action]}
-                            onChange={() => togglePerm(menu.code, action)}
-                            className="w-4 h-4 cursor-pointer rounded accent-red-600" />
-                        </td>
-                      ))}
+                      <td className="px-3 py-2 text-center">
+                        <input type="checkbox"
+                          checked={!!permissions[menu.code]}
+                          onChange={() => togglePerm(menu.code)}
+                          className="w-4 h-4 cursor-pointer rounded accent-red-600" />
+                      </td>
                     </tr>
                   ))}
                 </tbody>
