@@ -28,12 +28,12 @@ const ExpiryBadge = ({ date, label }) => {
   const days = daysUntil(date);
   if (days === null || days > 90) return null;
   let cls, icon, txt;
-  if (days < 0)        { cls = 'bg-gray-200 text-gray-500';                     icon = '●'; txt = `${label} หมดแล้ว`; }
-  else if (days === 0) { cls = 'bg-red-600 text-white ring-1 ring-red-400';     icon = '!'; txt = `${label} วันนี้!`; }
-  else if (days <= 30) { cls = 'bg-red-500 text-white';                         icon = '●'; txt = `${label} ${days}ว.`; }
-  else if (days <= 60) { cls = 'bg-orange-500 text-white';                      icon = '●'; txt = `${label} ${days}ว.`; }
-  else                 { cls = 'bg-amber-400 text-white';                        icon = '●'; txt = `${label} ${days}ว.`; }
-  return <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[9px] font-bold whitespace-nowrap ${cls}`}>{icon} {txt}</span>;
+  if (days < 0)        { cls = 'bg-gray-200 text-gray-500';                 txt = `${label} หมด`; }
+  else if (days === 0) { cls = 'bg-red-600 text-white ring-1 ring-red-400'; txt = `${label} วันนี้!`; }
+  else if (days <= 30) { cls = 'bg-red-500 text-white';                     txt = `${label} ${days} วัน`; }
+  else if (days <= 60) { cls = 'bg-orange-500 text-white';                  txt = `${label} ${days} วัน`; }
+  else                 { cls = 'bg-amber-400 text-white';                    txt = `${label} ${days} วัน`; }
+  return <span className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-[9px] font-bold whitespace-nowrap ${cls}`}>{txt}</span>;
 };
 
 const VehicleStatusBadge = ({ status }) => {
@@ -445,9 +445,9 @@ export default function Master() {
                       </div>
                     )}
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      <ExpiryBadge date={i.InsuranceExpiry} label={i.InsuranceCompany ? `ประกัน (${i.InsuranceCompany})` : 'ประกัน'} />
-                      <ExpiryBadge date={i.ActExpiry} label={i.ActCompany ? `พ.ร.บ. (${i.ActCompany})` : 'พ.ร.บ.'} />
-                      <ExpiryBadge date={i.TaxExpiry} label="ภาษีรถ" />
+                      <ExpiryBadge date={i.InsuranceExpiry} label="ประกัน" />
+                      <ExpiryBadge date={i.ActExpiry} label="พ.ร.บ." />
+                      <ExpiryBadge date={i.TaxExpiry} label="ภาษี" />
                     </div>
                   </div>
                   <div className="flex-shrink-0"><VehicleStatusBadge status={i.VehicleStatus} /></div>
