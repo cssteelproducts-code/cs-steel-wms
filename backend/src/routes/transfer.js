@@ -501,4 +501,110 @@ router.put('/trips/:id/dest-exit', async (req, res) => {
   }
 });
 
+// GET /transfer/dashboard — performance metrics for the Transfer system
+router.get('/dashboard', async (req, res) => {
+  try {
+    const pool = getPool();
+    const todayBkk  = new Date(Date.now() + 7*3600000).toISOString().slice(0,10);
+    const monthBkk  = todayBkk.slice(0,7);
+    const yearBkk   = todayBkk.slice(0,4);
+
+    const [statusSummary, timeSeries, vehicleRank, routeRank, pendingLong, avgDuration] = await Promise.all([
+
+      // 1. สรุปจำนวนงานแต่ละสถานะ (วันนี้ / เดือนนี้ / ปีนี้ / ทั้งหมด)
+      pool.request()
+        .input('today', sql.NVarChar, todayBkk)
+        .input('month', sql.NVarChar, monthBkk + '%')
+        .input('year',  sql.NVarChar, yearBkk + '%')
+        .query(`
+          SELECT Status,
+            COUNT(*) AS Total,
+            SUM(CASE WHEN CAST(CreatedAt AS DATE) = @today THEN 1 ELSE 0 END) AS Today,
+            SUM(CASE WHEN CONVERT(NVARCHAR(7), CreatedAt, 120) LIKE @month THEN 1 ELSE 0 END) AS ThisMonth,
+            SUM(CASE WHEN CONVERT(NVARCHAR(4), CreatedAt, 120) LIKE @year  THEN 1 ELSE 0 END) AS ThisYear
+          FROM WMS_TransferJobs
+          GROUP BY Status
+        `),
+
+      // 2. งานรายวัน 30 วันล่าสุด
+      pool.request().query(`
+        SELECT CAST(CreatedAt AS DATE) AS Day,
+          COUNT(*) AS Created,
+          SUM(CASE WHEN Status='COMPLETE' THEN 1 ELSE 0 END) AS Completed
+        FROM WMS_TransferJobs
+        WHERE CreatedAt >= DATEADD(DAY,-29,GETDATE())
+        GROUP BY CAST(CreatedAt AS DATE)
+        ORDER BY Day
+      `),
+
+      // 3. รถที่ใช้บ่อย
+      pool.request().query(`
+        SELECT TOP 8 v.LicensePlate, v.VehicleCode,
+          COUNT(DISTINCT t.TripID) AS TripCount,
+          COUNT(DISTINCT t.JobID) AS JobCount
+        FROM WMS_TransferTrips t
+        JOIN WMS_TransferVehicles v ON t.VehicleID=v.VehicleID
+        GROUP BY v.VehicleID, v.LicensePlate, v.VehicleCode
+        ORDER BY TripCount DESC
+      `),
+
+      // 4. เส้นทางสถานีที่ใช้บ่อย
+      pool.request().query(`
+        SELECT TOP 8
+          ss.StationName AS Source, ds.StationName AS Dest,
+          COUNT(*) AS JobCount,
+          SUM(j.ActualBundles) AS TotalBundles,
+          SUM(j.ActualWeightKg) AS TotalWeight
+        FROM WMS_TransferJobs j
+        JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
+        JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID
+        GROUP BY ss.StationName, ds.StationName
+        ORDER BY JobCount DESC
+      `),
+
+      // 5. งาน PENDING ที่ค้างนานที่สุด
+      pool.request().query(`
+        SELECT TOP 5 j.JobCode, j.ProductDetail,
+          ss.StationName AS Source, ds.StationName AS Dest,
+          j.PlannedBundles, j.CreatedAt,
+          DATEDIFF(HOUR, j.CreatedAt, GETDATE()) AS HoursWaiting
+        FROM WMS_TransferJobs j
+        JOIN WMS_TransferStations ss ON j.SourceStationID=ss.StationID
+        JOIN WMS_TransferStations ds ON j.DestStationID=ds.StationID
+        WHERE j.Status IN ('PENDING','ASSIGNED')
+        ORDER BY j.CreatedAt ASC
+      `),
+
+      // 6. เวลาเฉลี่ยในการเสร็จงาน (จากสร้างถึง COMPLETE)
+      pool.request()
+        .input('month2', sql.NVarChar, monthBkk + '%')
+        .query(`
+          SELECT
+            AVG(DATEDIFF(MINUTE, CreatedAt, CompletedAt)) AS AvgMinThisMonth,
+            MIN(DATEDIFF(MINUTE, CreatedAt, CompletedAt)) AS MinMin,
+            MAX(DATEDIFF(MINUTE, CreatedAt, CompletedAt)) AS MaxMin,
+            COUNT(*) AS CompletedCount
+          FROM WMS_TransferJobs
+          WHERE Status='COMPLETE' AND CompletedAt IS NOT NULL
+            AND CONVERT(NVARCHAR(7), CreatedAt, 120) LIKE @month2
+        `)
+    ]);
+
+    res.json({
+      success: true,
+      data: {
+        statusSummary: statusSummary.recordset,
+        timeSeries: timeSeries.recordset,
+        vehicleRank: vehicleRank.recordset,
+        routeRank: routeRank.recordset,
+        pendingLong: pendingLong.recordset,
+        avgDuration: avgDuration.recordset[0] || {}
+      }
+    });
+  } catch (err) {
+    console.error('Transfer dashboard:', err);
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 module.exports = router;

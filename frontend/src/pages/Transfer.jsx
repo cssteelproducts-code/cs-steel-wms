@@ -4,7 +4,7 @@ import {
   ArrowRight, Package, CheckCircle2, Plus,
   ChevronDown, ChevronUp, X, Edit2, Trash2,
   RefreshCw, Building2, Layers, Clock, Truck, UserCheck,
-  Wrench, AlertTriangle, CheckCircle
+  Wrench, AlertTriangle, CheckCircle, BarChart2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -36,6 +36,8 @@ export default function Transfer() {
   const [vehicles, setVehicles] = useState([]);
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [dashData, setDashData] = useState(null);
+  const [dashLoading, setDashLoading] = useState(false);
   const [expandedJob, setExpandedJob] = useState(null);
   const [jobDetail, setJobDetail] = useState(null);
   const [statusFilter, setStatusFilter] = useState('');
@@ -75,6 +77,15 @@ export default function Transfer() {
     stationCode: '', stationName: '', stationType: 'BOTH', sortOrder: 0
   });
 
+  const loadDashboard = async () => {
+    setDashLoading(true);
+    try {
+      const res = await api.get('/transfer/dashboard');
+      if (res.data.success) setDashData(res.data.data);
+    } catch {}
+    setDashLoading(false);
+  };
+
   const loadJobs = useCallback(async () => {
     setLoading(true);
     try {
@@ -110,6 +121,7 @@ export default function Transfer() {
   }, []);
 
   useEffect(() => { loadJobs(); loadStations(); loadVehicles(); loadUsers(); }, [loadJobs, loadStations, loadVehicles, loadUsers]);
+  useEffect(() => { if (activeTab === 'report') loadDashboard(); }, [activeTab]);
 
   const toggleJobDetail = async (jobId) => {
     if (expandedJob === jobId) {
@@ -412,6 +424,7 @@ export default function Transfer() {
           { key: 'jobs', label: 'งาน', icon: Layers },
           { key: 'stations', label: 'สถานี', icon: Building2 },
           { key: 'vehicles', label: 'รถ', icon: Truck },
+          { key: 'report', label: 'รายงาน', icon: BarChart2 },
         ].map(({ key, label, icon: Icon }) => (
           <button key={key} onClick={() => setActiveTab(key)}
             className="flex items-center justify-center gap-2 flex-1 h-9 rounded-xl text-sm font-semibold transition-all"
@@ -803,6 +816,163 @@ export default function Transfer() {
           </div>
         );
       })()}
+
+      {/* ── REPORT TAB ── */}
+      {activeTab === 'report' && (
+        <div className="space-y-5">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-bold" style={{ color: '#6b7280' }}>ข้อมูล ณ วันนี้</p>
+            <button onClick={loadDashboard} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl"
+              style={{ background: '#f3f4f6', color: '#6b7280' }}>
+              <RefreshCw size={12} className={dashLoading ? 'animate-spin' : ''} />
+              รีเฟรช
+            </button>
+          </div>
+
+          {dashLoading && <div className="text-center py-12 text-sm" style={{ color: '#9ca3af' }}>กำลังโหลด...</div>}
+
+          {dashData && (() => {
+            const ss = dashData.statusSummary || [];
+            const getS = (status, field) => ss.find(s => s.Status === status)?.[field] ?? 0;
+            const totalToday = ss.reduce((a, s) => a + (s.Today ?? 0), 0);
+            const totalMonth = ss.reduce((a, s) => a + (s.ThisMonth ?? 0), 0);
+            const totalAll   = ss.reduce((a, s) => a + (s.Total ?? 0), 0);
+            const completeToday = getS('COMPLETE', 'Today');
+            const completeMonth = getS('COMPLETE', 'ThisMonth');
+            const pendingCount  = getS('PENDING', 'Total') + getS('ASSIGNED', 'Total');
+            const inProgCount   = getS('IN_PROGRESS', 'Total');
+            const avg = dashData.avgDuration || {};
+            const fmtDur = (m) => m == null ? '-' : m < 60 ? `${m} นาที` : `${Math.floor(m/60)} ชม. ${m%60} นาที`;
+
+            return (
+              <>
+                {/* ── KPI row ── */}
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+                  {[
+                    { label: 'งานวันนี้', value: totalToday, sub: `เสร็จ ${completeToday}`, color: '#3b82f6', bg: '#eff6ff' },
+                    { label: 'งานเดือนนี้', value: totalMonth, sub: `เสร็จ ${completeMonth}`, color: '#10b981', bg: '#f0fdf4' },
+                    { label: 'รอดำเนินการ', value: pendingCount + inProgCount, sub: `รอ ${pendingCount} / ดำเนินการ ${inProgCount}`, color: '#f59e0b', bg: '#fffbeb' },
+                    { label: 'งานทั้งหมด', value: totalAll, sub: `ยกเลิก ${getS('CANCELLED','Total')}`, color: '#8b5cf6', bg: '#f5f3ff' },
+                  ].map(({ label, value, sub, color, bg }) => (
+                    <div key={label} className="rounded-2xl p-4" style={{ background: bg, border: `1.5px solid ${color}22` }}>
+                      <p className="text-xs font-semibold mb-1" style={{ color }}>{label}</p>
+                      <p className="text-3xl font-black" style={{ color }}>{value}</p>
+                      <p className="text-xs mt-1" style={{ color: '#9ca3af' }}>{sub}</p>
+                    </div>
+                  ))}
+                </div>
+
+                {/* ── เวลาเฉลี่ย ── */}
+                {avg.CompletedCount > 0 && (
+                  <div className="rounded-2xl p-4 grid grid-cols-3 gap-4" style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0' }}>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">⏱ เวลาเฉลี่ย (เดือนนี้)</p>
+                      <p className="text-xl font-black text-slate-800">{fmtDur(avg.AvgMinThisMonth)}</p>
+                      <p className="text-xs text-slate-400">จาก {avg.CompletedCount} งาน</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">🏆 เร็วสุด</p>
+                      <p className="text-xl font-black text-emerald-600">{fmtDur(avg.MinMin)}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">🐢 ช้าสุด</p>
+                      <p className="text-xl font-black text-rose-500">{fmtDur(avg.MaxMin)}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  {/* ── งานค้างนาน ── */}
+                  <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #fde68a' }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#fffbeb' }}>
+                      <AlertTriangle size={14} style={{ color: '#d97706' }} />
+                      <span className="text-sm font-bold" style={{ color: '#92400e' }}>งานที่รอนานสุด</span>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead><tr style={{ background: '#fef3c7' }}>
+                        {['รหัส','ต้นทาง → ปลายทาง','รอนาน'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: '#92400e' }}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>
+                        {(dashData.pendingLong || []).length === 0
+                          ? <tr><td colSpan={3} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>ไม่มีงานค้าง ✓</td></tr>
+                          : (dashData.pendingLong || []).map(j => (
+                            <tr key={j.JobCode} style={{ borderTop: '1px solid #fde68a' }}>
+                              <td className="px-3 py-2 font-mono font-bold" style={{ color: '#d97706' }}>{j.JobCode}</td>
+                              <td className="px-3 py-2" style={{ color: '#374151' }}>{j.Source} → {j.Dest}</td>
+                              <td className="px-3 py-2 font-semibold whitespace-nowrap" style={{ color: j.HoursWaiting > 8 ? '#ef4444' : '#f59e0b' }}>
+                                {j.HoursWaiting} ชม.
+                              </td>
+                            </tr>
+                          ))
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* ── รถที่ใช้บ่อย ── */}
+                  <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #e0e7ff' }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#eef2ff' }}>
+                      <Truck size={14} style={{ color: '#4f46e5' }} />
+                      <span className="text-sm font-bold" style={{ color: '#3730a3' }}>รถที่ใช้บ่อย</span>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead><tr style={{ background: '#e0e7ff' }}>
+                        {['ทะเบียน','รหัส','รอบ','งาน'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: '#3730a3' }}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>
+                        {(dashData.vehicleRank || []).length === 0
+                          ? <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>ยังไม่มีข้อมูล</td></tr>
+                          : (dashData.vehicleRank || []).map((v, i) => (
+                            <tr key={v.LicensePlate} style={{ borderTop: '1px solid #e0e7ff', background: i === 0 ? '#f5f3ff' : '' }}>
+                              <td className="px-3 py-2 font-mono font-bold" style={{ color: '#4f46e5' }}>{v.LicensePlate}</td>
+                              <td className="px-3 py-2" style={{ color: '#6b7280' }}>{v.VehicleCode || '-'}</td>
+                              <td className="px-3 py-2 font-semibold" style={{ color: '#111827' }}>{v.TripCount}</td>
+                              <td className="px-3 py-2" style={{ color: '#6b7280' }}>{v.JobCount}</td>
+                            </tr>
+                          ))
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+
+                  {/* ── เส้นทางที่ใช้บ่อย ── */}
+                  <div className="rounded-2xl overflow-hidden sm:col-span-2" style={{ border: '1.5px solid #d1fae5' }}>
+                    <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#ecfdf5' }}>
+                      <ArrowRight size={14} style={{ color: '#059669' }} />
+                      <span className="text-sm font-bold" style={{ color: '#065f46' }}>เส้นทางที่ใช้บ่อย</span>
+                    </div>
+                    <table className="w-full text-xs">
+                      <thead><tr style={{ background: '#d1fae5' }}>
+                        {['ต้นทาง','ปลายทาง','งาน','มัด','น้ำหนัก (กก.)'].map(h => (
+                          <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: '#065f46' }}>{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>
+                        {(dashData.routeRank || []).length === 0
+                          ? <tr><td colSpan={5} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>ยังไม่มีข้อมูล</td></tr>
+                          : (dashData.routeRank || []).map((r, i) => (
+                            <tr key={`${r.Source}-${r.Dest}-${i}`} style={{ borderTop: '1px solid #d1fae5', background: i === 0 ? '#f0fdf4' : '' }}>
+                              <td className="px-3 py-2 font-semibold" style={{ color: '#374151' }}>{r.Source}</td>
+                              <td className="px-3 py-2 font-semibold" style={{ color: '#374151' }}>{r.Dest}</td>
+                              <td className="px-3 py-2 font-bold" style={{ color: '#059669' }}>{r.JobCount}</td>
+                              <td className="px-3 py-2" style={{ color: '#6b7280' }}>{r.TotalBundles ?? '-'}</td>
+                              <td className="px-3 py-2" style={{ color: '#6b7280' }}>{r.TotalWeight ? Number(r.TotalWeight).toLocaleString() : '-'}</td>
+                            </tr>
+                          ))
+                        }
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </div>
+      )}
 
       {/* ── CREATE JOB MODAL ── */}
       {showCreateJob && (
