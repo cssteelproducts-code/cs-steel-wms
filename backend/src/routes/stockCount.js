@@ -162,35 +162,48 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
     const rows = XLSX.utils.sheet_to_json(ws);
     if (!rows.length) return res.status(400).json({ success: false, message: 'ไม่พบข้อมูล' });
 
-    // Clear previous import — join through items to avoid SessionID dependency on entries table
+    // Clear previous import
     await pool.request().input('ID', sql.Int, req.params.id)
-      .query(`DELETE e FROM WMS_StockCountEntries e
-              INNER JOIN WMS_StockCountItems i ON e.ItemID=i.ItemID
-              WHERE i.SessionID=@ID`);
+      .query(`DELETE FROM WMS_StockCountEntries WHERE ItemID IN
+              (SELECT ItemID FROM WMS_StockCountItems WHERE SessionID=@ID)`);
     await pool.request().input('ID', sql.Int, req.params.id)
       .query('DELETE FROM WMS_StockCountItems WHERE SessionID=@ID');
+
+    // Bulk insert — 6000+ rows via loop INSERT is too slow (times out)
+    const table = new sql.Table('WMS_StockCountItems');
+    table.create = false;
+    table.columns.add('SessionID',    sql.Int,           { nullable: false });
+    table.columns.add('Warehouse',    sql.NVarChar(20),  { nullable: true });
+    table.columns.add('Location',     sql.NVarChar(50),  { nullable: true });
+    table.columns.add('ItemCode',     sql.NVarChar(50),  { nullable: true });
+    table.columns.add('ItemName',     sql.NVarChar(300), { nullable: true });
+    table.columns.add('TypeSKU',      sql.NVarChar(50),  { nullable: true });
+    table.columns.add('CategoryCode', sql.NVarChar(20),  { nullable: true });
+    table.columns.add('CategoryName', sql.NVarChar(100), { nullable: true });
+    table.columns.add('SizeCode',     sql.NVarChar(100), { nullable: true });
+    table.columns.add('SystemQty',    sql.Decimal(12,2), { nullable: true });
+    table.columns.add('SystemWeight', sql.Decimal(12,2), { nullable: true });
 
     let imported = 0;
     for (const row of rows) {
       const code = row['Itemcode'] || row['ItemCode'] || row['itemcode'] || '';
       if (!code) continue;
-      await pool.request()
-        .input('SID', sql.Int, req.params.id)
-        .input('WH',  sql.NVarChar, row['Warehouse'] || null)
-        .input('LOC', sql.NVarChar, row['Location']  || null)
-        .input('CODE',sql.NVarChar, String(code).trim())
-        .input('NAME',sql.NVarChar, row['ItemName']  || null)
-        .input('SKU', sql.NVarChar, row['TypeSUK']   || null)
-        .input('CC',  sql.NVarChar, row['GategoryCode'] || null)
-        .input('CN',  sql.NVarChar, row['Gname']     || null)
-        .input('SZ',  sql.NVarChar, row['SizeCode'] != null ? String(row['SizeCode']) : null)
-        .input('QTY', sql.Decimal(12,2), parseFloat(row['Quantity']) || 0)
-        .input('WGT', sql.Decimal(12,2), row['UnitNetWeight'] != null ? parseFloat(row['UnitNetWeight']) : null)
-        .query(`INSERT INTO WMS_StockCountItems
-          (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,SystemQty,SystemWeight)
-          VALUES(@SID,@WH,@LOC,@CODE,@NAME,@SKU,@CC,@CN,@SZ,@QTY,@WGT)`);
+      table.rows.add(
+        parseInt(req.params.id),
+        row['Warehouse'] || null,
+        row['Location']  || null,
+        String(code).trim().substring(0, 50),
+        row['ItemName']  ? String(row['ItemName']).substring(0, 300)  : null,
+        row['TypeSUK']   ? String(row['TypeSUK']).substring(0, 50)   : null,
+        row['GategoryCode'] ? String(row['GategoryCode']).substring(0, 20) : null,
+        row['Gname']     ? String(row['Gname']).substring(0, 100)    : null,
+        row['SizeCode'] != null ? String(row['SizeCode']).substring(0, 100) : null,
+        parseFloat(row['Quantity']) || 0,
+        row['UnitNetWeight'] != null ? parseFloat(row['UnitNetWeight']) : null
+      );
       imported++;
     }
+    if (imported > 0) await pool.bulk(table);
     res.json({ success: true, message: `นำเข้า ${imported} รายการสำเร็จ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
