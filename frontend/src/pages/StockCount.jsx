@@ -393,23 +393,21 @@ export default function StockCount() {
                   </div>
                 </div>
 
-                {/* Stats */}
-                {items.length > 0 && (
-                  <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
-                    {[
-                      { label: 'ทั้งหมด', value: stats.total, cls: 'text-slate-700' },
-                      { label: 'นับแล้ว', value: stats.counted, cls: 'text-blue-600' },
-                      { label: 'ผลต่าง', value: stats.diff, cls: 'text-red-500' },
-                      { label: 'ตรวจซ้ำ', value: stats.recount, cls: 'text-amber-600' },
-                      { label: 'Lock', value: stats.locked, cls: 'text-emerald-600' },
-                    ].map(({ label, value, cls }) => (
-                      <div key={label} className="text-center py-2 px-3 rounded-xl bg-slate-50">
-                        <div className={`text-lg font-black ${cls}`}>{value}</div>
-                        <div className="text-[10px] text-slate-400 font-medium">{label}</div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Stats — always visible so user sees count change after import */}
+                <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
+                  {[
+                    { label: 'ทั้งหมด', value: stats.total, cls: 'text-slate-700' },
+                    { label: 'นับแล้ว', value: stats.counted, cls: 'text-blue-600' },
+                    { label: 'ผลต่าง', value: stats.diff, cls: 'text-red-500' },
+                    { label: 'ตรวจซ้ำ', value: stats.recount, cls: 'text-amber-600' },
+                    { label: 'Lock', value: stats.locked, cls: 'text-emerald-600' },
+                  ].map(({ label, value, cls }) => (
+                    <div key={label} className="text-center py-2 px-3 rounded-xl bg-slate-50">
+                      <div className={`text-lg font-black ${cls}`}>{value}</div>
+                      <div className="text-[10px] text-slate-400 font-medium">{label}</div>
+                    </div>
+                  ))}
+                </div>
               </div>
 
               {/* Detail Tabs */}
@@ -433,7 +431,9 @@ export default function StockCount() {
                   className="input-field pl-8 text-sm" />
               </div>
 
-              {detailLoading ? <LoadingSpinner text="กำลังโหลด..." /> : (
+              {(importing || detailLoading) ? (
+                <LoadingSpinner text={importing ? 'กำลังนำเข้าข้อมูล...' : 'กำลังโหลด...'} />
+              ) : (
                 <div className="card overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
