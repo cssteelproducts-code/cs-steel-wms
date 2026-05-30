@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, AlertCircle, CheckCircle, Settings, RefreshCw, CheckCheck, X, Trash2 } from 'lucide-react';
+import { Bell, AlertTriangle, AlertCircle, CheckCircle, Settings, CheckCheck, X, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -147,21 +147,12 @@ export default function Alerts() {
               <span className="text-slate-500 text-sm">({active.length} ที่ยังไม่แก้ไข)</span>
             </div>
             <div className="flex gap-2">
-              <button onClick={runCheck} disabled={checking}
-                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-sm rounded-lg font-medium transition-colors disabled:opacity-50">
-                <RefreshCw size={13} className={checking ? 'animate-spin' : ''} />
-                {checking ? 'กำลังตรวจ...' : 'ตรวจสอบตอนนี้'}
-              </button>
               {unread > 0 && (
                 <button onClick={readAll}
                   className="flex items-center gap-1.5 px-3 py-1.5 bg-white border border-slate-200 text-slate-700 text-sm rounded-lg font-medium transition-colors hover:bg-slate-50">
                   <CheckCheck size={13} />อ่านทั้งหมด
                 </button>
               )}
-              <button onClick={fetchAlerts}
-                className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
-                <RefreshCw size={14} />
-              </button>
             </div>
           </div>
 
@@ -332,7 +323,7 @@ export default function Alerts() {
             <div>• <b>รถอยู่นานเกิน</b>: แจ้งเตือนเมื่อรถอยู่ในคลังเกินเวลาที่กำหนด (หน่วย: นาที)</div>
             <div>• <b>น้ำหนักเกินพิกัด</b>: แจ้งเตือนเมื่อน้ำหนักสุทธิเกินค่าที่กำหนด (หน่วย: กิโลกรัม)</div>
             <div>• <b>เข้าคลังนอกเวลา</b>: แจ้งเตือนเมื่อรถชั่งเข้านอกช่วงเวลาที่กำหนดในประเภทรถ</div>
-            <div>• กด "ตรวจสอบตอนนี้" หรือระบบจะตรวจอัตโนมัติทุก 30 วินาที</div>
+            <div>• ระบบตรวจสอบอัตโนมัติทุก 30 วินาที</div>
           </div>
         </div>
       )}
