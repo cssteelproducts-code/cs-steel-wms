@@ -268,7 +268,7 @@ export default function StockCount() {
   const locations  = [...new Set(items.filter(i => !filterWH || i.Warehouse === filterWH).map(i => i.Location).filter(Boolean))].sort();
   const gnames     = [...new Set(items.map(i => i.CategoryName).filter(Boolean))].sort();
   const sizes      = [...new Set(baseFiltered.map(i => i.SizeCode).filter(Boolean))].sort();
-  const thicks     = [...new Set(baseFiltered.map(i => i.Thickness).filter(v => v != null && String(v) !== '0' && String(v) !== '')).map(String)].sort();
+  const thicks     = [...new Set(baseFiltered.map(i => i.Thickness).filter(v => v != null && String(v) !== '0' && String(v) !== ''))].map(String).sort();
   const filteredItems = baseFiltered.filter(i => {
     if (!search) return true;
     const q = search.toLowerCase();
