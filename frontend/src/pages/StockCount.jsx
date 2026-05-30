@@ -152,7 +152,21 @@ export default function StockCount() {
     setImporting(true);
     try {
       const res = await api.post(`/stock-count/${selectedSession.SessionID}/import`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
-      if (res.data.success) { toast.success(res.data.message); fetchDetail(selectedSession.SessionID); }
+      if (res.data.success) {
+        toast.success(res.data.message);
+        // Backend processes in background — poll fetchDetail every 3s until items load (max 60s)
+        const sid = selectedSession.SessionID;
+        let attempts = 0;
+        const poll = async () => {
+          try {
+            const detail = await api.get(`/stock-count/${sid}`);
+            const count = detail?.data?.data?.items?.length ?? 0;
+            await fetchDetail(sid);
+            if (count === 0 && ++attempts < 20) setTimeout(poll, 3000);
+          } catch { /* ignore poll errors */ }
+        };
+        setTimeout(poll, 3000);
+      }
     } catch (err) { toast.error(err.response?.data?.message || 'นำเข้าล้มเหลว'); }
     finally { setImporting(false); }
   };

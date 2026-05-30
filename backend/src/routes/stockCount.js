@@ -162,14 +162,6 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
     const rows = XLSX.utils.sheet_to_json(ws);
     if (!rows.length) return res.status(400).json({ success: false, message: 'ไม่พบข้อมูล' });
 
-    // Clear previous import
-    await pool.request().input('ID', sql.Int, req.params.id)
-      .query(`DELETE FROM WMS_StockCountEntries WHERE ItemID IN
-              (SELECT ItemID FROM WMS_StockCountItems WHERE SessionID=@ID)`);
-    await pool.request().input('ID', sql.Int, req.params.id)
-      .query('DELETE FROM WMS_StockCountItems WHERE SessionID=@ID');
-
-    // Inline-value batch INSERT (1000 rows/batch, no param limit) — fastest approach
     const sessionId = parseInt(req.params.id);
     const esc = v => v == null ? 'NULL' : `N'${String(v).replace(/'/g, "''")}'`;
     const num = v => (v != null && !isNaN(parseFloat(v))) ? parseFloat(v) : 'NULL';
@@ -178,14 +170,29 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
       const code = esc(String(row['Itemcode'] || row['ItemCode'] || row['itemcode'] || '').trim().substring(0, 50));
       return `(${sessionId},${esc(row['Warehouse'])},${esc(row['Location'])},${code},${esc(String(row['ItemName']||'').substring(0,300))},${esc(String(row['TypeSUK']||'').substring(0,50))},${esc(String(row['GategoryCode']||'').substring(0,20))},${esc(String(row['Gname']||'').substring(0,100))},${esc(row['SizeCode']!=null?String(row['SizeCode']).substring(0,100):null)},${parseFloat(row['Quantity'])||0},${num(row['UnitNetWeight'])})`;
     });
-    const BATCH = 1000;
-    for (let b = 0; b < valStrings.length; b += BATCH) {
-      await pool.request().query(
-        `INSERT INTO WMS_StockCountItems (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,SystemQty,SystemWeight) VALUES ${valStrings.slice(b, b + BATCH).join(',')}`
-      );
-    }
-    const imported = validRows.length;
-    res.json({ success: true, message: `นำเข้า ${imported} รายการสำเร็จ` });
+
+    // Respond immediately — HTTP proxy may timeout if we wait for all INSERTs
+    res.json({ success: true, message: `กำลังนำเข้า ${validRows.length} รายการ...`, importing: true });
+
+    // Process in background (non-blocking)
+    setImmediate(async () => {
+      try {
+        await pool.request().input('ID', sql.Int, sessionId)
+          .query(`DELETE FROM WMS_StockCountEntries WHERE ItemID IN
+                  (SELECT ItemID FROM WMS_StockCountItems WHERE SessionID=@ID)`);
+        await pool.request().input('ID', sql.Int, sessionId)
+          .query('DELETE FROM WMS_StockCountItems WHERE SessionID=@ID');
+        const BATCH = 1000;
+        for (let b = 0; b < valStrings.length; b += BATCH) {
+          await pool.request().query(
+            `INSERT INTO WMS_StockCountItems (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,SystemQty,SystemWeight) VALUES ${valStrings.slice(b, b + BATCH).join(',')}`
+          );
+        }
+        console.log(`✅ Import session ${sessionId}: ${validRows.length} rows done`);
+      } catch (e) {
+        console.error(`❌ Import session ${sessionId} background error:`, e.message);
+      }
+    });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
