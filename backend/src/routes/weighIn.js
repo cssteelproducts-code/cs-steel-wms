@@ -45,10 +45,11 @@ router.post('/', authenticate, async (req, res) => {
         .input('Status', sql.NVarChar, 'Data')
         .input('CreatedBy', sql.Int, req.user.UserID)
         .input('TripDate', sql.Date, tripDate)
+        .input('CreatedAt', sql.DateTime, weighDateTime)
         .query(`
-          INSERT INTO WMS_Trips (TripDate, LicensePlate, VehicleTypeID, WarehouseID, CustomerID, DeliveryType, Priority, Status, CreatedBy)
+          INSERT INTO WMS_Trips (TripDate, LicensePlate, VehicleTypeID, WarehouseID, CustomerID, DeliveryType, Priority, Status, CreatedBy, CreatedAt)
           OUTPUT INSERTED.TripID
-          VALUES (@TripDate, @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Priority, @Status, @CreatedBy)
+          VALUES (@TripDate, @LicensePlate, @VehicleTypeID, @WarehouseID, @CustomerID, @DeliveryType, @Priority, @Status, @CreatedBy, @CreatedAt)
         `);
 
       const tripId = tripResult.recordset[0].TripID;

@@ -239,9 +239,9 @@ router.post('/jobs', async (req, res) => {
       return res.status(400).json({ success: false, message: 'กรุณากรอกข้อมูลที่จำเป็น' });
     }
     const pool = getPool();
-    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const today = new Date(Date.now() + 7 * 3600000).toISOString().slice(0, 10).replace(/-/g, '');
     const seqResult = await pool.request()
-      .query(`SELECT COUNT(*)+1 AS seq FROM WMS_TransferJobs WHERE CAST(CreatedAt AS DATE)=CAST(GETDATE() AS DATE)`);
+      .query(`SELECT COUNT(*)+1 AS seq FROM WMS_TransferJobs WHERE CAST(CreatedAt AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)`);
     const seq = seqResult.recordset[0].seq.toString().padStart(3, '0');
     const jobCode = `TF${today}${seq}`;
 
@@ -255,10 +255,11 @@ router.post('/jobs', async (req, res) => {
       .input('priority', sql.NVarChar, priority || 'NORMAL')
       .input('notes', sql.NVarChar, notes || null)
       .input('createdBy', sql.Int, req.user.UserID)
+      .input('createdAt', sql.DateTime, new Date())
       .query(`
-        INSERT INTO WMS_TransferJobs (JobCode, SourceStationID, DestStationID, ProductDesc, PlannedBundles, PlannedWeightKg, Priority, Notes, CreatedBy)
+        INSERT INTO WMS_TransferJobs (JobCode, SourceStationID, DestStationID, ProductDesc, PlannedBundles, PlannedWeightKg, Priority, Notes, CreatedBy, CreatedAt)
         OUTPUT INSERTED.JobID
-        VALUES (@code, @src, @dst, @prod, @bundles, @weight, @priority, @notes, @createdBy)
+        VALUES (@code, @src, @dst, @prod, @bundles, @weight, @priority, @notes, @createdBy, @createdAt)
       `);
     res.json({ success: true, jobId: result.recordset[0].JobID, jobCode });
   } catch (err) {
@@ -330,7 +331,7 @@ router.put('/jobs/:id/status', async (req, res) => {
   try {
     const { status } = req.body;
     const pool = getPool();
-    const completedAt = status === 'COMPLETE' ? ', CompletedAt=GETDATE()' : '';
+    const completedAt = status === 'COMPLETE' ? ', CompletedAt=DATEADD(HOUR,7,GETUTCDATE())' : '';
     await pool.request()
       .input('id', sql.Int, req.params.id)
       .input('status', sql.NVarChar, status)
@@ -425,7 +426,7 @@ router.put('/trips/:id/source-entry', async (req, res) => {
     const pool = getPool();
     const r = await pool.request()
       .input('id', sql.Int, req.params.id)
-      .query("UPDATE WMS_TransferTrips SET SourceEntryTime=GETDATE(), Status='SOURCE_ENTRY' OUTPUT INSERTED.JobID WHERE TripID=@id AND Status='PENDING'");
+      .query("UPDATE WMS_TransferTrips SET SourceEntryTime=DATEADD(HOUR,7,GETUTCDATE()), Status='SOURCE_ENTRY' OUTPUT INSERTED.JobID WHERE TripID=@id AND Status='PENDING'");
     if (r.recordset.length > 0) {
       await pool.request()
         .input('jid', sql.Int, r.recordset[0].JobID)
@@ -448,7 +449,7 @@ router.put('/trips/:id/source-exit', async (req, res) => {
       .input('notes', sql.NVarChar, notes || null)
       .query(`
         UPDATE WMS_TransferTrips
-        SET SourceExitTime=GETDATE(), BundleCount=@bundles, TotalWeightKg=@weight, Notes=@notes, Status='SOURCE_EXIT'
+        SET SourceExitTime=DATEADD(HOUR,7,GETUTCDATE()), BundleCount=@bundles, TotalWeightKg=@weight, Notes=@notes, Status='SOURCE_EXIT'
         WHERE TripID=@id AND Status='SOURCE_ENTRY'
       `);
     res.json({ success: true });
@@ -462,7 +463,7 @@ router.put('/trips/:id/dest-entry', async (req, res) => {
     const pool = getPool();
     await pool.request()
       .input('id', sql.Int, req.params.id)
-      .query("UPDATE WMS_TransferTrips SET DestEntryTime=GETDATE(), Status='DEST_ENTRY' WHERE TripID=@id AND Status='SOURCE_EXIT'");
+      .query("UPDATE WMS_TransferTrips SET DestEntryTime=DATEADD(HOUR,7,GETUTCDATE()), Status='DEST_ENTRY' WHERE TripID=@id AND Status='SOURCE_EXIT'");
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -475,7 +476,7 @@ router.put('/trips/:id/dest-exit', async (req, res) => {
     const tripResult = await pool.request()
       .input('id', sql.Int, req.params.id)
       .query(`
-        UPDATE WMS_TransferTrips SET DestExitTime=GETDATE(), Status='COMPLETE'
+        UPDATE WMS_TransferTrips SET DestExitTime=DATEADD(HOUR,7,GETUTCDATE()), Status='COMPLETE'
         OUTPUT INSERTED.JobID, INSERTED.BundleCount, INSERTED.TotalWeightKg
         WHERE TripID=@id AND Status='DEST_ENTRY'
       `);

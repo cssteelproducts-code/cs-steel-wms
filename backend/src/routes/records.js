@@ -146,8 +146,8 @@ router.get('/:tripId/timeline', authenticate, async (req, res) => {
         ? Math.max(0, Math.round((new Date(t.DataStationTime || t.FirstLoadEntry) - new Date(t.WeighInTime)) / 60000))
         : null;
 
-    const soWaitMinutes = t.SOWaitStartedAt && (t.DataStationTime || t.FirstLoadEntry)
-      ? Math.max(0, Math.round((new Date(t.DataStationTime || t.FirstLoadEntry) - new Date(t.SOWaitStartedAt)) / 60000))
+    const soWaitMinutes = t.SOWaitStartedAt && t.FirstLoadEntry
+      ? Math.max(0, Math.round((new Date(t.FirstLoadEntry) - new Date(t.SOWaitStartedAt)) / 60000))
       : null;
 
     const weighOutWaitMinutes = t.LastLoadExit && t.WeighOutTime
@@ -222,7 +222,7 @@ router.put('/:tripId', authenticate, async (req, res) => {
       tripSets.push('Status=@Status');
       tripsReq.input('Status', sql.NVarChar, status);
       if (status === 'Complete' && prevStatus !== 'Complete' && !completedAtTime) {
-        tripSets.push('CompletedAt=GETUTCDATE()');
+        tripSets.push('CompletedAt=DATEADD(HOUR,7,GETUTCDATE())');
       }
     }
     if (completedAtTime && /^\d{2}:\d{2}$/.test(completedAtTime)) {

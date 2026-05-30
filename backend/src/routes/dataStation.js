@@ -46,7 +46,7 @@ router.post('/', authenticate, async (req, res) => {
         .input('Notes', sql.NVarChar, notes || '')
         .input('OperatorID', sql.Int, req.user.UserID)
         .query(`INSERT INTO WMS_DataStation (TripID, TargetStationID, PickDocumentNo, ReceivedTime, Notes, OperatorID)
-                VALUES (@TripID, @TargetStationID, NULL, GETUTCDATE(), @Notes, @OperatorID)`);
+                VALUES (@TripID, @TargetStationID, NULL, DATEADD(HOUR,7,GETUTCDATE()), @Notes, @OperatorID)`);
     }
 
     // Store all target stations in WMS_DataStationTargets (batch insert)
@@ -89,9 +89,9 @@ router.get('/pending', authenticate, async (req, res) => {
                w.WarehouseName,
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime,
-               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as WaitMinutes,
+               DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as WaitMinutes,
                CASE WHEN t.SOWaitStartedAt IS NOT NULL
-                    THEN DATEDIFF(SECOND, t.SOWaitStartedAt, GETUTCDATE())
+                    THEN DATEDIFF(SECOND, t.SOWaitStartedAt, DATEADD(HOUR,7,GETUTCDATE()))
                     ELSE NULL END as SOWaitSeconds
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
@@ -135,7 +135,7 @@ router.put('/:tripId/wait-pick', authenticate, async (req, res) => {
     const pool = getPool();
     await pool.request()
       .input('TripID', sql.Int, req.params.tripId)
-      .query(`UPDATE WMS_Trips SET Status = 'WaitPick', SOWaitStartedAt = GETUTCDATE()
+      .query(`UPDATE WMS_Trips SET Status = 'WaitPick', SOWaitStartedAt = DATEADD(HOUR,7,GETUTCDATE())
               WHERE TripID = @TripID AND Status IN ('Data', 'WaitPick')`);
     res.json({ success: true });
   } catch (err) {

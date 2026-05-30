@@ -15,17 +15,17 @@ async function runAlertCheck() {
 
       const trips = await r.query(`
         SELECT t.TripID, t.LicensePlate, t.WarehouseID, t.VehicleTypeID,
-          DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) AS MinutesInWarehouse
+          DATEDIFF(MINUTE, t.CreatedAt, DATEADD(HOUR,7,GETUTCDATE())) AS MinutesInWarehouse
         FROM WMS_Trips t
         WHERE t.Status NOT IN ('Complete', 'Cancelled')
-          AND DATEDIFF(MINUTE, t.CreatedAt, GETUTCDATE()) > @threshold
+          AND DATEDIFF(MINUTE, t.CreatedAt, DATEADD(HOUR,7,GETUTCDATE())) > @threshold
           ${cfg.WarehouseID ? 'AND t.WarehouseID = @warehouseId' : ''}
           ${cfg.VehicleTypeID ? 'AND t.VehicleTypeID = @vehicleTypeId' : ''}
           AND NOT EXISTS (
             SELECT 1 FROM WMS_Alerts a
             WHERE a.TripID = t.TripID AND a.AlertType = 'OVERSTAY'
               AND a.IsResolved = 0
-              AND CAST(a.CreatedAt AS DATE) = CAST(GETDATE() AS DATE)
+              AND CAST(a.CreatedAt AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
           )
       `);
 
@@ -42,9 +42,9 @@ async function runAlertCheck() {
           batchReq.input(`wi${i}`, sql.Int, trip.WarehouseID);
           batchReq.input(`ms${i}`, sql.NVarChar, msg);
           newAlerts.push(msg);
-          return `('OVERSTAY', @sv${i}, @ti${i}, @wi${i}, @ms${i})`;
+          return `('OVERSTAY', @sv${i}, @ti${i}, @wi${i}, @ms${i}, DATEADD(HOUR,7,GETUTCDATE()))`;
         });
-        await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message) VALUES ${vals.join(', ')}`);
+        await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message, CreatedAt) VALUES ${vals.join(', ')}`);
       }
     }
 
@@ -54,8 +54,8 @@ async function runAlertCheck() {
           ISNULL(vt.TypeName, 'ไม่ระบุ') as TypeName,
           ISNULL(vt.StartHour, 8) as StartHour, ISNULL(vt.StartMinute, 0) as StartMinute,
           ISNULL(vt.CutoffHour, 16) as CutoffHour, ISNULL(vt.CutoffMinute, 0) as CutoffMinute,
-          DATEPART(HOUR, DATEADD(MINUTE,420,wi.WeighDateTime))*60 +
-            DATEPART(MINUTE, DATEADD(MINUTE,420,wi.WeighDateTime)) as LocalMin
+          DATEPART(HOUR, wi.WeighDateTime)*60 +
+            DATEPART(MINUTE, wi.WeighDateTime) as LocalMin
         FROM WMS_Trips t
         JOIN WMS_WeighIn wi ON wi.TripID = t.TripID
         LEFT JOIN WMS_VehicleTypes vt ON vt.TypeID = t.VehicleTypeID
@@ -64,7 +64,7 @@ async function runAlertCheck() {
           AND NOT EXISTS (
             SELECT 1 FROM WMS_Alerts a
             WHERE a.TripID = t.TripID AND a.AlertType = 'OVERTIME_ENTRY'
-              AND a.CreatedAt >= CAST(GETUTCDATE() AS DATE)
+              AND a.CreatedAt >= CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
           )
       `);
       const overtime = trips.recordset.filter(r => {
@@ -84,9 +84,9 @@ async function runAlertCheck() {
           batchReq.input(`wi${i}`, sql.Int, trip.WarehouseID);
           batchReq.input(`ms${i}`, sql.NVarChar, msg);
           newAlerts.push(msg);
-          return `('OVERTIME_ENTRY', 'WARNING', @ti${i}, @wi${i}, @ms${i})`;
+          return `('OVERTIME_ENTRY', 'WARNING', @ti${i}, @wi${i}, @ms${i}, DATEADD(HOUR,7,GETUTCDATE()))`;
         });
-        await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message) VALUES ${vals.join(', ')}`);
+        await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message, CreatedAt) VALUES ${vals.join(', ')}`);
       }
     }
 
@@ -98,7 +98,7 @@ async function runAlertCheck() {
           FROM WMS_Trips t
           JOIN WMS_WeighOut wo ON wo.TripID = t.TripID
           WHERE t.Status = 'Complete'
-            AND t.CompletedAt >= DATEADD(HOUR, -2, GETDATE())
+            AND t.CompletedAt >= DATEADD(HOUR, 5, GETUTCDATE())
             AND wo.NetWeight > @threshold
             AND NOT EXISTS (
               SELECT 1 FROM WMS_Alerts a
@@ -114,9 +114,9 @@ async function runAlertCheck() {
           batchReq.input(`wi${i}`, sql.Int, trip.WarehouseID);
           batchReq.input(`ms${i}`, sql.NVarChar, msg);
           newAlerts.push(msg);
-          return `('OVERWEIGHT', 'WARNING', @ti${i}, @wi${i}, @ms${i})`;
+          return `('OVERWEIGHT', 'WARNING', @ti${i}, @wi${i}, @ms${i}, DATEADD(HOUR,7,GETUTCDATE()))`;
         });
-        await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message) VALUES ${vals.join(', ')}`);
+        await batchReq.query(`INSERT INTO WMS_Alerts (AlertType, Severity, TripID, WarehouseID, Message, CreatedAt) VALUES ${vals.join(', ')}`);
       }
     }
   }

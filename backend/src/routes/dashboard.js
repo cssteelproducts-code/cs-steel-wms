@@ -177,10 +177,10 @@ router.get('/summary', authenticate, async (req, res) => {
       pool.request().query(`
         SELECT t.TripID, t.LicensePlate, ISNULL(vt.TypeName, '-') as TypeName,
                lr.EntryTime,
-               DATEDIFF(HOUR, lr.EntryTime, GETUTCDATE()) as HoursIn,
+               DATEDIFF(HOUR, lr.EntryTime, DATEADD(HOUR,7,GETUTCDATE())) as HoursIn,
                CASE WHEN
-                 DATEPART(HOUR,DATEADD(MINUTE,420,lr.EntryTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,lr.EntryTime)) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
-                 OR DATEPART(HOUR,DATEADD(MINUTE,420,lr.EntryTime))*60+DATEPART(MINUTE,DATEADD(MINUTE,420,lr.EntryTime)) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
+                 DATEPART(HOUR,lr.EntryTime)*60+DATEPART(MINUTE,lr.EntryTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
+                 OR DATEPART(HOUR,lr.EntryTime)*60+DATEPART(MINUTE,lr.EntryTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0)
                THEN 1 ELSE 0 END as IsOvertime
         FROM WMS_LoadingRecord lr
         JOIN WMS_Trips t ON lr.TripID=t.TripID
@@ -339,7 +339,7 @@ router.get('/live', authenticate, async (req, res) => {
              c.CustomerName,
              wi.TareWeight, wi.WeighDateTime as WeighInTime,
              ds.PickDocumentNo,
-             DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse,
+             DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
              ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
              ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
              cur.StationName as CurrentStation,
@@ -436,7 +436,7 @@ router.get('/station-vehicles', authenticate, async (req, res) => {
           c.CustomerName,
           vt.TypeName AS VehicleTypeName,
           wi.WeighDateTime AS WeighInTime,
-          DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) AS MinutesIn,
+          DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) AS MinutesIn,
           CASE WHEN lr_cur.TripID IS NOT NULL THEN 1 ELSE 0 END AS IsLoading
         FROM WMS_DataStationTargets dst
         JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID

@@ -28,7 +28,7 @@ router.post('/', authenticate, async (req, res) => {
         .input('OperatorID', sql.Int, req.user.UserID)
         .input('CheckDurationMinutes', sql.Int, checkDurationMinutes != null ? checkDurationMinutes : null)
         .input('CheckStartTime', sql.DateTime, startTime)
-        .query(`UPDATE WMS_CheckerRecord SET CheckTime=GETUTCDATE(), IsApproved=@IsApproved,
+        .query(`UPDATE WMS_CheckerRecord SET CheckTime=DATEADD(HOUR,7,GETUTCDATE()), IsApproved=@IsApproved,
                 Remarks=@Remarks, OperatorID=@OperatorID,
                 CheckDurationMinutes=@CheckDurationMinutes, CheckStartTime=@CheckStartTime
                 WHERE TripID=@TripID`);
@@ -47,7 +47,7 @@ router.post('/', authenticate, async (req, res) => {
     if (isApproved) {
       await pool.request()
         .input('TripID', sql.Int, tripId)
-        .query(`UPDATE WMS_Trips SET Status='Complete', CompletedAt=GETUTCDATE() WHERE TripID=@TripID`);
+        .query(`UPDATE WMS_Trips SET Status='Complete', CompletedAt=DATEADD(HOUR,7,GETUTCDATE()) WHERE TripID=@TripID`);
     }
 
     const tripInfo = await pool.request()
@@ -81,7 +81,7 @@ router.get('/pending', authenticate, async (req, res) => {
                ds.PickDocumentNo,
                ls_target.StationName as TargetStation,
                wo.WeighDateTime as WeighOutDateTime,
-               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse
+               DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse
         FROM WMS_Trips t
         LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
         LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
@@ -138,7 +138,7 @@ router.post('/fail-rework', authenticate, async (req, res) => {
         .input('OperatorID', sql.Int, req.user.UserID)
         .input('CheckDurationMinutes', sql.Int, checkDurationMinutes ?? null)
         .input('CheckStartTime', sql.DateTime, startTime)
-        .query(`UPDATE WMS_CheckerRecord SET CheckTime=GETUTCDATE(), IsApproved=0,
+        .query(`UPDATE WMS_CheckerRecord SET CheckTime=DATEADD(HOUR,7,GETUTCDATE()), IsApproved=0,
                 Remarks=@Remarks, OperatorID=@OperatorID,
                 CheckDurationMinutes=@CheckDurationMinutes, CheckStartTime=@CheckStartTime
                 WHERE TripID=@TripID`);

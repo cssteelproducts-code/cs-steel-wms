@@ -73,7 +73,7 @@ router.put('/:id/resolve', async (req, res) => {
     const pool = getPool();
     await pool.request()
       .input('id', sql.Int, req.params.id)
-      .query('UPDATE WMS_Alerts SET IsResolved = 1, IsRead = 1, ResolvedAt = GETDATE() WHERE AlertID = @id');
+      .query('UPDATE WMS_Alerts SET IsResolved = 1, IsRead = 1, ResolvedAt = DATEADD(HOUR,7,GETUTCDATE()) WHERE AlertID = @id');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

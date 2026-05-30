@@ -60,7 +60,7 @@ router.post('/', authenticate, async (req, res) => {
         .input('Notes', sql.NVarChar, notes || '')
         .input('OperatorID', sql.Int, req.user.UserID)
         .query(`INSERT INTO WMS_WeighOut (TripID, WeighDateTime, GrossWeight, TareWeight, NetWeight, Notes, OperatorID)
-                VALUES (@TripID, GETUTCDATE(), @GrossWeight, @TareWeight, @NetWeight, @Notes, @OperatorID)`);
+                VALUES (@TripID, DATEADD(HOUR,7,GETUTCDATE()), @GrossWeight, @TareWeight, @NetWeight, @Notes, @OperatorID)`);
 
       await transaction.request()
         .input('TripID', sql.Int, tripId)
@@ -96,7 +96,7 @@ router.get('/pending', authenticate, async (req, res) => {
                c.CustomerName,
                wi.TareWeight, wi.WeighDateTime as WeighInTime,
                ds.PickDocumentNo,
-               DATEDIFF(MINUTE, wi.WeighDateTime, GETUTCDATE()) as MinutesInWarehouse,
+               DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
                ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
                ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
                cur.StationName as CurrentStation
