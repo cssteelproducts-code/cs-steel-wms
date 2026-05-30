@@ -886,7 +886,7 @@ export default function Master() {
 
             {/* ข้อมูลประกันภัย / พรบ. / ภาษีรถ */}
             <div className="rounded-2xl p-4 space-y-3" style={{ background: '#fef9f0', border: '1px solid #fde68a' }}>
-              <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5"><Calendar size={13}/>ข้อมูลประกันภัย / พรบ. / ภาษีรถ</p>
+              <p className="text-xs font-bold text-amber-700 flex items-center gap-1.5"><Calendar size={13}/>ข้อมูลประกันภัย / พรบ. / ภาษีรถ — แจ้งเตือน 90 / 60 / 30 วัน และรายวันเมื่อ ≤ 30 วัน</p>
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="label text-amber-700">บริษัท ประกันภัย</label>
@@ -913,10 +913,7 @@ export default function Master() {
                   {form.ActExpiry && <p className="text-[10px] mt-0.5"><ExpiryBadge date={form.ActExpiry} label="พ.ร.บ." /></p>}
                 </div>
                 <div className="col-span-2">
-                  <label className="label text-amber-700 flex items-center gap-1.5">
-                    วันต่อภาษีรถ
-                    <span className="text-[10px] font-normal text-amber-600">ระบบแจ้งเตือน 90 / 60 / 30 วัน</span>
-                  </label>
+                  <label className="label text-amber-700">วันต่อภาษีรถ</label>
                   <input type="date" value={form.TaxExpiry ? form.TaxExpiry.split('T')[0] : ''}
                     onChange={e => setForm(p => ({ ...p, TaxExpiry: e.target.value }))}
                     className="input-field" />
