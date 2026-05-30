@@ -25,6 +25,7 @@ const pageTitles = {
   '/forecast':          { title: 'วิเคราะห์และวางแผนล่วงหน้า' },
   '/shift-planning':    { title: 'วางแผนกะพนักงาน' },
   '/freight-calc':      { title: '🚛 คำนวณค่าขนส่ง', subtitle: 'คำนวณต้นทุนค่าขนส่งต่อเที่ยว รวมขาไปและขากลับ' },
+  '/location-check':    { title: 'ตรวจสอบ Location', subtitle: 'สแกนรหัส Location และตรวจสอบประเภทสินค้า (TypeSKU)' },
 };
 
 export default function MainLayout() {

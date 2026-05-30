@@ -4,7 +4,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, X, Activity,
-  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit, CalendarClock, Truck
+  Bell, Boxes, Route, ArrowLeftRight, ClipboardList, BrainCircuit, CalendarClock, Truck, ScanLine
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -21,6 +21,7 @@ const menuItems = [
   { path: '/records', icon: ClipboardList, key: 'nav.records', code: 'RECORDS' },
   { key: 'section.warehouse', divider: true },
   { path: '/stock', icon: Boxes, key: 'nav.stock', code: 'STOCK' },
+  { path: '/location-check', icon: ScanLine, key: 'nav.locationCheck', code: 'STOCK' },
   { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
   { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },

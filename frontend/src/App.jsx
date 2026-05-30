@@ -26,6 +26,7 @@ import DeliveryPlan from './pages/DeliveryPlan';
 import Transfer from './pages/Transfer';
 import TransferDriver from './pages/TransferDriver';
 import Records from './pages/Records';
+import LocationCheck from './pages/LocationCheck';
 
 const ProtectedRoute = ({ children, menuCode }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -81,6 +82,7 @@ function AppRoutes() {
         <Route path="transfer/driver" element={<ProtectedRoute menuCode="TRANSFER"><TransferDriver /></ProtectedRoute>} />
         <Route path="records" element={<ProtectedRoute menuCode="RECORDS"><Records /></ProtectedRoute>} />
         <Route path="freight-calc" element={<ProtectedRoute menuCode="FREIGHT_CALC"><FreightCalc /></ProtectedRoute>} />
+        <Route path="location-check" element={<ProtectedRoute><LocationCheck /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
