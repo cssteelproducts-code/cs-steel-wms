@@ -1022,23 +1022,7 @@ export default function Master() {
 
   return (
     <div className="space-y-6">
-      {/* Summary */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        {summaryItems.map(s => (
-          <button key={s.key} onClick={() => setTab(s.key)}
-            className={`card flex items-center gap-3 py-2.5 px-3 transition-all hover:shadow-md ${tab === s.key ? 'ring-2 ring-red-400' : ''}`}>
-            <div className={`flex-shrink-0 inline-flex items-center justify-center w-7 h-7 rounded-lg ${s.bg}`}>
-              <s.icon size={13} className={s.color} />
-            </div>
-            <div className="text-left min-w-0">
-              <div className="text-base font-black text-gray-900 leading-tight">{data[s.key]?.length ?? '—'}</div>
-              <div className="text-xs text-gray-400 truncate">{s.label}</div>
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="flex flex-wrap gap-2">
+<div className="flex flex-wrap gap-2">
         {tabs.map(t => (
           <button key={t.key} onClick={() => setTab(t.key)}
             className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${tab === t.key ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
