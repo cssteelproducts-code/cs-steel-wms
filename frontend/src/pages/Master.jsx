@@ -28,22 +28,22 @@ const ExpiryBadge = ({ date, label }) => {
   const days = daysUntil(date);
   if (days === null || days > 90) return null;
   let cls, icon, txt;
-  if (days < 0)        { cls = 'bg-gray-200 text-gray-500 ring-1 ring-gray-300';                        icon = '⚫'; txt = `${label}: หมดแล้ว ${Math.abs(days)}ว.`; }
-  else if (days === 0) { cls = 'bg-red-600 text-white ring-2 ring-red-400 shadow-md shadow-red-200';     icon = '🚨'; txt = `${label}: หมดวันนี้!`; }
-  else if (days <= 30) { cls = 'bg-red-500 text-white ring-2 ring-red-300 shadow-sm shadow-red-100';     icon = '🔴'; txt = `${label}: ${days}ว.`; }
-  else if (days <= 60) { cls = 'bg-orange-500 text-white ring-1 ring-orange-300 shadow-sm shadow-orange-100'; icon = '🟠'; txt = `${label}: ${days}ว.`; }
-  else                 { cls = 'bg-amber-400 text-white ring-1 ring-amber-300';                          icon = '🟡'; txt = `${label}: ${days}ว.`; }
-  return <span className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold whitespace-nowrap ${cls}`}>{icon} {txt}</span>;
+  if (days < 0)        { cls = 'bg-gray-200 text-gray-500';                     icon = '●'; txt = `${label} หมดแล้ว`; }
+  else if (days === 0) { cls = 'bg-red-600 text-white ring-1 ring-red-400';     icon = '!'; txt = `${label} วันนี้!`; }
+  else if (days <= 30) { cls = 'bg-red-500 text-white';                         icon = '●'; txt = `${label} ${days}ว.`; }
+  else if (days <= 60) { cls = 'bg-orange-500 text-white';                      icon = '●'; txt = `${label} ${days}ว.`; }
+  else                 { cls = 'bg-amber-400 text-white';                        icon = '●'; txt = `${label} ${days}ว.`; }
+  return <span className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded-lg text-[9px] font-bold whitespace-nowrap ${cls}`}>{icon} {txt}</span>;
 };
 
 const VehicleStatusBadge = ({ status }) => {
   if (status === 'รอซ่อม') return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-amber-100 text-amber-700"><Wrench size={10}/>รอซ่อม</span>
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-700"><Wrench size={13}/>รอซ่อม</span>
   );
   if (status === 'อุบัติเหตุ') return (
-    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-red-100 text-red-700"><AlertTriangle size={10}/>อุบัติเหตุ</span>
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700"><AlertTriangle size={13}/>อุบัติเหตุ</span>
   );
-  return <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-semibold bg-emerald-100 text-emerald-700"><CheckCircle2 size={10}/>พร้อมใช้</span>;
+  return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-700"><CheckCircle2 size={13}/>พร้อมใช้</span>;
 };
 
 export default function Master() {
@@ -433,9 +433,9 @@ export default function Master() {
                   <div className="pt-0.5 flex-shrink-0"><Checkbox id={i.VehicleID} checked={sel} onChange={() => toggleSelect(i.VehicleID)} /></div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-bold text-slate-900 text-sm">{i.LicensePlate}</span>
-                      {i.VehicleName && <span className="text-slate-500 text-xs">{i.VehicleName}</span>}
-                      {i.VehicleCategory && <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-50 text-blue-600">{i.VehicleCategory}</span>}
+                      <span className="font-black text-slate-900 text-base">{i.LicensePlate}</span>
+                      {i.VehicleName && <span className="text-slate-500 text-sm">{i.VehicleName}</span>}
+                      {i.VehicleCategory && <span className="px-2.5 py-0.5 rounded-full text-xs font-semibold bg-blue-100 text-blue-700">{i.VehicleCategory}</span>}
                     </div>
                     {needsRepair && (
                       <div className="mt-1 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1 flex flex-wrap gap-2">
