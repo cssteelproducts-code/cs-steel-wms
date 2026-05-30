@@ -5,10 +5,11 @@ import toast from 'react-hot-toast';
 import {
   Plus, Upload, Download, Lock, Unlock, RefreshCw, RotateCcw,
   ChevronLeft, CheckCircle2, AlertTriangle, Clock, FileText,
-  Search, X, Save
+  Search, X, Save, Trash2
 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
+import '../utils/helpers';
 
 const STATUS_LABEL = {
   DRAFT:     { label: 'ร่าง',         cls: 'bg-slate-100 text-slate-600' },
@@ -45,7 +46,7 @@ export default function StockCount() {
   const [importing, setImporting] = useState(false);
   const importRef = useRef(null);
   const [createModal, setCreateModal] = useState(false);
-  const [createForm, setCreateForm] = useState({ sessionName: '', warehouseCode: '', notes: '' });
+  const [createForm, setCreateForm] = useState({ countDate: dayjs().format('YYYY-MM-DD'), notes: '' });
   const [search, setSearch] = useState('');
   const [entriesModal, setEntriesModal] = useState(null); // item object
   const [entries, setEntries] = useState([]);
@@ -115,14 +116,15 @@ export default function StockCount() {
   };
 
   const handleCreate = async () => {
-    if (!createForm.sessionName.trim()) return toast.error('กรุณาระบุชื่อรอบ');
+    if (!createForm.countDate) return toast.error('กรุณาระบุวันที่');
     setSaving(true);
     try {
-      const res = await api.post('/stock-count', createForm);
+      const sessionName = dayjs(createForm.countDate).format('D MMMM BBBB');
+      const res = await api.post('/stock-count', { sessionName, notes: createForm.notes });
       if (res.data.success) {
         toast.success(res.data.message);
         setCreateModal(false);
-        setCreateForm({ sessionName: '', warehouseCode: '', notes: '' });
+        setCreateForm({ countDate: dayjs().format('YYYY-MM-DD'), notes: '' });
         await fetchSessions();
       }
     } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
@@ -321,7 +323,7 @@ export default function StockCount() {
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
                         {s.Status === 'DRAFT' && (
                           <button onClick={() => handleDelete(s)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors">
-                            <X size={14} />
+                            <Trash2 size={14} />
                           </button>
                         )}
                       </div>
@@ -636,14 +638,10 @@ export default function StockCount() {
             </div>
             <div className="space-y-3">
               <div>
-                <label className="label">ชื่อรอบตรวจนับ *</label>
-                <input value={createForm.sessionName} onChange={e => setCreateForm(p => ({ ...p, sessionName: e.target.value }))}
-                  className="input-field" placeholder="เช่น นับสต็อก WHR2 เดือนมิถุนายน 2026" />
-              </div>
-              <div>
-                <label className="label">คลังสินค้า</label>
-                <input value={createForm.warehouseCode} onChange={e => setCreateForm(p => ({ ...p, warehouseCode: e.target.value }))}
-                  className="input-field" placeholder="เช่น WHR2" />
+                <label className="label">วันที่สำหรับตรวจนับ *</label>
+                <input type="date" value={createForm.countDate}
+                  onChange={e => setCreateForm(p => ({ ...p, countDate: e.target.value }))}
+                  className="input-field" />
               </div>
               <div>
                 <label className="label">หมายเหตุ</label>
