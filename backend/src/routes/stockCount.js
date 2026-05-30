@@ -309,6 +309,30 @@ router.post('/:id/recount-diff', authenticate, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+// ── Trim items (keep only selected, DRAFT only) ───────────
+
+router.post('/:id/trim-items', authenticate, async (req, res) => {
+  try {
+    const { keepIds } = req.body;
+    if (!Array.isArray(keepIds) || keepIds.length === 0)
+      return res.status(400).json({ success: false, message: 'keepIds required' });
+    const pool = getPool();
+    const check = await pool.request().input('ID', sql.Int, req.params.id)
+      .query('SELECT Status FROM WMS_StockCountSessions WHERE SessionID=@ID');
+    if (!check.recordset.length || check.recordset[0].Status !== 'DRAFT')
+      return res.status(400).json({ success: false, message: 'ตัดรายการได้เฉพาะรอบ DRAFT' });
+    const ids = keepIds.map(Number).filter(n => Number.isInteger(n) && n > 0).join(',');
+    if (!ids) return res.status(400).json({ success: false, message: 'keepIds ไม่ถูกต้อง' });
+    await pool.request().input('ID', sql.Int, req.params.id).query(
+      `DELETE FROM WMS_StockCountEntries WHERE ItemID IN (SELECT ItemID FROM WMS_StockCountItems WHERE SessionID=@ID AND ItemID NOT IN (${ids}))`
+    );
+    await pool.request().input('ID', sql.Int, req.params.id).query(
+      `DELETE FROM WMS_StockCountItems WHERE SessionID=@ID AND ItemID NOT IN (${ids})`
+    );
+    res.json({ success: true, message: 'บันทึกรายการที่เลือกสำเร็จ' });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 // ── Report ────────────────────────────────────────────────
 
 router.get('/:id/report', authenticate, async (req, res) => {

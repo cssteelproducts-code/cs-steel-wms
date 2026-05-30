@@ -66,6 +66,8 @@ export default function StockCount() {
   const [fieldSearch, setFieldSearch] = useState('');
   const [fieldFilter, setFieldFilter] = useState('all'); // 'all' | 'recount' | 'pending' | 'done'
   const [submitting, setSubmitting] = useState({});
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [showSelected, setShowSelected] = useState(false);
 
   // ── Fetch ─────────────────────────────────────────────
 
@@ -117,6 +119,8 @@ export default function StockCount() {
     setView('detail');
     setDetailTab('items');
     setSearch('');
+    setSelectedIds(new Set());
+    setShowSelected(false);
     fetchDetail(session.SessionID);
   };
 
@@ -137,11 +141,25 @@ export default function StockCount() {
   };
 
   const handleStatusChange = async (status) => {
-    setSaving(true);
+    if (status === 'OPEN' && selectedIds.size > 0 && selectedIds.size < items.length) {
+      if (!confirm(`เปิดรอบเฉพาะ ${selectedIds.size} รายการที่เลือก (จากทั้งหมด ${items.length} รายการ)\nรายการที่ไม่ได้เลือกจะถูกลบออกจากรอบนี้ ยืนยันไหม?`)) return;
+      setSaving(true);
+      try {
+        await api.post(`/stock-count/${selectedSession.SessionID}/trim-items`, { keepIds: [...selectedIds] });
+      } catch (err) {
+        toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด');
+        setSaving(false);
+        return;
+      }
+    } else {
+      setSaving(true);
+    }
     try {
       const res = await api.put(`/stock-count/${selectedSession.SessionID}/status`, { status });
       if (res.data.success) {
         toast.success(res.data.message);
+        setSelectedIds(new Set());
+        setShowSelected(false);
         await Promise.all([fetchSessions(), fetchDetail(selectedSession.SessionID)]);
       }
     } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
@@ -159,6 +177,8 @@ export default function StockCount() {
       const res = await api.post(`/stock-count/${selectedSession.SessionID}/import`, formData, { headers: { 'Content-Type': 'multipart/form-data' } });
       if (res.data.success) {
         toast.success(res.data.message);
+        setSelectedIds(new Set());
+        setShowSelected(false);
         // Backend processes in background — poll fetchDetail every 3s until items load (max 60s)
         const sid = selectedSession.SessionID;
         let attempts = 0;
@@ -274,6 +294,28 @@ export default function StockCount() {
     const q = search.toLowerCase();
     return i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q);
   });
+
+  const toggleSelect = (itemId) => {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      next.has(itemId) ? next.delete(itemId) : next.add(itemId);
+      return next;
+    });
+  };
+  const toggleSelectAll = () => {
+    const ids = filteredItems.map(i => i.ItemID);
+    const allSel = ids.length > 0 && ids.every(id => selectedIds.has(id));
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (allSel) ids.forEach(id => next.delete(id));
+      else ids.forEach(id => next.add(id));
+      return next;
+    });
+  };
+  const allFilteredSelected = filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.ItemID));
+  const someFilteredSelected = !allFilteredSelected && filteredItems.some(i => selectedIds.has(i.ItemID));
+  const displayItems = showSelected ? items.filter(i => selectedIds.has(i.ItemID)) : filteredItems;
+  const isDraft = sessionData?.session?.Status === 'DRAFT';
 
   const stats = {
     total: items.length,
@@ -395,7 +437,9 @@ export default function StockCount() {
                         </button>
                         <button onClick={() => handleStatusChange('OPEN')} disabled={saving || !items.length}
                           className="btn-primary text-sm">
-                          เปิดรอบ (ส่งให้หน้างาน)
+                          {selectedIds.size > 0 && selectedIds.size < items.length
+                            ? `เปิดรอบ (เลือก ${selectedIds.size} รายการ)`
+                            : 'เปิดรอบ (ส่งให้หน้างาน)'}
                         </button>
                       </>
                     )}
@@ -454,46 +498,91 @@ export default function StockCount() {
                 ))}
               </div>
 
-              {/* Filters */}
-              <div className="flex gap-2 flex-wrap">
-                <select value={filterWH} onChange={e => { setFilterWH(e.target.value); setFilterLoc(''); }}
-                  className="input-field py-1.5 text-sm w-auto min-w-32">
-                  <option value="">— คลัง —</option>
-                  {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
-                </select>
-                <select value={filterLoc} onChange={e => setFilterLoc(e.target.value)}
-                  className="input-field py-1.5 text-sm w-auto min-w-36">
-                  <option value="">— Location —</option>
-                  {locations.map(l => <option key={l} value={l}>{l}</option>)}
-                </select>
-                <select value={filterGname} onChange={e => setFilterGname(e.target.value)}
-                  className="input-field py-1.5 text-sm w-auto min-w-36">
-                  <option value="">— หมวดหมู่ —</option>
-                  {gnames.map(g => <option key={g} value={g}>{g}</option>)}
-                </select>
-                <select value={filterSize} onChange={e => setFilterSize(e.target.value)}
-                  className="input-field py-1.5 text-sm w-auto min-w-36">
-                  <option value="">— SizeCode —</option>
-                  {sizes.map(s => <option key={s} value={s}>{s}</option>)}
-                </select>
-                <select value={filterThick} onChange={e => setFilterThick(e.target.value)}
-                  className="input-field py-1.5 text-sm w-auto min-w-32">
-                  <option value="">— Thickness —</option>
-                  {thicks.map(t => <option key={t} value={t}>{t}</option>)}
-                </select>
-                <div className="relative flex-1 min-w-40">
-                  <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                  <input value={search} onChange={e => setSearch(e.target.value)}
-                    placeholder="ค้นหา รหัส / ชื่อสินค้า..."
-                    className="input-field pl-8 text-sm" />
+              {/* Filters — hidden when reviewing selected items */}
+              {!showSelected && (
+                <div className="flex gap-2 flex-wrap">
+                  <select value={filterWH} onChange={e => { setFilterWH(e.target.value); setFilterLoc(''); }}
+                    className="input-field py-1.5 text-sm w-auto min-w-32">
+                    <option value="">— คลัง —</option>
+                    {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                  <select value={filterLoc} onChange={e => setFilterLoc(e.target.value)}
+                    className="input-field py-1.5 text-sm w-auto min-w-36">
+                    <option value="">— Location —</option>
+                    {locations.map(l => <option key={l} value={l}>{l}</option>)}
+                  </select>
+                  <select value={filterGname} onChange={e => setFilterGname(e.target.value)}
+                    className="input-field py-1.5 text-sm w-auto min-w-36">
+                    <option value="">— หมวดหมู่ —</option>
+                    {gnames.map(g => <option key={g} value={g}>{g}</option>)}
+                  </select>
+                  <select value={filterSize} onChange={e => setFilterSize(e.target.value)}
+                    className="input-field py-1.5 text-sm w-auto min-w-36">
+                    <option value="">— SizeCode —</option>
+                    {sizes.map(s => <option key={s} value={s}>{s}</option>)}
+                  </select>
+                  <select value={filterThick} onChange={e => setFilterThick(e.target.value)}
+                    className="input-field py-1.5 text-sm w-auto min-w-32">
+                    <option value="">— Thickness —</option>
+                    {thicks.map(t => <option key={t} value={t}>{t}</option>)}
+                  </select>
+                  <div className="relative flex-1 min-w-40">
+                    <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                    <input value={search} onChange={e => setSearch(e.target.value)}
+                      placeholder="ค้นหา รหัส / ชื่อสินค้า..."
+                      className="input-field pl-8 text-sm" />
+                  </div>
+                  {(filterWH || filterLoc || filterGname || filterSize || filterThick || search) && (
+                    <button onClick={() => { setFilterWH(''); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); setSearch(''); }}
+                      className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors whitespace-nowrap">
+                      ล้างทั้งหมด
+                    </button>
+                  )}
                 </div>
-                {(filterWH || filterLoc || filterGname || filterSize || filterThick || search) && (
-                  <button onClick={() => { setFilterWH(''); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); setSearch(''); }}
-                    className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors whitespace-nowrap">
-                    ล้างทั้งหมด
-                  </button>
-                )}
-              </div>
+              )}
+
+              {/* Selection bar (DRAFT only) */}
+              {isDraft && (
+                <div className="flex items-center gap-3 flex-wrap bg-white border border-slate-200 rounded-xl px-4 py-2.5">
+                  {showSelected ? (
+                    <>
+                      <button onClick={() => setShowSelected(false)}
+                        className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors">
+                        <ChevronLeft size={13} />กลับ
+                      </button>
+                      <span className="text-sm font-bold text-red-600">ยืนยันรายการที่เลือก — {selectedIds.size} รายการ</span>
+                      <button onClick={() => { setSelectedIds(new Set()); setShowSelected(false); }}
+                        className="ml-auto text-xs text-slate-400 hover:text-red-500 transition-colors">
+                        ล้างการเลือกทั้งหมด
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-sm text-slate-500">
+                        เลือกแล้ว{' '}
+                        <span className={`font-bold ${selectedIds.size > 0 ? 'text-red-600' : 'text-slate-400'}`}>
+                          {selectedIds.size}
+                        </span>
+                        {' '}/ {items.length} รายการ
+                      </span>
+                      {selectedIds.size > 0 ? (
+                        <div className="ml-auto flex items-center gap-2">
+                          <button onClick={() => setSelectedIds(new Set())}
+                            className="text-xs text-slate-400 hover:text-red-500 transition-colors">
+                            ล้าง
+                          </button>
+                          <button onClick={() => setShowSelected(true)}
+                            className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors flex items-center gap-1.5">
+                            <CheckCircle2 size={12} />ดูที่เลือก ({selectedIds.size})
+                          </button>
+                        </div>
+                      ) : (
+                        <span className="ml-auto text-xs text-slate-400">Checkbox เพื่อเลือกรายการ</span>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
 
               {(importing || detailLoading) ? (
                 <LoadingSpinner text={importing ? 'กำลังนำเข้าข้อมูล...' : 'กำลังโหลด...'} />
@@ -502,6 +591,15 @@ export default function StockCount() {
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-100">
+                        {isDraft && !showSelected && (
+                          <th className="table-header px-3 py-2 w-8">
+                            <input type="checkbox"
+                              ref={el => { if (el) el.indeterminate = someFilteredSelected; }}
+                              checked={allFilteredSelected}
+                              onChange={toggleSelectAll}
+                              className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" />
+                          </th>
+                        )}
                         <th className="table-header text-left px-3 py-2">Location</th>
                         <th className="table-header text-left px-3 py-2">รหัสสินค้า</th>
                         <th className="table-header text-left px-3 py-2 hide-mobile">ชื่อสินค้า</th>
@@ -515,18 +613,40 @@ export default function StockCount() {
                       </tr>
                     </thead>
                     <tbody>
-                      {filteredItems.length === 0 && (
-                        <tr><td colSpan={8} className="text-center py-8 text-slate-400 text-sm">ไม่พบรายการ</td></tr>
+                      {displayItems.length === 0 && (
+                        <tr><td colSpan={9} className="text-center py-8 text-slate-400 text-sm">
+                          {showSelected ? 'ยังไม่ได้เลือกรายการ' : 'ไม่พบรายการ'}
+                        </td></tr>
                       )}
-                      {filteredItems.map(item => {
+                      {displayItems.map(item => {
                         const diff = Number(item.TotalCounted) - Number(item.SystemQty);
                         const hasDiff = item.EntryCount > 0 && Math.abs(diff) >= 0.001;
                         const rowCls = item.IsLocked ? 'bg-emerald-50/40' : item.NeedsRecount ? 'bg-amber-50/50' : hasDiff ? 'bg-red-50/30' : '';
                         return (
                           <tr key={item.ItemID} className={`border-b border-slate-50 hover:bg-slate-50/50 ${rowCls}`}>
-                            <td className="px-3 py-2 font-mono text-xs text-blue-600">{item.Location}</td>
-                            <td className="px-3 py-2 font-mono text-xs">{item.ItemCode}</td>
-                            <td className="px-3 py-2 text-xs text-slate-600 max-w-[200px] truncate hide-mobile">{item.ItemName}</td>
+                            {isDraft && !showSelected && (
+                              <td className="px-3 py-2 w-8">
+                                <input type="checkbox"
+                                  checked={selectedIds.has(item.ItemID)}
+                                  onChange={() => toggleSelect(item.ItemID)}
+                                  className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" />
+                              </td>
+                            )}
+                            <td className="px-3 py-2">
+                              <div className="font-mono text-xs text-blue-600">{item.Location}</div>
+                              {item.Warehouse && <div className="text-[10px] text-slate-400 mt-0.5">{item.Warehouse}</div>}
+                            </td>
+                            <td className="px-3 py-2">
+                              <div className="font-mono text-xs">{item.ItemCode}</div>
+                              <div className="text-[10px] text-slate-400 mt-0.5 flex gap-1.5 flex-wrap">
+                                {item.SizeCode && <span>{item.SizeCode}</span>}
+                                {item.Thickness && item.Thickness !== '0' && <span>t{item.Thickness}</span>}
+                              </div>
+                            </td>
+                            <td className="px-3 py-2 hide-mobile">
+                              <div className="text-xs text-slate-600 max-w-[200px] truncate">{item.ItemName}</div>
+                              {item.CategoryName && <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[200px]">{item.CategoryName}</div>}
+                            </td>
                             <td className="px-3 py-2 text-right font-semibold">{Number(item.SystemQty).toLocaleString()}</td>
                             {detailTab === 'process' && <>
                               <td className="px-3 py-2 text-right font-semibold text-blue-700">
