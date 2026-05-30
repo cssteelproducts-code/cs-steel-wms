@@ -163,24 +163,43 @@ router.post('/transaction', async (req, res) => {
   }
 });
 
-// ===== STOCK COUNT =====
+// ===== STOCK COUNT (REDESIGNED) =====
+const multer = require('multer');
+const XLSX = require('xlsx');
+const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 10 * 1024 * 1024 } });
+
+let _countSchemaReady = false;
+async function ensureCountSchema() {
+  if (_countSchemaReady) return;
+  const pool = getPool();
+  try { await pool.request().query(`IF EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCount') AND name='WarehouseID' AND is_nullable=0) ALTER TABLE WMS_StockCount ALTER COLUMN WarehouseID INT NULL`); } catch(e) {}
+  for (const stmt of [
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCount') AND name='CountName') ALTER TABLE WMS_StockCount ADD CountName NVARCHAR(100) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='ItemCode') ALTER TABLE WMS_StockCountItems ADD ItemCode NVARCHAR(50) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='ExternalName') ALTER TABLE WMS_StockCountItems ADD ExternalName NVARCHAR(200) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='Location') ALTER TABLE WMS_StockCountItems ADD Location NVARCHAR(50) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='WarehouseCode') ALTER TABLE WMS_StockCountItems ADD WarehouseCode NVARCHAR(20) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='TypeSKU') ALTER TABLE WMS_StockCountItems ADD TypeSKU NVARCHAR(50) NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='IsClosed') ALTER TABLE WMS_StockCountItems ADD IsClosed BIT DEFAULT 0`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='ClosedBy') ALTER TABLE WMS_StockCountItems ADD ClosedBy INT NULL`,
+    `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_StockCountItems') AND name='ClosedAt') ALTER TABLE WMS_StockCountItems ADD ClosedAt DATETIME NULL`,
+    `IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_StockCountEntries' AND xtype='U') CREATE TABLE WMS_StockCountEntries (EntryID INT IDENTITY(1,1) PRIMARY KEY, ItemID INT NOT NULL, CountedQty DECIMAL(12,3) NOT NULL, Note NVARCHAR(200) NULL, CountedBy INT NULL, CountedAt DATETIME DEFAULT GETDATE())`,
+  ]) { await pool.request().query(stmt); }
+  _countSchemaReady = true;
+}
 
 router.get('/count', async (req, res) => {
   try {
+    await ensureCountSchema();
     const pool = getPool();
-    const { warehouseId } = req.query;
-    const r = pool.request();
-    const cond = warehouseId ? 'AND c.WarehouseID = @wh' : '';
-    if (warehouseId) r.input('wh', sql.Int, warehouseId);
-    const result = await r.query(`
-      SELECT TOP 50 c.CountID, c.CountCode, c.CountDate, c.Status, c.Remark, c.CreatedAt,
-        w.WarehouseName, u.FullName AS OperatorName,
-        (SELECT COUNT(*) FROM WMS_StockCountItems i WHERE i.CountID = c.CountID) AS ItemCount,
-        (SELECT COUNT(*) FROM WMS_StockCountItems i WHERE i.CountID = c.CountID AND i.ActualQty IS NOT NULL) AS FilledCount
+    const result = await pool.request().query(`
+      SELECT TOP 50 c.CountID, c.CountCode, c.CountName, c.CountDate, c.Status, c.Remark, c.CreatedAt,
+        ISNULL(w.WarehouseName,'') AS WarehouseName, u.FullName AS OperatorName,
+        (SELECT COUNT(*) FROM WMS_StockCountItems i WHERE i.CountID=c.CountID) AS ItemCount,
+        (SELECT COUNT(*) FROM WMS_StockCountItems i WHERE i.CountID=c.CountID AND i.IsClosed=1) AS ClosedCount
       FROM WMS_StockCount c
-      JOIN WMS_Warehouses w ON c.WarehouseID = w.WarehouseID
-      LEFT JOIN WMS_Users u ON c.OperatorID = u.UserID
-      WHERE 1=1 ${cond}
+      LEFT JOIN WMS_Warehouses w ON c.WarehouseID=w.WarehouseID
+      LEFT JOIN WMS_Users u ON c.OperatorID=u.UserID
       ORDER BY c.CreatedAt DESC
     `);
     res.json({ success: true, data: result.recordset });
@@ -191,49 +210,62 @@ router.get('/count', async (req, res) => {
 
 router.post('/count', async (req, res) => {
   try {
+    await ensureCountSchema();
     const pool = getPool();
-    const { warehouseId, countDate, remark } = req.body;
+    const { countName, countDate, remark } = req.body;
+    if (!countName) return res.status(400).json({ success: false, message: 'กรุณาระบุชื่อรายการนับ' });
     const operatorId = req.user.UserID;
-    const dateStr = (countDate || new Date().toISOString().slice(0, 10)).replace(/-/g, '');
-
-    const seq = await pool.request()
-      .input('prefix', sql.NVarChar, `CNT-${dateStr}-%`)
+    const dateStr = (countDate || new Date(Date.now()+7*3600000).toISOString().slice(0,10)).replace(/-/g,'');
+    const seq = await pool.request().input('prefix', sql.NVarChar, `CNT-${dateStr}-%`)
       .query('SELECT COUNT(*)+1 AS seq FROM WMS_StockCount WHERE CountCode LIKE @prefix');
-    const countCode = `CNT-${dateStr}-${String(seq.recordset[0].seq).padStart(3, '0')}`;
-
-    const stockItems = await pool.request()
-      .input('wh', sql.Int, warehouseId)
-      .query(`
-        SELECT p.ProductID, ISNULL(s.Quantity, 0) AS SystemQty
-        FROM WMS_Products p
-        LEFT JOIN WMS_Stock s ON s.ProductID = p.ProductID AND s.WarehouseID = @wh
-        WHERE p.IsActive = 1
-      `);
-
+    const countCode = `CNT-${dateStr}-${String(seq.recordset[0].seq).padStart(3,'0')}`;
     const result = await pool.request()
-      .input('code', sql.NVarChar, countCode)
-      .input('wh', sql.Int, warehouseId)
-      .input('date', sql.Date, countDate || new Date())
-      .input('rem', sql.NVarChar, remark || null)
-      .input('op', sql.Int, operatorId)
-      .query(`
-        INSERT INTO WMS_StockCount (CountCode, WarehouseID, CountDate, Remark, OperatorID)
-        OUTPUT INSERTED.CountID
-        VALUES (@code, @wh, @date, @rem, @op)
-      `);
+      .input('code', sql.NVarChar, countCode).input('name', sql.NVarChar, countName)
+      .input('date', sql.Date, countDate || new Date(Date.now()+7*3600000).toISOString().slice(0,10))
+      .input('rem', sql.NVarChar, remark || null).input('op', sql.Int, operatorId)
+      .query(`INSERT INTO WMS_StockCount (CountCode, CountName, CountDate, Status, Remark, OperatorID) OUTPUT INSERTED.CountID VALUES (@code,@name,@date,'DRAFT',@rem,@op)`);
+    res.json({ success: true, countId: result.recordset[0].CountID, countCode });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
 
-    const countId = result.recordset[0].CountID;
-    if (stockItems.recordset.length > 0) {
-      const batchReq = pool.request().input('cid', sql.Int, countId);
-      const vals = stockItems.recordset.map((item, i) => {
-        batchReq.input(`pid${i}`, sql.Int, item.ProductID);
-        batchReq.input(`sq${i}`, sql.Decimal(12, 3), item.SystemQty);
-        return `(@cid, @pid${i}, @sq${i})`;
-      });
-      await batchReq.query(`INSERT INTO WMS_StockCountItems (CountID, ProductID, SystemQty) VALUES ${vals.join(', ')}`);
+router.post('/count/:id/import-excel', upload.single('file'), async (req, res) => {
+  try {
+    await ensureCountSchema();
+    const pool = getPool();
+    if (!req.file) return res.status(400).json({ success: false, message: 'กรุณาอัปโหลดไฟล์' });
+    const wb = XLSX.read(req.file.buffer, { type: 'buffer' });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    const rows = XLSX.utils.sheet_to_json(ws, { header: 1 });
+    const headers = rows[0] || [];
+    const col = (name) => headers.indexOf(name);
+    const dataRows = rows.slice(1).filter(r => r.length > 0 && r[col('Itemcode')]);
+    if (!dataRows.length) return res.status(400).json({ success: false, message: 'ไม่พบข้อมูลในไฟล์' });
+
+    await pool.request().input('cid', sql.Int, req.params.id)
+      .query('DELETE FROM WMS_StockCountEntries WHERE ItemID IN (SELECT ItemID FROM WMS_StockCountItems WHERE CountID=@cid)');
+    await pool.request().input('cid', sql.Int, req.params.id)
+      .query('DELETE FROM WMS_StockCountItems WHERE CountID=@cid');
+
+    let inserted = 0;
+    for (const row of dataRows) {
+      const itemCode = String(row[col('Itemcode')] || '').trim();
+      if (!itemCode) continue;
+      await pool.request()
+        .input('cid', sql.Int, parseInt(req.params.id))
+        .input('ic', sql.NVarChar, itemCode)
+        .input('en', sql.NVarChar, String(row[col('ItemName')] || '').trim())
+        .input('loc', sql.NVarChar, String(row[col('Location')] || '').trim() || null)
+        .input('wc', sql.NVarChar, String(row[col('Warehouse')] || '').trim() || null)
+        .input('sku', sql.NVarChar, String(row[col('TypeSUK')] || '').trim() || null)
+        .input('sq', sql.Decimal(12,3), parseFloat(row[col('Quantity')]) || 0)
+        .query(`INSERT INTO WMS_StockCountItems (CountID,ItemCode,ExternalName,Location,WarehouseCode,TypeSKU,SystemQty,IsClosed) VALUES (@cid,@ic,@en,@loc,@wc,@sku,@sq,0)`);
+      inserted++;
     }
-
-    res.json({ success: true, countId, countCode });
+    await pool.request().input('id', sql.Int, parseInt(req.params.id))
+      .query("UPDATE WMS_StockCount SET Status='OPEN' WHERE CountID=@id");
+    res.json({ success: true, message: `นำเข้าสำเร็จ ${inserted} รายการ`, imported: inserted });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -241,124 +273,109 @@ router.post('/count', async (req, res) => {
 
 router.get('/count/:id', async (req, res) => {
   try {
+    await ensureCountSchema();
     const pool = getPool();
-    const header = await pool.request().input('id', sql.Int, req.params.id)
-      .query(`
-        SELECT c.*, w.WarehouseName, u.FullName AS OperatorName
-        FROM WMS_StockCount c
-        JOIN WMS_Warehouses w ON c.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Users u ON c.OperatorID = u.UserID
-        WHERE c.CountID = @id
-      `);
-    const items = await pool.request().input('id', sql.Int, req.params.id)
-      .query(`
-        SELECT i.ItemID, i.ProductID, i.SystemQty, i.ActualQty, i.Remark,
-          p.ProductCode, p.ProductName, p.Unit,
-          CASE WHEN i.ActualQty IS NOT NULL THEN i.ActualQty - i.SystemQty ELSE NULL END AS Variance
-        FROM WMS_StockCountItems i
-        JOIN WMS_Products p ON i.ProductID = p.ProductID
-        WHERE i.CountID = @id
-        ORDER BY p.ProductCode
-      `);
+    const header = await pool.request().input('id', sql.Int, req.params.id).query(`
+      SELECT c.*, ISNULL(w.WarehouseName,'') AS WarehouseName, u.FullName AS OperatorName
+      FROM WMS_StockCount c LEFT JOIN WMS_Warehouses w ON c.WarehouseID=w.WarehouseID LEFT JOIN WMS_Users u ON c.OperatorID=u.UserID
+      WHERE c.CountID=@id
+    `);
+    if (!header.recordset.length) return res.status(404).json({ success: false, message: 'ไม่พบรายการ' });
+    const items = await pool.request().input('id', sql.Int, req.params.id).query(`
+      SELECT i.*,
+        (SELECT TOP 1 e.CountedQty FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID ORDER BY e.CountedAt DESC) AS LatestCount,
+        (SELECT COUNT(*) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID) AS EntryCount,
+        cu.FullName AS ClosedByName
+      FROM WMS_StockCountItems i LEFT JOIN WMS_Users cu ON i.ClosedBy=cu.UserID
+      WHERE i.CountID=@id ORDER BY i.IsClosed, i.Location, i.ExternalName
+    `);
     res.json({ success: true, data: { ...header.recordset[0], items: items.recordset } });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.put('/count/:id/items', async (req, res) => {
+router.post('/count/:id/entries', async (req, res) => {
   try {
+    await ensureCountSchema();
     const pool = getPool();
-    const { items } = req.body;
-    await Promise.all(items.map(item =>
-      pool.request()
-        .input('iid', sql.Int, item.itemId)
-        .input('qty', sql.Decimal(12, 3), item.actualQty)
-        .input('rem', sql.NVarChar, item.remark || null)
-        .query('UPDATE WMS_StockCountItems SET ActualQty=@qty, Remark=@rem WHERE ItemID=@iid')
-    ));
+    const { itemId, countedQty, note } = req.body;
+    if (itemId == null || countedQty == null) return res.status(400).json({ success: false, message: 'กรุณาระบุ itemId และ countedQty' });
+    await pool.request()
+      .input('iid', sql.Int, itemId).input('qty', sql.Decimal(12,3), parseFloat(countedQty))
+      .input('note', sql.NVarChar, note || null).input('by', sql.Int, req.user.UserID)
+      .query('INSERT INTO WMS_StockCountEntries (ItemID,CountedQty,Note,CountedBy) VALUES (@iid,@qty,@note,@by)');
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.put('/count/:id/confirm', async (req, res) => {
+router.get('/count/:id/entries/:itemId', async (req, res) => {
   try {
+    await ensureCountSchema();
     const pool = getPool();
-    const operatorId = req.user.UserID;
-
-    const header = await pool.request().input('id', sql.Int, req.params.id)
-      .query('SELECT * FROM WMS_StockCount WHERE CountID = @id');
-    if (!header.recordset.length) return res.status(404).json({ success: false, message: 'ไม่พบรายการ' });
-    if (header.recordset[0].Status !== 'DRAFT') return res.status(400).json({ success: false, message: 'ยืนยันแล้ว' });
-    const count = header.recordset[0];
-
-    const items = await pool.request().input('id', sql.Int, req.params.id)
-      .query('SELECT * FROM WMS_StockCountItems WHERE CountID = @id AND ActualQty IS NOT NULL');
-
-    const varianceItems = items.recordset.filter(item => (item.ActualQty - item.SystemQty) !== 0);
-
-    const transaction = new sql.Transaction(pool);
-    await transaction.begin();
-    try {
-      if (varianceItems.length > 0) {
-        // Batch INSERT all transaction records at once
-        const txReq = transaction.request()
-          .input('wh', sql.Int, count.WarehouseID)
-          .input('ref', sql.NVarChar, count.CountCode)
-          .input('rem', sql.NVarChar, `ปรับจากนับสต็อก ${count.CountCode}`)
-          .input('op', sql.Int, operatorId);
-        const txVals = varianceItems.map((item, i) => {
-          const variance = item.ActualQty - item.SystemQty;
-          txReq.input(`pid${i}`, sql.Int, item.ProductID);
-          txReq.input(`qty${i}`, sql.Decimal(12, 3), variance);
-          return `(@wh, @pid${i}, 'COUNT', @qty${i}, @ref, @rem, @op)`;
-        });
-        await txReq.query(`
-          INSERT INTO WMS_StockTransactions (WarehouseID, ProductID, TxType, Quantity, RefDocNo, Remark, OperatorID)
-          VALUES ${txVals.join(', ')}
-        `);
-
-        // MERGE to update or insert stock in one shot
-        const mergeReq = transaction.request().input('wh', sql.Int, count.WarehouseID);
-        const mergeVals = varianceItems.map((item, i) => {
-          const variance = item.ActualQty - item.SystemQty;
-          mergeReq.input(`mp${i}`, sql.Int, item.ProductID);
-          mergeReq.input(`mq${i}`, sql.Decimal(12, 3), variance);
-          mergeReq.input(`ma${i}`, sql.Decimal(12, 3), item.ActualQty);
-          return `(@mp${i}, @mq${i}, @ma${i})`;
-        });
-        await mergeReq.query(`
-          MERGE WMS_Stock AS target
-          USING (VALUES ${mergeVals.join(', ')}) AS source(ProductID, Variance, ActualQty)
-          ON target.WarehouseID = @wh AND target.ProductID = source.ProductID
-          WHEN MATCHED THEN
-            UPDATE SET Quantity = Quantity + source.Variance, LastUpdated = GETDATE()
-          WHEN NOT MATCHED THEN
-            INSERT (WarehouseID, ProductID, Quantity) VALUES (@wh, source.ProductID, source.ActualQty);
-        `);
-      }
-
-      await transaction.request().input('id', sql.Int, req.params.id).input('op', sql.Int, operatorId)
-        .query("UPDATE WMS_StockCount SET Status='CONFIRMED', ConfirmedBy=@op, ConfirmedAt=GETDATE() WHERE CountID=@id");
-
-      await transaction.commit();
-      res.json({ success: true, message: 'ยืนยันการนับสต็อกสำเร็จ' });
-    } catch (err) {
-      await transaction.rollback();
-      throw err;
-    }
+    const result = await pool.request().input('iid', sql.Int, req.params.itemId).query(`
+      SELECT e.*, u.FullName AS CountedByName FROM WMS_StockCountEntries e
+      LEFT JOIN WMS_Users u ON e.CountedBy=u.UserID WHERE e.ItemID=@iid ORDER BY e.CountedAt DESC
+    `);
+    res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
+router.put('/count/:id/close-items', async (req, res) => {
+  try {
+    await ensureCountSchema();
+    const pool = getPool();
+    const { itemIds, all } = req.body;
+    const by = req.user.UserID;
+    if (all) {
+      await pool.request().input('cid', sql.Int, req.params.id).input('by', sql.Int, by)
+        .query('UPDATE WMS_StockCountItems SET IsClosed=1,ClosedBy=@by,ClosedAt=GETDATE() WHERE CountID=@cid AND IsClosed=0');
+    } else if (itemIds?.length) {
+      for (const iid of itemIds)
+        await pool.request().input('iid', sql.Int, iid).input('by', sql.Int, by)
+          .query('UPDATE WMS_StockCountItems SET IsClosed=1,ClosedBy=@by,ClosedAt=GETDATE() WHERE ItemID=@iid');
+    }
+    const rem = await pool.request().input('cid', sql.Int, req.params.id)
+      .query('SELECT COUNT(*) AS cnt FROM WMS_StockCountItems WHERE CountID=@cid AND IsClosed=0');
+    if (rem.recordset[0].cnt === 0)
+      await pool.request().input('cid', sql.Int, req.params.id)
+        .query("UPDATE WMS_StockCount SET Status='CLOSED' WHERE CountID=@cid AND Status='OPEN'");
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+router.put('/count/:id/reopen-items', async (req, res) => {
+  try {
+    await ensureCountSchema();
+    const pool = getPool();
+    const { itemIds } = req.body;
+    if (itemIds?.length) {
+      for (const iid of itemIds)
+        await pool.request().input('iid', sql.Int, iid)
+          .query('UPDATE WMS_StockCountItems SET IsClosed=0,ClosedBy=NULL,ClosedAt=NULL WHERE ItemID=@iid');
+      await pool.request().input('cid', sql.Int, req.params.id)
+        .query("UPDATE WMS_StockCount SET Status='OPEN' WHERE CountID=@cid AND Status='CLOSED'");
+    }
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
+
+
 router.put('/count/:id/cancel', async (req, res) => {
   try {
+    await ensureCountSchema();
     const pool = getPool();
     await pool.request().input('id', sql.Int, req.params.id)
-      .query("UPDATE WMS_StockCount SET Status='CANCELLED' WHERE CountID=@id AND Status='DRAFT'");
+      .query("UPDATE WMS_StockCount SET Status='CANCELLED' WHERE CountID=@id AND Status IN ('DRAFT','OPEN')");
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
