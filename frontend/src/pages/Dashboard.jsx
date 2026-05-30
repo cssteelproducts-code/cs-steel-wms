@@ -366,14 +366,18 @@ export default function Dashboard() {
           return (
             <div className="space-y-3">
               {/* ในเวลา/นอกเวลา row — flip to see overtime vehicle breakdown */}
+              {(() => {
+                  const otCards = [
+                    { label: 'วันนี้',   inTime: ot.TodayOnTime,  overtime: ot.TodayOvertime,  types: data?.overtimeByTypeToday  || [] },
+                    { label: 'เดือนนี้', inTime: ot.MonthOnTime,  overtime: ot.MonthOvertime,  types: data?.overtimeByTypeMonth || [] },
+                    { label: 'ปีนี้',    inTime: ot.YearOnTime,   overtime: ot.YearOvertime,   types: data?.overtimeByTypeYear  || [] },
+                  ];
+                  const maxTypes = Math.max(0, ...otCards.map(c => c.types.length));
+                  const cardMinH = Math.max(100, maxTypes > 0 ? maxTypes * 28 + 52 : 100);
+                  return (
               <div className="grid grid-cols-3 gap-3">
-                {[
-                  { label: 'วันนี้',   inTime: ot.TodayOnTime,  overtime: ot.TodayOvertime,  types: data?.overtimeByTypeToday  || [] },
-                  { label: 'เดือนนี้', inTime: ot.MonthOnTime,  overtime: ot.MonthOvertime,  types: data?.overtimeByTypeMonth || [] },
-                  { label: 'ปีนี้',    inTime: ot.YearOnTime,   overtime: ot.YearOvertime,   types: data?.overtimeByTypeYear  || [] },
-                ].map(({ label, inTime, overtime, types }) => {
+                {otCards.map(({ label, inTime, overtime, types }) => {
                   const isFlipped = !!overtimeFlipped[label];
-                  const cardMinH = Math.max(100, types.length > 0 ? types.length * 28 + 52 : 100);
                   const face = {
                     borderRadius: 12, padding: 12,
                     backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
@@ -428,6 +432,8 @@ export default function Dashboard() {
                   );
                 })}
               </div>
+                  );
+                })()}
               {/* ประเภทรถ table */}
               {allTypes.length > 0 && (
                 <div className="rounded-xl overflow-hidden border border-slate-100">
