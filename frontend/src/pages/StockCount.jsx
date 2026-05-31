@@ -4,12 +4,59 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import {
   Plus, Upload, Download, Lock, Unlock, RefreshCw, RotateCcw,
-  ChevronLeft, CheckCircle2, FileText,
+  ChevronLeft, CheckCircle2, FileText, ChevronDown,
   Search, X, Save, Trash2
 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
 import '../utils/helpers';
+
+// Searchable dropdown with max-height scroll — fixes overflow on long lists
+function SearchSelect({ value, onChange, options, placeholder, className = '' }) {
+  const [open, setOpen] = useState(false);
+  const [q, setQ] = useState('');
+  const ref = useRef(null);
+  const filtered = useMemo(
+    () => q ? options.filter(o => o.toLowerCase().includes(q.toLowerCase())) : options,
+    [options, q]
+  );
+  useEffect(() => {
+    if (!open) return;
+    const h = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener('mousedown', h);
+    return () => document.removeEventListener('mousedown', h);
+  }, [open]);
+  return (
+    <div ref={ref} className={`relative ${className}`}>
+      <button type="button" onClick={() => { setOpen(p => !p); setQ(''); }}
+        className="input-field py-1.5 text-sm w-full text-left flex items-center justify-between gap-1 min-w-32 cursor-pointer">
+        <span className={`truncate ${value ? 'text-slate-800' : 'text-slate-400'}`}>{value || placeholder}</span>
+        <ChevronDown size={11} className="flex-shrink-0 text-slate-400" />
+      </button>
+      {open && (
+        <div className="absolute top-full left-0 mt-1 z-[200] bg-white border border-slate-200 rounded-xl shadow-xl flex flex-col"
+          style={{ minWidth: 150, maxHeight: 260 }}>
+          <div className="p-1.5 border-b border-slate-100 flex-shrink-0">
+            <input autoFocus value={q} onChange={e => setQ(e.target.value)}
+              placeholder="ค้นหา..." onClick={e => e.stopPropagation()}
+              className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg outline-none focus:border-red-400" />
+          </div>
+          <div className="overflow-y-auto flex-1 p-1">
+            <button type="button" onClick={() => { onChange(''); setOpen(false); setQ(''); }}
+              className="w-full text-left px-2 py-1 rounded text-xs text-slate-400 hover:bg-slate-50">{placeholder}</button>
+            {filtered.map(o => (
+              <button type="button" key={o} onClick={() => { onChange(o); setOpen(false); setQ(''); }}
+                className={`w-full text-left px-2 py-1 rounded text-xs transition-colors ${value === o ? 'bg-red-50 text-red-600 font-semibold' : 'text-slate-700 hover:bg-slate-50'}`}>
+                {o}
+              </button>
+            ))}
+            {filtered.length === 0 && <p className="text-center text-xs text-slate-400 py-3">ไม่พบ</p>}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
 
 const PAGE_SIZE = 100;
 const FIELD_PAGE_SIZE = 50;
@@ -108,20 +155,34 @@ const ItemRow = memo(function ItemRow({ item, isDraft, showSelected, detailTab, 
 });
 
 // ── Memoized field card — own local input state, no parent re-render on type ──
-const FieldCard = memo(function FieldCard({ item, submitting, onSubmit }) {
+const FieldCard = memo(function FieldCard({ item, submitting, onSubmit, isActive, onSubmitDone }) {
   const [qty, setQty] = useState('');
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    if (isActive && inputRef.current) {
+      inputRef.current.focus();
+      inputRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [isActive]);
+
   const submit = () => {
     if (qty === '' || qty == null) return;
     onSubmit(item.ItemID, parseFloat(qty));
     setQty('');
+    onSubmitDone?.();
   };
   return (
-    <div className={`card py-3 px-4 space-y-2 ${item.NeedsRecount ? 'border-amber-200 bg-amber-50/30' : ''} ${item.IsLocked ? 'border-emerald-200 bg-emerald-50/20 opacity-60' : ''}`}>
+    <div className={`card py-3 px-4 space-y-2
+      ${isActive ? 'ring-2 ring-red-400 shadow-md border-red-300 bg-red-50/20' : ''}
+      ${item.NeedsRecount ? 'border-amber-200 bg-amber-50/30' : ''}
+      ${item.IsLocked ? 'border-emerald-200 bg-emerald-50/20 opacity-60' : ''}`}>
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0">
           <div className="flex items-center gap-2 flex-wrap">
             <span className="font-black text-slate-900 text-sm">{item.ItemCode}</span>
             <span className="text-xs text-blue-600 font-mono bg-blue-50 px-1.5 py-0.5 rounded">{item.Location}</span>
+            {item.Warehouse && <span className="text-xs text-slate-400 font-mono">{item.Warehouse}</span>}
             {item.NeedsRecount && <span className="text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><RotateCcw size={10}/>ตรวจนับซ้ำ</span>}
             {item.IsLocked && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Lock size={10}/>Lock</span>}
           </div>
@@ -138,6 +199,7 @@ const FieldCard = memo(function FieldCard({ item, submitting, onSubmit }) {
       {!item.IsLocked && (
         <div className="flex gap-2">
           <input
+            ref={inputRef}
             type="number" step="0.01" min="0"
             value={qty}
             onChange={e => setQty(e.target.value)}
@@ -194,6 +256,10 @@ export default function StockCount() {
   const [fieldLoading, setFieldLoading] = useState(false);
   const [fieldSearch, setFieldSearch] = useState('');
   const [fieldFilter, setFieldFilter] = useState('all');
+  const [filterFieldWH, setFilterFieldWH] = useState('');
+  const [filterFieldLoc, setFilterFieldLoc] = useState('');
+  const [scanInput, setScanInput] = useState('');
+  const [activeItemId, setActiveItemId] = useState(null);
   const [submitting, setSubmitting] = useState({});
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showSelected, setShowSelected] = useState(false);
@@ -241,7 +307,8 @@ export default function StockCount() {
   useEffect(() => { if (tab === 'field') fetchFieldSessions(); }, [tab, fetchFieldSessions]);
   useEffect(() => { if (fieldSessionId) fetchFieldData(fieldSessionId); }, [fieldSessionId, fetchFieldData]);
   useEffect(() => { setPage(0); }, [filterWH, filterLoc, filterGname, filterSize, filterThick, search, showSelected]);
-  useEffect(() => { setFieldPage(0); }, [fieldSearch, fieldFilter, fieldSessionId]);
+  useEffect(() => { setFieldPage(0); setFilterFieldWH(''); setFilterFieldLoc(''); }, [fieldSessionId]);
+  useEffect(() => { setFieldPage(0); }, [fieldSearch, fieldFilter, filterFieldWH, filterFieldLoc]);
 
   // ── Office actions ────────────────────────────────────
 
@@ -411,6 +478,31 @@ export default function StockCount() {
     finally { setSubmitting(p => ({ ...p, [itemId]: false })); }
   }, [fieldSessionId, fetchFieldData]);
 
+  const handleScan = (code) => {
+    if (!code) return;
+    if (fieldLocations.includes(code)) {
+      setFilterFieldLoc(code);
+      setActiveItemId(null);
+      toast.success(`📍 Location: ${code}`);
+      return;
+    }
+    if (fieldWarehouses.includes(code)) {
+      setFilterFieldWH(code); setFilterFieldLoc('');
+      setActiveItemId(null);
+      toast.success(`คลัง: ${code}`);
+      return;
+    }
+    const found = fieldItems.find(i => i.ItemCode?.toLowerCase() === code.toLowerCase());
+    if (found) {
+      if (found.Warehouse) setFilterFieldWH(found.Warehouse);
+      if (found.Location) setFilterFieldLoc(found.Location);
+      setActiveItemId(found.ItemID);
+      return;
+    }
+    toast.error(`ไม่พบรหัส: ${code}`);
+  };
+  const clearActive = useCallback(() => setActiveItemId(null), []);
+
   // ── Derived data ──────────────────────────────────────
 
   const items = useMemo(() => sessionData?.items || [], [sessionData]);
@@ -477,7 +569,11 @@ export default function StockCount() {
   const totalPages = Math.max(1, Math.ceil(displayItems.length / PAGE_SIZE));
 
   const fieldItems = useMemo(() => fieldData?.items || [], [fieldData]);
+  const fieldWarehouses = useMemo(() => [...new Set(fieldItems.map(i => i.Warehouse).filter(Boolean))].sort(), [fieldItems]);
+  const fieldLocations  = useMemo(() => [...new Set(fieldItems.filter(i => !filterFieldWH || i.Warehouse === filterFieldWH).map(i => i.Location).filter(Boolean))].sort(), [fieldItems, filterFieldWH]);
   const filteredFieldItems = useMemo(() => fieldItems.filter(i => {
+    if (filterFieldWH  && i.Warehouse !== filterFieldWH)  return false;
+    if (filterFieldLoc && i.Location  !== filterFieldLoc) return false;
     const q = fieldSearch.toLowerCase();
     const matchSearch = !q || i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q) || i.Location?.toLowerCase().includes(q);
     if (!matchSearch) return false;
@@ -485,7 +581,7 @@ export default function StockCount() {
     if (fieldFilter === 'pending') return !i.IsLocked && i.EntryCount === 0;
     if (fieldFilter === 'done') return i.EntryCount > 0 || i.IsLocked;
     return !i.IsLocked;
-  }), [fieldItems, fieldSearch, fieldFilter]);
+  }), [fieldItems, fieldSearch, fieldFilter, filterFieldWH, filterFieldLoc]);
   const fieldPageItems = useMemo(() => filteredFieldItems.slice(fieldPage * FIELD_PAGE_SIZE, (fieldPage + 1) * FIELD_PAGE_SIZE), [filteredFieldItems, fieldPage]);
   const fieldTotalPages = Math.max(1, Math.ceil(filteredFieldItems.length / FIELD_PAGE_SIZE));
 
@@ -652,31 +748,16 @@ export default function StockCount() {
 
               {!showSelected && (
                 <div className="flex gap-2 flex-wrap">
-                  <select value={filterWH} onChange={e => { setFilterWH(e.target.value); setFilterLoc(''); }}
-                    className="input-field py-1.5 text-sm w-auto min-w-32">
-                    <option value="">— คลัง —</option>
-                    {warehouses.map(w => <option key={w} value={w}>{w}</option>)}
-                  </select>
-                  <select value={filterLoc} onChange={e => setFilterLoc(e.target.value)}
-                    className="input-field py-1.5 text-sm w-auto min-w-36">
-                    <option value="">— Location —</option>
-                    {locations.map(l => <option key={l} value={l}>{l}</option>)}
-                  </select>
-                  <select value={filterGname} onChange={e => setFilterGname(e.target.value)}
-                    className="input-field py-1.5 text-sm w-auto min-w-36">
-                    <option value="">— หมวดหมู่ —</option>
-                    {gnames.map(g => <option key={g} value={g}>{g}</option>)}
-                  </select>
-                  <select value={filterSize} onChange={e => setFilterSize(e.target.value)}
-                    className="input-field py-1.5 text-sm w-auto min-w-36">
-                    <option value="">— SizeCode —</option>
-                    {sizes.map(s => <option key={s} value={s}>{s}</option>)}
-                  </select>
-                  <select value={filterThick} onChange={e => setFilterThick(e.target.value)}
-                    className="input-field py-1.5 text-sm w-auto min-w-32">
-                    <option value="">— Thickness —</option>
-                    {thicks.map(t => <option key={t} value={t}>{t}</option>)}
-                  </select>
+                  <SearchSelect value={filterWH} onChange={v => { setFilterWH(v); setFilterLoc(''); }}
+                    options={warehouses} placeholder="— คลัง —" className="w-32" />
+                  <SearchSelect value={filterLoc} onChange={setFilterLoc}
+                    options={locations} placeholder="— Location —" className="w-36" />
+                  <SearchSelect value={filterGname} onChange={setFilterGname}
+                    options={gnames} placeholder="— หมวดหมู่ —" className="w-36" />
+                  <SearchSelect value={filterSize} onChange={setFilterSize}
+                    options={sizes} placeholder="— SizeCode —" className="w-36" />
+                  <SearchSelect value={filterThick} onChange={setFilterThick}
+                    options={thicks} placeholder="— Thickness —" className="w-32" />
                   <div className="relative flex-1 min-w-40">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input value={search} onChange={e => setSearch(e.target.value)}
@@ -836,6 +917,33 @@ export default function StockCount() {
 
           {fieldSessionId && (
             <>
+              {/* ── Barcode scan panel ── */}
+              <div className="card py-3 px-4 border-slate-200 bg-slate-50">
+                <label className="text-xs text-slate-500 font-semibold block mb-1.5 flex items-center gap-1">
+                  <Search size={12} />สแกนบาร์โค้ด (Location / รหัสสินค้า)
+                </label>
+                <input
+                  value={scanInput}
+                  onChange={e => setScanInput(e.target.value)}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter' && scanInput.trim()) {
+                      handleScan(scanInput.trim());
+                      setScanInput('');
+                    }
+                  }}
+                  placeholder="สแกนหรือพิมพ์รหัส แล้วกด Enter..."
+                  className="input-field text-sm font-mono"
+                />
+                {(filterFieldWH || filterFieldLoc) && (
+                  <div className="flex items-center gap-2 mt-2 flex-wrap">
+                    {filterFieldWH && <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-mono">{filterFieldWH}</span>}
+                    {filterFieldLoc && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono font-bold">📍 {filterFieldLoc}</span>}
+                    <button onClick={() => { setFilterFieldWH(''); setFilterFieldLoc(''); setActiveItemId(null); }}
+                      className="text-xs text-slate-400 hover:text-red-500 transition-colors">ล้าง</button>
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-2 flex-wrap">
                 {[
                   { v: 'all', l: 'ทั้งหมด' },
@@ -853,7 +961,15 @@ export default function StockCount() {
                     )}
                   </button>
                 ))}
-                <div className="relative flex-1 min-w-[180px]">
+                {fieldWarehouses.length > 0 && (
+                  <SearchSelect value={filterFieldWH} onChange={v => { setFilterFieldWH(v); setFilterFieldLoc(''); }}
+                    options={fieldWarehouses} placeholder="— คลัง —" className="w-28" />
+                )}
+                {fieldLocations.length > 0 && (
+                  <SearchSelect value={filterFieldLoc} onChange={setFilterFieldLoc}
+                    options={fieldLocations} placeholder="— Location —" className="w-32" />
+                )}
+                <div className="relative flex-1 min-w-[160px]">
                   <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
                     placeholder="ค้นหา..." className="input-field pl-8 text-sm h-8" />
@@ -889,6 +1005,8 @@ export default function StockCount() {
                       item={item}
                       submitting={!!submitting[item.ItemID]}
                       onSubmit={handleSubmitCount}
+                      isActive={item.ItemID === activeItemId}
+                      onSubmitDone={clearActive}
                     />
                   ))}
                   {fieldTotalPages > 1 && (
