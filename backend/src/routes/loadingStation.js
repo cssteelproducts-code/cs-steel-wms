@@ -3,6 +3,11 @@ const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
+const _lc = new Map();
+const lcGet = k => { const e = _lc.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
+const lcSet = (k, v, ms) => _lc.set(k, { v, exp: Date.now() + ms });
+const lcDel = (...keys) => keys.forEach(k => _lc.delete(k));
+
 // POST /api/loading-station/entry - Record entry to loading station
 router.post('/entry', authenticate, async (req, res) => {
   try {
@@ -55,6 +60,7 @@ router.post('/entry', authenticate, async (req, res) => {
     const recordId = result.recordset[0].RecordID;
     const info2 = info.recordset[0];
 
+    lcDel('ls:active', 'ls:stations-status');
     res.json({
       success: true,
       recordId,
@@ -129,6 +135,7 @@ router.put('/exit/:recordId', authenticate, async (req, res) => {
                 WHERE TripID=@TripID AND Status NOT IN ('Complete','Cancelled','WeighOut','Checker')`);
     }
 
+    lcDel('ls:active', 'ls:stations-status');
     res.json({
       success: true,
       message: `บันทึกออกจากสถานี "${r.StationName}" สำเร็จ | ทะเบียน: ${r.LicensePlate} | เวลาอยู่: ${durationMinutes} นาที`
@@ -157,9 +164,12 @@ router.put('/done/:tripId', authenticate, async (req, res) => {
 
 // GET /api/loading-station/active - Get all active loading (no exit time)
 router.get('/active', authenticate, async (req, res) => {
+  const { stationId } = req.query;
+  const cacheKey = stationId ? `ls:active:${stationId}` : 'ls:active';
+  const hit = lcGet(cacheKey);
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
-    const { stationId } = req.query;
 
     let whereClause = 'WHERE lr.ExitTime IS NULL AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)';
     const request = pool.request();
@@ -189,6 +199,7 @@ router.get('/active', authenticate, async (req, res) => {
       ORDER BY lr.EntryTime DESC
     `);
 
+    lcSet(cacheKey, result.recordset, 5000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -242,6 +253,8 @@ router.get('/trip/:tripId', authenticate, async (req, res) => {
 
 // GET /api/loading-station/stations-status - Get all stations with current occupancy
 router.get('/stations-status', authenticate, async (req, res) => {
+  const hit = lcGet('ls:stations-status');
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
     const result = await pool.request()
@@ -268,6 +281,7 @@ router.get('/stations-status', authenticate, async (req, res) => {
         GROUP BY ls.StationID, ls.StationCode, ls.StationName, ls.WarehouseID, w.WarehouseName, ct.LicensePlate
         ORDER BY ls.SortOrder, ls.StationName
       `);
+    lcSet('ls:stations-status', result.recordset, 5000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

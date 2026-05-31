@@ -3,6 +3,11 @@ const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
+const _tc = new Map();
+const tcGet = k => { const e = _tc.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
+const tcSet = (k, v, ms) => _tc.set(k, { v, exp: Date.now() + ms });
+const tcDel = (...keys) => keys.forEach(k => _tc.delete(k));
+
 // GET /api/trips - List trips with filters
 router.get('/', authenticate, async (req, res) => {
   try {
@@ -87,6 +92,8 @@ router.get('/', authenticate, async (req, res) => {
 
 // GET /api/trips/active - Get active trips (in warehouse)
 router.get('/active', authenticate, async (req, res) => {
+  const hit = tcGet('trips:active');
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
     const result = await pool.request()
@@ -128,6 +135,7 @@ router.get('/active', authenticate, async (req, res) => {
         AND t.TripDate >= DATEADD(DAY, -1, CAST(GETUTCDATE() AS DATE))
         ORDER BY t.CreatedAt DESC
       `);
+    tcSet('trips:active', result.recordset, 5000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -209,6 +217,7 @@ router.put('/:id/cancel', authenticate, async (req, res) => {
     await pool.request()
       .input('TripID', sql.Int, req.params.id)
       .query(`UPDATE WMS_Trips SET Status = 'Cancelled' WHERE TripID = @TripID`);
+    tcDel('trips:active');
     res.json({ success: true, message: 'ยกเลิก Trip สำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

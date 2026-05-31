@@ -365,48 +365,66 @@ router.get('/live', authenticate, async (req, res) => {
   if (cached) return res.json({ success: true, data: cached });
   try {
     const pool = getPool();
-    const result = await pool.request().query(`
-      SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-             t.DeliveryType, t.Priority, t.SOWaitStartedAt,
-             vt.TypeName as VehicleType,
-             w.WarehouseName,
-             c.CustomerName,
-             wi.TareWeight, wi.WeighDateTime as WeighInTime,
-             ds.PickDocumentNo,
-             DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
-             ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
-             ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
-             cur.StationName as CurrentStation,
-             STUFF((
-               SELECT ',' + ls3.StationName + ':' +
-                 CAST(CASE WHEN EXISTS(
-                   SELECT 1 FROM WMS_LoadingRecord lr3
-                   WHERE lr3.TripID = t.TripID AND lr3.StationID = dst2.StationID AND lr3.ExitTime IS NOT NULL
-                 ) THEN 1 ELSE 0 END AS NVARCHAR(1))
-               FROM WMS_DataStationTargets dst2
-               JOIN WMS_LoadingStations ls3 ON dst2.StationID = ls3.StationID
-               WHERE dst2.TripID = t.TripID
-               FOR XML PATH(''), TYPE).value('.','NVARCHAR(MAX)'), 1, 1, '') as TargetStations
-      FROM WMS_Trips t
-      LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-      LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-      LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-      LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-      LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-      LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
-      LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
-      LEFT JOIN (
-        SELECT lr.TripID, ls2.StationName,
-          ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
-        FROM WMS_LoadingRecord lr JOIN WMS_LoadingStations ls2 ON lr.StationID=ls2.StationID
-        WHERE lr.ExitTime IS NULL
-      ) cur ON cur.TripID = t.TripID AND cur.rn = 1
-      WHERE t.Status NOT IN ('Complete','Cancelled')
-      AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
-      ORDER BY t.CreatedAt DESC
-    `);
-    setCache('dashboard:live', result.recordset, 8000); // 8s cache
-    res.json({ success: true, data: result.recordset });
+
+    // Replaced correlated STUFF/FOR XML PATH (1 sub-query per trip row) with
+    // two parallel flat queries joined in JS — same "name:done" format for the frontend.
+    const [tripRes, stRes] = await Promise.all([
+      pool.request().query(`
+        SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+               t.DeliveryType, t.Priority, t.SOWaitStartedAt,
+               vt.TypeName as VehicleType,
+               w.WarehouseName,
+               c.CustomerName,
+               wi.TareWeight, wi.WeighDateTime as WeighInTime,
+               ds.PickDocumentNo,
+               DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
+               ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
+               ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
+               cur.StationName as CurrentStation
+        FROM WMS_Trips t
+        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
+        LEFT JOIN (
+          SELECT lr.TripID, ls2.StationName,
+            ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
+          FROM WMS_LoadingRecord lr JOIN WMS_LoadingStations ls2 ON lr.StationID=ls2.StationID
+          WHERE lr.ExitTime IS NULL
+        ) cur ON cur.TripID = t.TripID AND cur.rn = 1
+        WHERE t.Status NOT IN ('Complete','Cancelled')
+          AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+        ORDER BY t.CreatedAt DESC
+      `),
+      pool.request().query(`
+        SELECT dst.TripID, ls.StationName,
+          CASE WHEN EXISTS(
+            SELECT 1 FROM WMS_LoadingRecord lr
+            WHERE lr.TripID = dst.TripID AND lr.StationID = dst.StationID AND lr.ExitTime IS NOT NULL
+          ) THEN 1 ELSE 0 END as IsDone
+        FROM WMS_DataStationTargets dst
+        JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
+        JOIN WMS_Trips t ON dst.TripID = t.TripID
+        WHERE t.Status NOT IN ('Complete','Cancelled')
+          AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+      `)
+    ]);
+
+    const stMap = {};
+    for (const r of stRes.recordset) {
+      if (!stMap[r.TripID]) stMap[r.TripID] = [];
+      stMap[r.TripID].push(`${r.StationName}:${r.IsDone}`);
+    }
+    const data = tripRes.recordset.map(t => ({
+      ...t,
+      TargetStations: stMap[t.TripID] ? stMap[t.TripID].join(',') : null
+    }));
+
+    setCache('dashboard:live', data, 8000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

@@ -1,6 +1,14 @@
 const jwt = require('jsonwebtoken');
 const { sql, getPool } = require('../config/db');
 
+// Cache user lookups by token — eliminates a DB round-trip on every API call.
+// 30s TTL: user info is stable; if a user is deactivated it takes effect within 30s.
+const _authCache = new Map();
+setInterval(() => {
+  const now = Date.now();
+  for (const [k, v] of _authCache.entries()) if (v.exp < now) _authCache.delete(k);
+}, 60000);
+
 const authenticate = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization;
@@ -10,6 +18,12 @@ const authenticate = async (req, res, next) => {
 
     const token = authHeader.split(' ')[1];
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cs_steel_wms_secret');
+
+    const hit = _authCache.get(token);
+    if (hit && Date.now() < hit.exp) {
+      req.user = hit.user;
+      return next();
+    }
 
     const pool = getPool();
     const result = await pool.request()
@@ -26,7 +40,9 @@ const authenticate = async (req, res, next) => {
       return res.status(401).json({ success: false, message: 'ไม่พบผู้ใช้งาน หรือถูกระงับการใช้งาน' });
     }
 
-    req.user = result.recordset[0];
+    const user = result.recordset[0];
+    _authCache.set(token, { user, exp: Date.now() + 30000 });
+    req.user = user;
     next();
   } catch (err) {
     if (err.name === 'TokenExpiredError') {

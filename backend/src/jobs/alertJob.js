@@ -129,16 +129,27 @@ async function runAlertCheck() {
 
 async function checkVehicleExpiry(pool) {
   try {
-    // Table may not exist yet — skip gracefully
     const tableCheck = await pool.request()
       .query(`SELECT 1 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME='WMS_InternalVehicles'`);
     if (!tableCheck.recordset.length) return;
 
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayStr = today.toISOString().slice(0, 10);
 
-    const vehicles = await pool.request()
-      .query('SELECT * FROM WMS_InternalVehicles WHERE IsActive=1');
+    const [vehiclesRes, alertsRes] = await Promise.all([
+      pool.request().query('SELECT * FROM WMS_InternalVehicles WHERE IsActive=1'),
+      // Batch-fetch all recent vehicle alerts in ONE query instead of N×M queries
+      pool.request().query(`
+        SELECT AlertType, TripID, CONVERT(NVARCHAR(10), CreatedAt, 23) as AlertDate
+        FROM WMS_Alerts
+        WHERE AlertType LIKE 'VEH_%'
+          AND CreatedAt >= DATEADD(DAY, -8, GETUTCDATE())
+      `)
+    ]);
+
+    // Build a Set for O(1) duplicate checks: "AlertType:VehicleID:YYYY-MM-DD"
+    const alertSet = new Set(alertsRes.recordset.map(a => `${a.AlertType}:${a.TripID}:${a.AlertDate}`));
 
     const EXPIRY_FIELDS = [
       { field: 'ActExpiry',        type: 'VEH_ACT_EXP',   label: 'พ.ร.บ.' },
@@ -149,7 +160,9 @@ async function checkVehicleExpiry(pool) {
     ];
     const MILESTONES = [90, 60, 30];
 
-    for (const v of vehicles.recordset) {
+    const inserts = []; // collect all needed inserts, fire in one batch per type
+
+    for (const v of vehiclesRes.recordset) {
       for (const ef of EXPIRY_FIELDS) {
         const expiryDate = v[ef.field];
         if (!expiryDate) continue;
@@ -162,51 +175,50 @@ async function checkVehicleExpiry(pool) {
 
         if (daysLeft > 92) continue;
 
-        // Milestone alerts at 90, 60, 30 days
+        // Milestone alerts at 90, 60, 30 days — check against in-memory Set
         for (const m of MILESTONES) {
           if (daysLeft >= m - 2 && daysLeft <= m + 2) {
             const mType = `${ef.type}_M${m}`;
-            const since = new Date(Date.now() - 7 * 86400000);
-            const exists = await pool.request()
-              .input('vid', sql.Int, v.VehicleID)
-              .input('tp', sql.NVarChar, mType)
-              .input('since', sql.DateTime, since)
-              .query('SELECT 1 FROM WMS_Alerts WHERE AlertType=@tp AND TripID=@vid AND CreatedAt>=@since');
-            if (!exists.recordset.length) {
+            // Check last 7 days for this milestone alert
+            let hasRecent = false;
+            for (let d = 0; d <= 7; d++) {
+              const ds = new Date(today - d * 86400000).toISOString().slice(0, 10);
+              if (alertSet.has(`${mType}:${v.VehicleID}:${ds}`)) { hasRecent = true; break; }
+            }
+            if (!hasRecent) {
               const expStr = expiry.toLocaleDateString('th-TH');
               const msg = `รถ ${v.LicensePlate}${vName} — ${label} สิ้นอายุในอีก ${daysLeft} วัน (${expStr})`;
-              await pool.request()
-                .input('tp', sql.NVarChar, mType)
-                .input('vid', sql.Int, v.VehicleID)
-                .input('msg', sql.NVarChar, msg)
-                .input('sev', sql.NVarChar, m <= 30 ? 'CRITICAL' : 'WARNING')
-                .query(`INSERT INTO WMS_Alerts (AlertType,Severity,TripID,Message,CreatedAt)
-                        VALUES (@tp,@sev,@vid,@msg,DATEADD(HOUR,7,GETUTCDATE()))`);
+              inserts.push({ type: mType, vid: v.VehicleID, msg, sev: m <= 30 ? 'CRITICAL' : 'WARNING' });
+              alertSet.add(`${mType}:${v.VehicleID}:${todayStr}`); // prevent duplicate within same run
             }
           }
         }
 
         // Daily alerts when < 30 days remaining (or expired)
         if (daysLeft < 30) {
-          const todayExists = await pool.request()
-            .input('vid', sql.Int, v.VehicleID)
-            .input('tp', sql.NVarChar, ef.type)
-            .query(`SELECT 1 FROM WMS_Alerts WHERE AlertType=@tp AND TripID=@vid
-                    AND CAST(CreatedAt AS DATE)=CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)`);
-          if (!todayExists.recordset.length) {
+          if (!alertSet.has(`${ef.type}:${v.VehicleID}:${todayStr}`)) {
             let msg;
             if (daysLeft < 0) msg = `🚨 รถ ${v.LicensePlate}${vName} — ${label} หมดอายุไปแล้ว ${Math.abs(daysLeft)} วัน!`;
             else if (daysLeft === 0) msg = `🚨 รถ ${v.LicensePlate}${vName} — ${label} หมดอายุวันนี้!`;
             else msg = `รถ ${v.LicensePlate}${vName} — ${label} สิ้นอายุในอีก ${daysLeft} วัน`;
-            await pool.request()
-              .input('tp', sql.NVarChar, ef.type)
-              .input('vid', sql.Int, v.VehicleID)
-              .input('msg', sql.NVarChar, msg)
-              .query(`INSERT INTO WMS_Alerts (AlertType,Severity,TripID,Message,CreatedAt)
-                      VALUES (@tp,'CRITICAL',@vid,@msg,DATEADD(HOUR,7,GETUTCDATE()))`);
+            inserts.push({ type: ef.type, vid: v.VehicleID, msg, sev: 'CRITICAL' });
+            alertSet.add(`${ef.type}:${v.VehicleID}:${todayStr}`);
           }
         }
       }
+    }
+
+    // Fire all inserts in one batch
+    if (inserts.length > 0) {
+      const batchReq = pool.request();
+      const vals = inserts.map((ins, i) => {
+        batchReq.input(`tp${i}`, sql.NVarChar, ins.type);
+        batchReq.input(`vid${i}`, sql.Int, ins.vid);
+        batchReq.input(`msg${i}`, sql.NVarChar, ins.msg);
+        batchReq.input(`sev${i}`, sql.NVarChar, ins.sev);
+        return `(@tp${i},@sev${i},@vid${i},@msg${i},DATEADD(HOUR,7,GETUTCDATE()))`;
+      });
+      await batchReq.query(`INSERT INTO WMS_Alerts (AlertType,Severity,TripID,Message,CreatedAt) VALUES ${vals.join(',')}`);
     }
   } catch (e) { console.error('checkVehicleExpiry error:', e.message); }
 }

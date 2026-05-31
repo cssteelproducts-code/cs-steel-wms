@@ -2,9 +2,26 @@ import { useState, useEffect } from 'react';
 import { FileText, Check, Clock, HourglassIcon, RefreshCw } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { formatDateTime, formatDuration } from '../utils/helpers';
+import { formatDateTime } from '../utils/helpers';
 import PriorityBadge from '../components/PriorityBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
+
+// Isolated timer — only this component re-renders every second, not the whole list.
+function LiveSOWait({ startedAt }) {
+  const [secs, setSecs] = useState(() =>
+    Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
+  );
+  useEffect(() => {
+    const id = setInterval(() =>
+      setSecs(Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))), 1000);
+    return () => clearInterval(id);
+  }, [startedAt]);
+
+  if (secs < 60) return <span className="text-xs font-semibold text-rose-500">⏱ {secs} วินาที</span>;
+  const mins = Math.floor(secs / 60);
+  if (mins < 60) return <span className="text-xs font-semibold text-rose-500">⏱ {mins} นาที</span>;
+  return <span className="text-xs font-semibold text-rose-500">⏱ {Math.floor(mins / 60)} ชม. {mins % 60} นาที</span>;
+}
 
 export default function DataStation() {
   const [pending, setPending] = useState([]);
@@ -14,14 +31,12 @@ export default function DataStation() {
   const [loading, setLoading] = useState(false);
   const [waitLoading, setWaitLoading] = useState(false);
   const [pageLoading, setPageLoading] = useState(true);
-  const [tick, setTick] = useState(0);
 
   useEffect(() => {
     fetchPending();
     fetchStations();
     const pollInterval = setInterval(fetchPending, 15000);
-    const tickInterval = setInterval(() => setTick(n => n + 1), 1000);
-    return () => { clearInterval(pollInterval); clearInterval(tickInterval); };
+    return () => clearInterval(pollInterval);
   }, []);
 
   const fetchPending = async () => {
@@ -29,19 +44,6 @@ export default function DataStation() {
       const res = await api.get('/data-station/pending');
       setPending(res.data.data || []);
     } catch {} finally { setPageLoading(false); }
-  };
-
-  const liveSOWaitSeconds = (trip) => {
-    if (!trip.SOWaitStartedAt) return null;
-    return Math.max(0, Math.floor((Date.now() - new Date(trip.SOWaitStartedAt).getTime()) / 1000));
-  };
-
-  const fmtWait = (secs) => {
-    if (secs === null) return null;
-    if (secs < 60) return `${secs} วินาที`;
-    const mins = Math.floor(secs / 60);
-    if (mins < 60) return `${mins} นาที`;
-    return `${Math.floor(mins / 60)} ชม. ${mins % 60} นาที`;
   };
 
   const fetchStations = async () => {
@@ -152,7 +154,7 @@ export default function DataStation() {
                         <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
                       )}
                       {trip.Status === 'WaitPick' && trip.SOWaitStartedAt && (
-                        <span className="text-xs font-semibold text-rose-500">⏱ {fmtWait(liveSOWaitSeconds(trip))}</span>
+                        <LiveSOWait startedAt={trip.SOWaitStartedAt} />
                       )}
                     </div>
                   </div>
