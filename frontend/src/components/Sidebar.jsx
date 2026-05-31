@@ -49,9 +49,12 @@ export default function Sidebar({ isOpen, onClose }) {
 
   return (
     <>
-      {isOpen && (
-        <div className="fixed inset-0 bg-black/40 z-[9998] lg:hidden backdrop-blur-sm" onClick={onClose} />
-      )}
+      <div
+        className={`fixed inset-0 z-[9998] lg:hidden backdrop-blur-sm transition-opacity duration-200
+          ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{ background: 'rgba(0,0,0,0.4)' }}
+        onClick={onClose}
+      />
 
       <aside className={`
         fixed top-0 left-0 h-full w-60 z-[9999]

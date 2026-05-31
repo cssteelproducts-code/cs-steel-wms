@@ -134,8 +134,15 @@ async function checkVehicleExpiry(pool) {
     if (!tableCheck.recordset.length) return;
 
     const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayStr = today.toISOString().slice(0, 10);
+    today.setHours(0, 0, 0, 0); // Bangkok midnight (process.env.TZ='Asia/Bangkok')
+
+    // Build Bangkok date string using local getters — toISOString() is always UTC,
+    // so using it here would give yesterday's date after 17:00 UTC.
+    const todayStr = [
+      today.getFullYear(),
+      String(today.getMonth() + 1).padStart(2, '0'),
+      String(today.getDate()).padStart(2, '0')
+    ].join('-');
 
     const [vehiclesRes, alertsRes] = await Promise.all([
       pool.request().query('SELECT * FROM WMS_InternalVehicles WHERE IsActive=1'),

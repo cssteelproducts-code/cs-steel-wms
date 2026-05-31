@@ -543,8 +543,8 @@ const translations = {
     'driver.saveAndExit': 'บันทึกและออก',
     // ── StockCount ────────────────────────────────────
     'stockCount.listTitle': 'รายการรอบตรวจนับ',
-    'stockCount.officeTab': 'Office',
-    'stockCount.fieldTab': 'Field',
+    'stockCount.officeTab': 'จัดการ (Office)',
+    'stockCount.fieldTab': 'หน้างาน (Field)',
     'stockCount.createSession': 'สร้างรอบนับ',
     'stockCount.noSessions': 'ยังไม่มีรอบนับ',
     'stockCount.countDate': 'วันที่นับ',

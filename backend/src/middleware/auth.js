@@ -48,7 +48,14 @@ const authenticate = async (req, res, next) => {
     if (err.name === 'TokenExpiredError') {
       return res.status(401).json({ success: false, message: 'Session หมดอายุ กรุณาเข้าสู่ระบบใหม่' });
     }
-    return res.status(401).json({ success: false, message: 'Token ไม่ถูกต้อง' });
+    // JWT errors (invalid signature, malformed, etc.) → 401
+    if (err.name === 'JsonWebTokenError' || err.name === 'NotBeforeError') {
+      return res.status(401).json({ success: false, message: 'Token ไม่ถูกต้อง' });
+    }
+    // Any other error (DB not connected yet, network, etc.) → 503 so the client
+    // does NOT clear the token and redirect to Login — it just shows an error.
+    console.error('Auth middleware error:', err.message);
+    return res.status(503).json({ success: false, message: 'ระบบไม่พร้อม กรุณารอสักครู่แล้วลองใหม่' });
   }
 };
 

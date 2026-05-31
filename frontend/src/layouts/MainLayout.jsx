@@ -42,7 +42,7 @@ export default function MainLayout() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} title={title} subtitle={subtitle} />
-        <main className="flex-1 overflow-y-auto p-5 lg:p-6">
+        <main className="flex-1 overflow-y-scroll p-5 lg:p-6" style={{ background: '#f1f5f9' }}>
           <Outlet />
         </main>
       </div>

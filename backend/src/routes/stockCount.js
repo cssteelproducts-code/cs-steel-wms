@@ -1,5 +1,6 @@
 const router = require('express').Router();
 const sql = require('mssql');
+const bcrypt = require('bcryptjs');
 const { getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 const multer = require('multer');
@@ -176,14 +177,36 @@ router.put('/:id/status', authenticate, async (req, res) => {
 
 router.delete('/:id', authenticate, async (req, res) => {
   try {
+    const { password } = req.body;
+    if (!password) return res.status(400).json({ success: false, message: 'กรุณาระบุรหัสผ่านเพื่อยืนยันการลบ' });
+
     const pool = getPool();
+
+    // Verify caller's password
+    const userRes = await pool.request()
+      .input('UID', sql.Int, req.user.UserID)
+      .query('SELECT Password FROM WMS_Users WITH (NOLOCK) WHERE UserID=@UID AND IsActive=1');
+    if (!userRes.recordset.length)
+      return res.status(401).json({ success: false, message: 'ไม่พบผู้ใช้งาน' });
+    const match = await bcrypt.compare(password, userRes.recordset[0].Password);
+    if (!match)
+      return res.status(400).json({ success: false, message: 'รหัสผ่านไม่ถูกต้อง' });
+
     const check = await pool.request().input('ID', sql.Int, req.params.id)
-      .query('SELECT Status FROM WMS_StockCountSessions WHERE SessionID=@ID');
-    if (!check.recordset.length || check.recordset[0].Status !== 'DRAFT')
-      return res.status(400).json({ success: false, message: 'ลบได้เฉพาะรอบ DRAFT' });
+      .query('SELECT SessionName FROM WMS_StockCountSessions WHERE SessionID=@ID');
+    if (!check.recordset.length)
+      return res.status(404).json({ success: false, message: 'ไม่พบรอบนับ' });
+
+    // Delete entries → items → session (in dependency order)
     await pool.request().input('ID', sql.Int, req.params.id)
-      .query('UPDATE WMS_StockCountSessions SET IsActive=0 WHERE SessionID=@ID');
-    res.json({ success: true, message: 'ลบรอบสำเร็จ' });
+      .query(`DELETE FROM WMS_StockCountEntries WHERE ItemID IN
+              (SELECT ItemID FROM WMS_StockCountItems WHERE SessionID=@ID)`);
+    await pool.request().input('ID', sql.Int, req.params.id)
+      .query('DELETE FROM WMS_StockCountItems WHERE SessionID=@ID');
+    await pool.request().input('ID', sql.Int, req.params.id)
+      .query('DELETE FROM WMS_StockCountSessions WHERE SessionID=@ID');
+
+    res.json({ success: true, message: `ลบรอบ "${check.recordset[0].SessionName}" สำเร็จ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 

@@ -13,6 +13,7 @@ export default function TripMonitor() {
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
   const [statusFilter, setStatusFilter] = useState('all');
+  const [keyFilter, setKeyFilter] = useState(null); // step card click → filter by status keys
 
   const FLOW_STEPS = [
     { keys: ['WeighIn'],          primaryKey: 'WeighIn',  labelKey: 'status.weighIn',  showCount: false, noFilter: true },
@@ -46,6 +47,7 @@ export default function TripMonitor() {
 
   const filtered = trips
     .filter(trip => {
+      if (keyFilter) return keyFilter.includes(trip.Status);
       if (statusFilter === 'all') return true;
       return getTripLabel(trip) === statusFilter;
     })
@@ -78,7 +80,7 @@ export default function TripMonitor() {
       {/* Status filter */}
       <div className="flex items-center gap-3 flex-wrap">
         <label className="text-xs font-semibold text-slate-500 whitespace-nowrap">{t('monitor.filterStatus')}</label>
-        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+        <select value={statusFilter} onChange={e => { setStatusFilter(e.target.value); setKeyFilter(null); }}
           className="input-field py-1.5 text-sm w-auto min-w-48">
           <option value="all">{t('monitor.allVehicles').replace('{n}', trips.length)}</option>
           {effectiveStatusOptions.map(label => {
@@ -86,8 +88,8 @@ export default function TripMonitor() {
             return <option key={label} value={label}>{label} ({count})</option>;
           })}
         </select>
-        {statusFilter !== 'all' && (
-          <button onClick={() => setStatusFilter('all')}
+        {(statusFilter !== 'all' || keyFilter) && (
+          <button onClick={() => { setStatusFilter('all'); setKeyFilter(null); }}
             className="text-xs text-slate-400 hover:text-red-500 transition-colors underline">
             {t('monitor.clearFilter')}
           </button>
@@ -98,18 +100,29 @@ export default function TripMonitor() {
       <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
         {FLOW_STEPS.map((step, idx) => {
           const count = stepCounts[idx];
-          const cfg = getStatusConfig(step.primaryKey);
+          const isActive = keyFilter && step.keys.every(k => keyFilter.includes(k)) && keyFilter.length === step.keys.length;
+          const handleClick = !step.noFilter ? () => {
+            if (isActive) { setKeyFilter(null); }
+            else { setKeyFilter(step.keys); setStatusFilter('all'); }
+          } : undefined;
           return (
             <div key={step.labelKey}
-              className={`p-2.5 rounded-xl border text-center ${step.noFilter ? 'border-slate-200 bg-white opacity-60' : 'border-slate-200 bg-white'}`}>
+              onClick={handleClick}
+              className={`p-2.5 rounded-xl border text-center transition-all
+                ${step.noFilter
+                  ? 'border-slate-200 bg-white opacity-60'
+                  : isActive
+                    ? 'border-red-400 bg-red-50 shadow-sm cursor-pointer'
+                    : 'border-slate-200 bg-white hover:border-slate-300 hover:shadow-sm cursor-pointer'
+                }`}>
               {step.showCount ? (
-                <div className={`text-xl font-bold ${count > 0 ? 'text-slate-900' : 'text-slate-400'}`}>{count}</div>
+                <div className={`text-xl font-bold ${count > 0 ? (isActive ? 'text-red-600' : 'text-slate-900') : 'text-slate-400'}`}>{count}</div>
               ) : (
                 <div className="h-7 flex items-center justify-center">
-                  <div className={`w-2 h-2 rounded-full bg-slate-300`} />
+                  <div className="w-2 h-2 rounded-full bg-slate-300" />
                 </div>
               )}
-              <div className="text-xs mt-0.5 text-slate-500 leading-tight">{t(step.labelKey)}</div>
+              <div className={`text-xs mt-0.5 leading-tight ${isActive ? 'text-red-600 font-semibold' : 'text-slate-500'}`}>{t(step.labelKey)}</div>
             </div>
           );
         })}

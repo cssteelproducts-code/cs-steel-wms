@@ -270,6 +270,7 @@ export default function StockCount() {
   const [showSelected, setShowSelected] = useState(false);
   const [page, setPage] = useState(0);
   const [fieldPage, setFieldPage] = useState(0);
+  const [deleteModal, setDeleteModal] = useState({ open: false, session: null, password: '', loading: false });
 
   // ── Fetch ─────────────────────────────────────────────
 
@@ -444,12 +445,25 @@ export default function StockCount() {
     finally { setSaving(false); }
   };
 
-  const handleDelete = async (session) => {
-    if (!confirm(`ลบรอบ "${session.SessionName}" ?`)) return;
+  const handleDelete = (session) => {
+    setDeleteModal({ open: true, session, password: '', loading: false });
+  };
+
+  const confirmDelete = async () => {
+    const { session, password } = deleteModal;
+    if (!password) { toast.error('กรุณาระบุรหัสผ่าน'); return; }
+    setDeleteModal(m => ({ ...m, loading: true }));
     try {
-      const res = await api.delete(`/stock-count/${session.SessionID}`);
-      if (res.data.success) { toast.success(res.data.message); fetchSessions(); }
-    } catch (err) { toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ'); }
+      const res = await api.delete(`/stock-count/${session.SessionID}`, { data: { password } });
+      if (res.data.success) {
+        toast.success(res.data.message);
+        setDeleteModal({ open: false, session: null, password: '', loading: false });
+        fetchSessions();
+      }
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ');
+      setDeleteModal(m => ({ ...m, loading: false }));
+    }
   };
 
   const handleReport = async () => {
@@ -607,6 +621,45 @@ export default function StockCount() {
 
   return (
     <div className="space-y-4">
+
+      {/* ── Delete confirm modal ── */}
+      {deleteModal.open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 rounded-xl bg-red-50"><Trash2 size={18} className="text-red-500" /></div>
+              <div>
+                <h3 className="font-bold text-slate-900">ยืนยันการลบรอบนับ</h3>
+                <p className="text-xs text-slate-500 mt-0.5">"{deleteModal.session?.SessionName}"</p>
+              </div>
+            </div>
+            <p className="text-sm text-slate-600">ข้อมูลทั้งหมดในรอบนี้จะถูกลบถาวร กรุณาใส่รหัสผ่านของคุณเพื่อยืนยัน</p>
+            <input
+              type="password"
+              placeholder="รหัสผ่านของคุณ"
+              value={deleteModal.password}
+              onChange={e => setDeleteModal(m => ({ ...m, password: e.target.value }))}
+              onKeyDown={e => e.key === 'Enter' && confirmDelete()}
+              autoFocus
+              className="input-field w-full"
+            />
+            <div className="flex gap-2 justify-end">
+              <button onClick={() => setDeleteModal({ open: false, session: null, password: '', loading: false })}
+                className="btn-secondary text-sm" disabled={deleteModal.loading}>
+                ยกเลิก
+              </button>
+              <button onClick={confirmDelete} disabled={deleteModal.loading || !deleteModal.password}
+                className="btn-danger text-sm flex items-center gap-1.5">
+                {deleteModal.loading
+                  ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+                  : <Trash2 size={13} />}
+                ลบรอบนี้
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-2">
         {canOffice && (
@@ -661,11 +714,9 @@ export default function StockCount() {
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                        {s.Status === 'DRAFT' && (
-                          <button onClick={() => handleDelete(s)} className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors">
-                            <Trash2 size={14} />
-                          </button>
-                        )}
+                        <button onClick={() => handleDelete(s)} title="ลบรอบนับ" className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors">
+                          <Trash2 size={14} />
+                        </button>
                       </div>
                     </div>
                   ))}
