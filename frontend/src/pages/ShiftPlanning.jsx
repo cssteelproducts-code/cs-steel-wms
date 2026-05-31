@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import * as XLSX from 'xlsx';
 import { Users, Clock, Plus, Trash2, BarChart2, RefreshCw, Download, Pencil, Check, X as XIcon } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -139,10 +140,12 @@ export default function ShiftPlanning() {
 
   const exportCSV = () => {
     const rows = [['วันที่', 'เวลาเลิก', 'OT พนักงาน', 'OT แบบ 2 (ชม.)', 'OT แบบ 1 (ชม.)', 'ต่าง (ชม.)']];
-    records.forEach(r => rows.push([r.date, r.endTime, r.otEmp, r.otHrs2, r.otHrs1, (r.otHrs1 - r.otHrs2).toFixed(2)]));
-    const csv = rows.map(r => r.join(',')).join('\n');
-    const a = document.createElement('a'); a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent('﻿' + csv);
-    a.download = 'shift_ot_compare.csv'; a.click();
+    records.forEach(r => rows.push([r.date, r.endTime, r.otEmp, r.otHrs2, r.otHrs1, parseFloat((r.otHrs1 - r.otHrs2).toFixed(2))]));
+    const ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 14 }, { wch: 16 }, { wch: 16 }, { wch: 12 }];
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'OT Compare');
+    XLSX.writeFile(wb, 'shift_ot_compare.xlsx');
   };
 
   const totalS2Emp = cfg.s2.reduce((s, x) => s + (x.emp || 0), 0);
@@ -161,7 +164,7 @@ export default function ShiftPlanning() {
         </div>
         <div className="flex gap-2">
           <button onClick={exportCSV} className="btn-secondary text-sm flex items-center gap-1.5">
-            <Download size={14} />Export CSV
+            <Download size={14} />Export
           </button>
           <button onClick={() => { if (confirm('ล้างข้อมูลทั้งหมด?')) { setRecords([]); } }} className="btn-secondary text-sm text-red-500">
             <RefreshCw size={14} />ล้างข้อมูล
