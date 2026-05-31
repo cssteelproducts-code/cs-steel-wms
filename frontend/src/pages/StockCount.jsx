@@ -29,7 +29,7 @@ function SearchSelect({ value, onChange, options, placeholder, className = '' })
   return (
     <div ref={ref} className={`relative ${className}`}>
       <button type="button" onClick={() => { setOpen(p => !p); setQ(''); }}
-        className="input-field py-1.5 text-sm w-full text-left flex items-center justify-between gap-1 min-w-32 cursor-pointer">
+        className="input-field py-1.5 text-sm w-full text-left flex items-center justify-between gap-1 cursor-pointer">
         <span className={`truncate ${value ? 'text-slate-800' : 'text-slate-400'}`}>{value || placeholder}</span>
         <ChevronDown size={11} className="flex-shrink-0 text-slate-400" />
       </button>
@@ -748,17 +748,17 @@ export default function StockCount() {
               </div>
 
               {!showSelected && (
-                <div className="flex gap-2 flex-wrap">
+                <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex gap-2 flex-wrap items-center">
                   <SearchSelect value={filterWH} onChange={v => { setFilterWH(v); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); }}
-                    options={warehouses} placeholder="— คลัง —" className="w-32" />
+                    options={warehouses} placeholder="— คลัง —" className="w-32 flex-shrink-0" />
                   <SearchSelect value={filterLoc} onChange={v => { setFilterLoc(v); setFilterGname(''); setFilterSize(''); setFilterThick(''); }}
-                    options={locations} placeholder="— Location —" className="w-36" />
+                    options={locations} placeholder="— Location —" className="w-36 flex-shrink-0" />
                   <SearchSelect value={filterGname} onChange={v => { setFilterGname(v); setFilterSize(''); setFilterThick(''); }}
-                    options={gnames} placeholder="— หมวดหมู่ —" className="w-36" />
+                    options={gnames} placeholder="— หมวดหมู่ —" className="w-36 flex-shrink-0" />
                   <SearchSelect value={filterSize} onChange={v => { setFilterSize(v); setFilterThick(''); }}
-                    options={sizes} placeholder="— SizeCode —" className="w-36" />
+                    options={sizes} placeholder="— SizeCode —" className="w-36 flex-shrink-0" />
                   <SearchSelect value={filterThick} onChange={setFilterThick}
-                    options={thicks} placeholder="— Thickness —" className="w-32" />
+                    options={thicks} placeholder="— Thickness —" className="w-32 flex-shrink-0" />
                   <div className="relative flex-1 min-w-40">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input value={search} onChange={e => setSearch(e.target.value)}
@@ -767,7 +767,7 @@ export default function StockCount() {
                   </div>
                   {(filterWH || filterLoc || filterGname || filterSize || filterThick || search) && (
                     <button onClick={() => { setFilterWH(''); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); setSearch(''); }}
-                      className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors whitespace-nowrap">
+                      className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors whitespace-nowrap flex-shrink-0">
                       ล้างทั้งหมด
                     </button>
                   )}
@@ -964,7 +964,7 @@ export default function StockCount() {
                 ))}
                 {fieldWarehouses.length > 0 && (
                   <SearchSelect value={filterFieldWH} onChange={v => { setFilterFieldWH(v); setFilterFieldLoc(''); }}
-                    options={fieldWarehouses} placeholder="— คลัง —" className="w-28 flex-shrink-0" />
+                    options={fieldWarehouses} placeholder="— คลัง —" className="w-32 flex-shrink-0" />
                 )}
                 {fieldLocations.length > 0 && (
                   <SearchSelect value={filterFieldLoc} onChange={setFilterFieldLoc}
