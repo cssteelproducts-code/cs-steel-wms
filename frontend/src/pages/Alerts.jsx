@@ -13,7 +13,18 @@ const SEVERITY_STYLE = {
 const TYPE_LABEL = {
   OVERSTAY: 'รถอยู่นานเกิน',
   OVERWEIGHT: 'น้ำหนักเกินพิกัด',
-  OVERTIME_ENTRY: 'เข้าคลังนอกเวลา'
+  OVERTIME_ENTRY: 'เข้าคลังนอกเวลา',
+  VEH_ACT_EXP:   'พ.ร.บ. หมดอายุ',
+  VEH_INS_EXP:   'ประกันภัย หมดอายุ',
+  VEH_INSP_EXP:  'ตรวจสภาพ หมดอายุ',
+  VEH_TAX_EXP:   'ภาษีรถ หมดอายุ',
+  VEH_OTHER_EXP: 'เอกสารรถ หมดอายุ',
+};
+const getTypeLabel = (type) => {
+  if (TYPE_LABEL[type]) return TYPE_LABEL[type];
+  const base = type.replace(/_M\d+$/, '');
+  const m = type.match(/_M(\d+)$/)?.[1];
+  return (TYPE_LABEL[base] && m) ? `${TYPE_LABEL[base]} (แจ้งล่วงหน้า ${m} วัน)` : type;
 };
 
 export default function Alerts() {
@@ -105,7 +116,7 @@ export default function Alerts() {
   };
 
   const deleteConfig = async (cfg) => {
-    if (!confirm(`ลบเกณฑ์ "${TYPE_LABEL[cfg.AlertType] || cfg.AlertType}" ?`)) return;
+    if (!confirm(`ลบเกณฑ์ "${getTypeLabel(cfg.AlertType)}" ?`)) return;
     try {
       await api.delete(`/alerts/config/${cfg.ConfigID}`);
       toast.success('ลบเกณฑ์แล้ว');
@@ -175,7 +186,7 @@ export default function Alerts() {
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-xs font-semibold uppercase tracking-wide opacity-70">
-                          {TYPE_LABEL[alert.AlertType] || alert.AlertType}
+                          {getTypeLabel(alert.AlertType)}
                         </span>
                         {!alert.IsRead && !alert.IsResolved && (
                           <span className="w-1.5 h-1.5 bg-amber-500 rounded-full" />

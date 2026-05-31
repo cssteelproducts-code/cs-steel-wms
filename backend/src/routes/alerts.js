@@ -6,15 +6,43 @@ const { runAlertCheck } = require('../jobs/alertJob');
 
 router.use(authenticate);
 
-let _unreadCache = null;
-let _unreadCacheExp = 0;
+// Per-role permission cache for TRANSFER_VEHICLES (60s TTL)
+const _permCache = new Map();
+async function canSeeVehicleAlerts(roleId, roleName) {
+  if (roleName === 'Admin') return true;
+  const key = `vp:${roleId}`;
+  const hit = _permCache.get(key);
+  if (hit && Date.now() < hit.exp) return hit.v;
+  try {
+    const r = await getPool().request()
+      .input('RID', sql.Int, roleId)
+      .query(`SELECT 1 AS p FROM WMS_MenuPermissions WITH (NOLOCK)
+              WHERE RoleID=@RID AND MenuCode='TRANSFER_VEHICLES' AND CanView=1`);
+    const v = r.recordset.length > 0;
+    _permCache.set(key, { v, exp: Date.now() + 60000 });
+    return v;
+  } catch { return false; }
+}
 
-// GET /api/alerts - recent alerts
+// Per-role unread-count cache (keyed by roleId+canSeeVeh)
+const _unreadCache = new Map();
+const unreadKey = (roleId, veh) => `u:${roleId}:${veh?1:0}`;
+const getUnreadCache = (k) => { const e = _unreadCache.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
+const setUnreadCache = (k, v) => _unreadCache.set(k, { v, exp: Date.now() + 20000 });
+const clearUnreadCache = () => _unreadCache.clear();
+
+// GET /api/alerts - recent alerts (VEH_* filtered by TRANSFER_VEHICLES permission)
 router.get('/', async (req, res) => {
   try {
     const pool = getPool();
     const { unreadOnly, limit = 100 } = req.query;
-    const where = unreadOnly === 'true' ? 'WHERE a.IsRead = 0 AND a.IsResolved = 0' : '';
+    const canVeh = await canSeeVehicleAlerts(req.user.RoleID, req.user.RoleName);
+
+    const conditions = [];
+    if (unreadOnly === 'true') conditions.push('a.IsRead = 0 AND a.IsResolved = 0');
+    if (!canVeh) conditions.push("a.AlertType NOT LIKE 'VEH_%'");
+    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+
     const result = await pool.request()
       .input('limit', sql.Int, parseInt(limit))
       .query(`
@@ -34,18 +62,21 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/alerts/unread-count — cached 20s to reduce DB load from polling
+// GET /api/alerts/unread-count — per-role cache (VEH_* filtered by permission)
 router.get('/unread-count', async (req, res) => {
-  if (_unreadCache !== null && Date.now() < _unreadCacheExp) {
-    return res.json({ success: true, count: _unreadCache });
-  }
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query('SELECT COUNT(*) AS cnt FROM WMS_Alerts WITH (NOLOCK) WHERE IsRead = 0 AND IsResolved = 0');
-    _unreadCache = result.recordset[0].cnt;
-    _unreadCacheExp = Date.now() + 20000;
-    res.json({ success: true, count: _unreadCache });
+    const canVeh = await canSeeVehicleAlerts(req.user.RoleID, req.user.RoleName);
+    const key = unreadKey(req.user.RoleID, canVeh);
+    const hit = getUnreadCache(key);
+    if (hit !== null) return res.json({ success: true, count: hit });
+
+    const vehFilter = canVeh ? '' : "AND AlertType NOT LIKE 'VEH_%'";
+    const result = await getPool().request()
+      .query(`SELECT COUNT(*) AS cnt FROM WMS_Alerts WITH (NOLOCK)
+              WHERE IsRead = 0 AND IsResolved = 0 ${vehFilter}`);
+    const count = result.recordset[0].cnt;
+    setUnreadCache(key, count);
+    res.json({ success: true, count });
   } catch (err) {
     res.status(500).json({ success: false, count: 0 });
   }
@@ -56,7 +87,7 @@ router.put('/read-all', async (req, res) => {
   try {
     const pool = getPool();
     await pool.request().query('UPDATE WMS_Alerts SET IsRead = 1 WHERE IsRead = 0');
-    _unreadCache = 0; _unreadCacheExp = Date.now() + 20000;
+    clearUnreadCache();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -70,7 +101,7 @@ router.put('/:id/read', async (req, res) => {
     await pool.request()
       .input('id', sql.Int, req.params.id)
       .query('UPDATE WMS_Alerts SET IsRead = 1 WHERE AlertID = @id');
-    _unreadCacheExp = 0;
+    clearUnreadCache();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -84,6 +115,7 @@ router.put('/:id/resolve', async (req, res) => {
     await pool.request()
       .input('id', sql.Int, req.params.id)
       .query('UPDATE WMS_Alerts SET IsResolved = 1, IsRead = 1, ResolvedAt = DATEADD(HOUR,7,GETUTCDATE()) WHERE AlertID = @id');
+    clearUnreadCache();
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -94,6 +126,7 @@ router.put('/:id/resolve', async (req, res) => {
 router.post('/check', async (req, res) => {
   try {
     const count = await runAlertCheck();
+    clearUnreadCache();
     res.json({ success: true, newAlerts: count });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
