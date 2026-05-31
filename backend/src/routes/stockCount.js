@@ -7,6 +7,12 @@ const XLSX = require('xlsx');
 const upload = multer({ storage: multer.memoryStorage() });
 
 let _ready = false;
+
+// Short session-level cache — large sessions (1000+ items) take 300-800ms to query
+const _sc = new Map();
+const scGet = k => { const e = _sc.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
+const scSet = (k, v, ms) => _sc.set(k, { v, exp: Date.now() + ms });
+const scDel = k => _sc.delete(k);
 async function ensureTables() {
   if (_ready) return;
   const pool = getPool();
@@ -129,23 +135,30 @@ router.post('/', authenticate, async (req, res) => {
 });
 
 router.get('/:id', authenticate, async (req, res) => {
+  const cacheKey = `sc:${req.params.id}`;
+  const hit = scGet(cacheKey);
+  if (hit) return res.json({ success: true, data: hit });
   try {
     await ensureTables();
     const pool = getPool();
-    const sess = await pool.request().input('ID', sql.Int, req.params.id)
-      .query('SELECT * FROM WMS_StockCountSessions WHERE SessionID=@ID AND IsActive=1');
+    const [sess, items] = await Promise.all([
+      pool.request().input('ID', sql.Int, req.params.id)
+        .query('SELECT * FROM WMS_StockCountSessions WITH (NOLOCK) WHERE SessionID=@ID AND IsActive=1'),
+      pool.request().input('ID', sql.Int, req.params.id)
+        .query(`SELECT i.*,
+          ISNULL(e.TotalCounted,0) AS TotalCounted,
+          ISNULL(e.EntryCount,0) AS EntryCount
+          FROM WMS_StockCountItems i WITH (NOLOCK)
+          LEFT JOIN (
+            SELECT ItemID, SUM(CountedQty) AS TotalCounted, COUNT(*) AS EntryCount
+            FROM WMS_StockCountEntries WITH (NOLOCK) WHERE SessionID=@ID GROUP BY ItemID
+          ) e ON e.ItemID=i.ItemID
+          WHERE i.SessionID=@ID ORDER BY i.Location,i.ItemCode`)
+    ]);
     if (!sess.recordset.length) return res.status(404).json({ success: false, message: 'ไม่พบรอบ' });
-    const items = await pool.request().input('ID', sql.Int, req.params.id)
-      .query(`SELECT i.*,
-        ISNULL(e.TotalCounted,0) AS TotalCounted,
-        ISNULL(e.EntryCount,0) AS EntryCount
-        FROM WMS_StockCountItems i WITH (NOLOCK)
-        LEFT JOIN (
-          SELECT ItemID, SUM(CountedQty) AS TotalCounted, COUNT(*) AS EntryCount
-          FROM WMS_StockCountEntries WITH (NOLOCK) WHERE SessionID=@ID GROUP BY ItemID
-        ) e ON e.ItemID=i.ItemID
-        WHERE i.SessionID=@ID ORDER BY i.Location,i.ItemCode`);
-    res.json({ success: true, data: { session: sess.recordset[0], items: items.recordset } });
+    const data = { session: sess.recordset[0], items: items.recordset };
+    scSet(cacheKey, data, 8000);
+    res.json({ success: true, data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -244,6 +257,7 @@ router.post('/:id/count', authenticate, async (req, res) => {
       .query(`INSERT INTO WMS_StockCountEntries (ItemID,SessionID,Round,CountedQty,CountedBy,Notes)
               VALUES(@IID,@SID,@RND,@QTY,@BY,@NT);
               UPDATE WMS_StockCountItems SET NeedsRecount=0 WHERE ItemID=@IID;`);
+    scDel(`sc:${req.params.id}`);
     res.json({ success: true, message: 'บันทึกยอดนับสำเร็จ' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -264,6 +278,7 @@ router.put('/:id/items/:itemId/lock', authenticate, async (req, res) => {
       .input('IID', sql.Int, req.params.itemId)
       .input('BY',  sql.NVarChar, req.user?.FullName || req.user?.Username)
       .query(`UPDATE WMS_StockCountItems SET IsLocked=1,NeedsRecount=0,LockedAt=GETDATE(),LockedBy=@BY WHERE ItemID=@IID`);
+    scDel(`sc:${req.params.id}`);
     res.json({ success: true, message: 'Lock สำเร็จ' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -272,6 +287,7 @@ router.put('/:id/items/:itemId/unlock', authenticate, async (req, res) => {
   try {
     await getPool().request().input('IID', sql.Int, req.params.itemId)
       .query('UPDATE WMS_StockCountItems SET IsLocked=0,LockedAt=NULL,LockedBy=NULL WHERE ItemID=@IID');
+    scDel(`sc:${req.params.id}`);
     res.json({ success: true, message: 'Unlock สำเร็จ' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -282,6 +298,7 @@ router.put('/:id/items/:itemId/recount', authenticate, async (req, res) => {
     await pool.request().input('IID', sql.Int, req.params.itemId)
       .query(`DELETE FROM WMS_StockCountEntries WHERE ItemID=@IID;
               UPDATE WMS_StockCountItems SET NeedsRecount=1,IsLocked=0 WHERE ItemID=@IID;`);
+    scDel(`sc:${req.params.id}`);
     res.json({ success: true, message: 'ส่งกลับตรวจนับสำเร็จ' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });

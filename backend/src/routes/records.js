@@ -30,21 +30,10 @@ router.get('/', authenticate, async (req, res) => {
       req1.input('Search', sql.NVarChar, `%${search}%`);
     }
 
-    const countResult = await req1.query(`
-      SELECT COUNT(*) as Total
-      FROM WMS_Trips t
-      LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-      ${where}
-    `);
+    req1.input('Offset', sql.Int, offset);
+    req1.input('Limit', sql.Int, parseInt(limit));
 
-    const req2 = pool.request();
-    if (date) req2.input('Date', sql.Date, date);
-    if (status && status !== 'all') req2.input('Status', sql.NVarChar, status);
-    if (search) req2.input('Search', sql.NVarChar, `%${search}%`);
-    req2.input('Offset', sql.Int, offset);
-    req2.input('Limit', sql.Int, parseInt(limit));
-
-    const result = await req2.query(`
+    const result = await req1.query(`
       SELECT
         t.TripID, t.TripDate, t.LicensePlate, t.Status, t.Priority, t.DeliveryType,
         t.CreatedAt, t.CompletedAt,
@@ -56,29 +45,31 @@ router.get('/', authenticate, async (req, res) => {
         cr.IsApproved, cr.Remarks as CheckerRemarks, cr.CheckTime,
         u.FullName as CheckerName,
         ds.PickDocumentNo,
-        (SELECT COUNT(*) FROM WMS_LoadingRecord lr WHERE lr.TripID = t.TripID) as LoadingCount
-      FROM WMS_Trips t
-      LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-      LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-      LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-      LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-      LEFT JOIN WMS_WeighOut wo ON t.TripID = wo.TripID
-      LEFT JOIN WMS_CheckerRecord cr ON t.TripID = cr.TripID
-      LEFT JOIN WMS_Users u ON cr.OperatorID = u.UserID
-      LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
+        (SELECT COUNT(*) FROM WMS_LoadingRecord lr WITH (NOLOCK) WHERE lr.TripID = t.TripID) as LoadingCount,
+        COUNT(*) OVER() AS TotalRows
+      FROM WMS_Trips t          WITH (NOLOCK)
+      LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON vt.TypeID     = t.VehicleTypeID
+      LEFT JOIN WMS_Warehouses w    WITH (NOLOCK) ON w.WarehouseID = t.WarehouseID
+      LEFT JOIN WMS_Customers c     WITH (NOLOCK) ON c.CustomerID  = t.CustomerID
+      LEFT JOIN WMS_WeighIn wi      WITH (NOLOCK) ON wi.TripID     = t.TripID
+      LEFT JOIN WMS_WeighOut wo     WITH (NOLOCK) ON wo.TripID     = t.TripID
+      LEFT JOIN WMS_CheckerRecord cr WITH (NOLOCK) ON cr.TripID    = t.TripID
+      LEFT JOIN WMS_Users u         WITH (NOLOCK) ON u.UserID      = cr.OperatorID
+      LEFT JOIN WMS_DataStation ds  WITH (NOLOCK) ON ds.TripID     = t.TripID
       ${where}
       ORDER BY t.CreatedAt DESC
       OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
     `);
 
+    const total = result.recordset[0]?.TotalRows ?? 0;
     res.json({
       success: true,
       data: result.recordset,
       pagination: {
-        total: countResult.recordset[0].Total,
+        total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(countResult.recordset[0].Total / parseInt(limit))
+        totalPages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (err) {

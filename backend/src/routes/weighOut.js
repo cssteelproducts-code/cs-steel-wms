@@ -3,6 +3,12 @@ const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
+// Short TTL caches — polled every 15s on the frontend
+const _c = new Map();
+const cGet = k => { const e = _c.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
+const cSet = (k, v, ms) => _c.set(k, { v, exp: Date.now() + ms });
+const cDel = (...keys) => keys.forEach(k => _c.delete(k));
+
 // POST /api/weigh-out - Record weigh-out and complete trip
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -19,8 +25,8 @@ router.post('/', authenticate, async (req, res) => {
       .query(`
         SELECT t.TripID, t.LicensePlate, t.Status,
                wi.TareWeight
-        FROM WMS_Trips t
-        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        FROM WMS_Trips t WITH (NOLOCK)
+        LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
         WHERE t.TripID = @TripID
       `);
 
@@ -68,6 +74,9 @@ router.post('/', authenticate, async (req, res) => {
 
       await transaction.commit();
 
+      // Invalidate caches — new record changes both lists
+      cDel('wo:pending', 'wo:today');
+
       res.json({
         success: true,
         message: `ชั่งออกสำเร็จ | ทะเบียน: ${licensePlate} | น้ำหนักสุทธิ: ${netWeight.toFixed(2)} กก.`,
@@ -83,43 +92,44 @@ router.post('/', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/weigh-out/pending - All trips with WeighIn record, not yet Complete/Cancelled
+// GET /api/weigh-out/pending
+// Simplified: EXISTS replaces 2 derived-table scans; OUTER APPLY replaces ROW_NUMBER window.
 router.get('/pending', authenticate, async (req, res) => {
+  const hit = cGet('wo:pending');
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
-    const result = await pool.request()
-      .query(`
-        SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt, t.TripDate,
-               t.DeliveryType, t.Priority, t.CustomerID, t.SOWaitStartedAt,
-               vt.TypeName as VehicleType,
-               w.WarehouseName,
-               c.CustomerName,
-               wi.TareWeight, wi.WeighDateTime as WeighInTime,
-               ds.PickDocumentNo,
-               DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
-               ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
-               ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
-               cur.StationName as CurrentStation
-        FROM WMS_Trips t
-        INNER JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
-        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
-        LEFT JOIN (
-          SELECT lr2.TripID, ls2.StationName,
-            ROW_NUMBER() OVER (PARTITION BY lr2.TripID ORDER BY lr2.EntryTime DESC) as rn
-          FROM WMS_LoadingRecord lr2 JOIN WMS_LoadingStations ls2 ON lr2.StationID = ls2.StationID
-          WHERE lr2.ExitTime IS NULL
-        ) cur ON cur.TripID = t.TripID AND cur.rn = 1
-        WHERE t.Status NOT IN ('Complete', 'Cancelled')
-        ORDER BY
-          CASE t.Status WHEN 'WeighOut' THEN 0 WHEN 'Loading' THEN 1 WHEN 'WaitPick' THEN 2 WHEN 'Data' THEN 3 ELSE 4 END,
-          t.CreatedAt DESC
-      `);
-    console.log(`[WeighOut/pending] found ${result.recordset.length} trips`);
+    const result = await pool.request().query(`
+      SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt, t.TripDate,
+             t.DeliveryType, t.Priority, t.CustomerID, t.SOWaitStartedAt,
+             vt.TypeName  AS VehicleType,
+             w.WarehouseName,
+             c.CustomerName,
+             wi.TareWeight, wi.WeighDateTime AS WeighInTime,
+             ds.PickDocumentNo,
+             DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) AS MinutesInWarehouse,
+             CASE WHEN EXISTS(SELECT 1 FROM WMS_LoadingRecord      WITH (NOLOCK) WHERE TripID=t.TripID) THEN 1 ELSE 0 END AS HasLoadingRecord,
+             CASE WHEN EXISTS(SELECT 1 FROM WMS_DataStationTargets WITH (NOLOCK) WHERE TripID=t.TripID) THEN 1 ELSE 0 END AS HasDataStationTargets,
+             cur.StationName AS CurrentStation
+      FROM WMS_Trips t WITH (NOLOCK)
+      INNER JOIN WMS_WeighIn wi          WITH (NOLOCK) ON wi.TripID   = t.TripID
+      LEFT JOIN  WMS_VehicleTypes vt     WITH (NOLOCK) ON vt.TypeID   = t.VehicleTypeID
+      LEFT JOIN  WMS_Warehouses w        WITH (NOLOCK) ON w.WarehouseID = t.WarehouseID
+      LEFT JOIN  WMS_Customers c         WITH (NOLOCK) ON c.CustomerID = t.CustomerID
+      LEFT JOIN  WMS_DataStation ds      WITH (NOLOCK) ON ds.TripID   = t.TripID
+      OUTER APPLY (
+        SELECT TOP 1 ls.StationName
+        FROM WMS_LoadingRecord lr WITH (NOLOCK)
+        JOIN WMS_LoadingStations ls WITH (NOLOCK) ON ls.StationID = lr.StationID
+        WHERE lr.TripID = t.TripID AND lr.ExitTime IS NULL
+        ORDER BY lr.EntryTime DESC
+      ) cur
+      WHERE t.Status NOT IN ('Complete','Cancelled')
+      ORDER BY
+        CASE t.Status WHEN 'WeighOut' THEN 0 WHEN 'Loading' THEN 1 WHEN 'WaitPick' THEN 2 WHEN 'Data' THEN 3 ELSE 4 END,
+        t.CreatedAt DESC
+    `);
+    cSet('wo:pending', result.recordset, 10000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     console.error('[WeighOut/pending] error:', err);
@@ -127,30 +137,32 @@ router.get('/pending', authenticate, async (req, res) => {
   }
 });
 
-// GET /api/weigh-out/today - Trips weighed-out today (Checker/Complete with WeighOut record)
+// GET /api/weigh-out/today
 router.get('/today', authenticate, async (req, res) => {
+  const hit = cGet('wo:today');
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
-    const result = await pool.request()
-      .query(`
-        SELECT t.TripID, t.LicensePlate, t.CompletedAt,
-               vt.TypeName as VehicleType,
-               c.CustomerName,
-               w.WarehouseName,
-               wi.TareWeight, wi.WeighDateTime as WeighInTime,
-               wo.GrossWeight, wo.NetWeight, wo.WeighDateTime as WeighOutTime,
-               DATEDIFF(MINUTE, wi.WeighDateTime, wo.WeighDateTime) as TotalMinutes,
-               u.FullName as OperatorName
-        FROM WMS_WeighOut wo
-        JOIN WMS_Trips t ON wo.TripID = t.TripID
-        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-        LEFT JOIN WMS_Users u ON wo.OperatorID = u.UserID
-        WHERE CAST(wo.WeighDateTime AS DATE) >= CAST(DATEADD(DAY,-1,GETUTCDATE()) AS DATE)
-        ORDER BY wo.WeighDateTime DESC
-      `);
+    const result = await pool.request().query(`
+      SELECT t.TripID, t.LicensePlate, t.CompletedAt,
+             vt.TypeName AS VehicleType,
+             c.CustomerName,
+             w.WarehouseName,
+             wi.TareWeight, wi.WeighDateTime AS WeighInTime,
+             wo.GrossWeight, wo.NetWeight, wo.WeighDateTime AS WeighOutTime,
+             DATEDIFF(MINUTE, wi.WeighDateTime, wo.WeighDateTime) AS TotalMinutes,
+             u.FullName AS OperatorName
+      FROM WMS_WeighOut wo WITH (NOLOCK)
+      JOIN  WMS_Trips t        WITH (NOLOCK) ON t.TripID     = wo.TripID
+      LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON vt.TypeID   = t.VehicleTypeID
+      LEFT JOIN WMS_Customers c     WITH (NOLOCK) ON c.CustomerID = t.CustomerID
+      LEFT JOIN WMS_Warehouses w    WITH (NOLOCK) ON w.WarehouseID = t.WarehouseID
+      LEFT JOIN WMS_WeighIn wi      WITH (NOLOCK) ON wi.TripID    = t.TripID
+      LEFT JOIN WMS_Users u         WITH (NOLOCK) ON u.UserID     = wo.OperatorID
+      WHERE CAST(wo.WeighDateTime AS DATE) >= CAST(DATEADD(DAY,-1,GETUTCDATE()) AS DATE)
+      ORDER BY wo.WeighDateTime DESC
+    `);
+    cSet('wo:today', result.recordset, 15000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -158,3 +170,5 @@ router.get('/today', authenticate, async (req, res) => {
 });
 
 module.exports = router;
+// Export cache invalidator so checker.js can clear wo:pending when a trip completes
+module.exports.clearPendingCache = () => cDel('wo:pending', 'wo:today');

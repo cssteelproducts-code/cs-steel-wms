@@ -67,9 +67,9 @@ router.get('/', authenticate, async (req, res) => {
       .input('Year', sql.NVarChar, String(year))
       .query(`
         SELECT c.*, w.WarehouseName, u.FullName as CreatedByName
-        FROM WMS_LocationChecks c
-        LEFT JOIN WMS_Warehouses w ON c.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Users u ON c.CreatedBy = u.UserID
+        FROM WMS_LocationChecks c WITH (NOLOCK)
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON c.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Users u WITH (NOLOCK) ON c.CreatedBy = u.UserID
         WHERE c.CheckMonth LIKE @Year + '%'
         ORDER BY c.CheckMonth DESC
       `);
