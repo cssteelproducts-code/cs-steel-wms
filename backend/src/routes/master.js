@@ -2,34 +2,28 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const cache = require('../utils/cache');
 const XLSX = require('xlsx');
 const multer = require('multer');
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 5 * 1024 * 1024 } });
 
-// TTL cache for static master data — these tables change rarely.
-const _mc = new Map();
-const mcGet = k => { const e = _mc.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
-const mcSet = (k, v, ms) => _mc.set(k, { v, exp: Date.now() + ms });
-const mcDel = (...keys) => keys.forEach(k => _mc.delete(k));
-const TTL_LONG = 5 * 60000;   // 5 min — vehicle types, warehouses, loading stations
-const TTL_MED  = 5 * 60000;   // 5 min — customers (increased from 2 min; rarely change)
+const TTL = 5 * 60_000; // 5 min — master data changes rarely
 
 // ==================== WAREHOUSES ====================
 router.get('/warehouses', authenticate, async (req, res) => {
   try {
-    const hit = mcGet('warehouses');
-    if (hit) return res.json({ success: true, data: hit });
-    const pool = getPool();
-    const result = await pool.request()
-      .query('SELECT * FROM WMS_Warehouses WITH (NOLOCK) WHERE IsActive = 1 ORDER BY WarehouseName ASC');
-    mcSet('warehouses', result.recordset, TTL_LONG);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('warehouses', async () => {
+      const result = await getPool().request()
+        .query('SELECT * FROM WMS_Warehouses WITH (NOLOCK) WHERE IsActive = 1 ORDER BY WarehouseName ASC');
+      return result.recordset;
+    }, TTL);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.post('/warehouses', authenticate, requireAdmin, async (req, res) => { mcDel('warehouses');
+router.post('/warehouses', authenticate, requireAdmin, async (req, res) => { cache.del('warehouses');
   try {
     const { warehouseCode, warehouseName, location, gpsLat, gpsLng, radiusKm } = req.body;
     const pool = getPool();
@@ -48,7 +42,7 @@ router.post('/warehouses', authenticate, requireAdmin, async (req, res) => { mcD
   }
 });
 
-router.put('/warehouses/:id', authenticate, requireAdmin, async (req, res) => { mcDel('warehouses');
+router.put('/warehouses/:id', authenticate, requireAdmin, async (req, res) => { cache.del('warehouses');
   try {
     const { warehouseCode, warehouseName, location, gpsLat, gpsLng, isActive, radiusKm } = req.body;
     const pool = getPool();
@@ -74,26 +68,31 @@ router.put('/warehouses/:id', authenticate, requireAdmin, async (req, res) => { 
 router.get('/customers', authenticate, async (req, res) => {
   try {
     const search = req.query.search || '';
-    // Only cache the unfiltered list (used by WeighIn page on load)
-    if (!search) {
-      const hit = mcGet('customers');
-      if (hit) return res.json({ success: true, data: hit });
-    }
-    const pool = getPool();
-    const result = await pool.request()
-      .input('Search', sql.NVarChar, `%${search}%`)
-      .query(`SELECT CustomerID, CustomerCode, ARCode, CustomerName, Phone, Address
-              FROM WMS_Customers WITH (NOLOCK)
-              WHERE IsActive = 1 AND (CustomerName LIKE @Search OR CustomerCode LIKE @Search OR ARCode LIKE @Search)
-              ORDER BY CustomerCode ASC`);
-    if (!search) mcSet('customers', result.recordset, TTL_MED);
-    res.json({ success: true, data: result.recordset });
+    const data = search
+      ? await (async () => {
+          const result = await getPool().request()
+            .input('Search', sql.NVarChar, `%${search}%`)
+            .query(`SELECT CustomerID, CustomerCode, ARCode, CustomerName, Phone, Address
+                    FROM WMS_Customers WITH (NOLOCK)
+                    WHERE IsActive = 1 AND (CustomerName LIKE @Search OR CustomerCode LIKE @Search OR ARCode LIKE @Search)
+                    ORDER BY CustomerCode ASC`);
+          return result.recordset;
+        })()
+      : await cache.wrap('customers', async () => {
+          const result = await getPool().request()
+            .query(`SELECT CustomerID, CustomerCode, ARCode, CustomerName, Phone, Address
+                    FROM WMS_Customers WITH (NOLOCK)
+                    WHERE IsActive = 1
+                    ORDER BY CustomerCode ASC`);
+          return result.recordset;
+        }, TTL);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.post('/customers', authenticate, requireAdmin, async (req, res) => { mcDel('customers');
+router.post('/customers', authenticate, requireAdmin, async (req, res) => { cache.del('customers');
   try {
     const { customerCode, customerName, phone, address } = req.body;
     const pool = getPool();
@@ -110,7 +109,7 @@ router.post('/customers', authenticate, requireAdmin, async (req, res) => { mcDe
   }
 });
 
-router.put('/customers/:id', authenticate, requireAdmin, async (req, res) => { mcDel('customers');
+router.put('/customers/:id', authenticate, requireAdmin, async (req, res) => { cache.del('customers');
   try {
     const { customerCode, customerName, phone, address, isActive } = req.body;
     const pool = getPool();
@@ -133,29 +132,28 @@ router.put('/customers/:id', authenticate, requireAdmin, async (req, res) => { m
 // ==================== VEHICLE TYPES ====================
 router.get('/vehicle-types', authenticate, async (req, res) => {
   try {
-    const hit = mcGet('vehicle-types');
-    if (hit) return res.json({ success: true, data: hit });
-    const pool = getPool();
-    const result = await pool.request()
-      .query(`SELECT * FROM WMS_VehicleTypes WITH (NOLOCK) WHERE IsActive = 1 ORDER BY
-        CASE
-          WHEN TypeName LIKE N'%4 ล้อ%'    THEN 1
-          WHEN TypeName LIKE N'%6 ล้อ%'    THEN 2
-          WHEN TypeName LIKE N'%10 ล้อ%'   THEN 3
-          WHEN TypeName LIKE N'%12 ล้อ%'   THEN 4
-          WHEN TypeName LIKE N'%18 ล้อ%'   THEN 5
-          WHEN TypeName LIKE N'%พ่วง%'     THEN 6
-          WHEN TypeName LIKE N'%เทรลเลอร์%' THEN 7
-          ELSE 8
-        END`);
-    mcSet('vehicle-types', result.recordset, TTL_LONG);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('vehicle-types', async () => {
+      const result = await getPool().request()
+        .query(`SELECT * FROM WMS_VehicleTypes WITH (NOLOCK) WHERE IsActive = 1 ORDER BY
+          CASE
+            WHEN TypeName LIKE N'%4 ล้อ%'    THEN 1
+            WHEN TypeName LIKE N'%6 ล้อ%'    THEN 2
+            WHEN TypeName LIKE N'%10 ล้อ%'   THEN 3
+            WHEN TypeName LIKE N'%12 ล้อ%'   THEN 4
+            WHEN TypeName LIKE N'%18 ล้อ%'   THEN 5
+            WHEN TypeName LIKE N'%พ่วง%'     THEN 6
+            WHEN TypeName LIKE N'%เทรลเลอร์%' THEN 7
+            ELSE 8
+          END`);
+      return result.recordset;
+    }, TTL);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.post('/vehicle-types', authenticate, requireAdmin, async (req, res) => { mcDel('vehicle-types');
+router.post('/vehicle-types', authenticate, requireAdmin, async (req, res) => { cache.del('vehicle-types');
   try {
     const { typeName, description, startHour, startMinute, cutoffHour, cutoffMinute } = req.body;
     const pool = getPool();
@@ -174,7 +172,7 @@ router.post('/vehicle-types', authenticate, requireAdmin, async (req, res) => { 
   }
 });
 
-router.put('/vehicle-types/:id', authenticate, requireAdmin, async (req, res) => { mcDel('vehicle-types');
+router.put('/vehicle-types/:id', authenticate, requireAdmin, async (req, res) => { cache.del('vehicle-types');
   try {
     const { typeName, description, startHour, startMinute, cutoffHour, cutoffMinute, isActive } = req.body;
     const pool = getPool();
@@ -201,30 +199,30 @@ router.put('/vehicle-types/:id', authenticate, requireAdmin, async (req, res) =>
 
 // ==================== LOADING STATIONS ====================
 router.get('/loading-stations', authenticate, async (req, res) => {
+  const warehouseId = req.query.warehouseId;
+  const cacheKey = warehouseId ? `loading-stations:${warehouseId}` : 'loading-stations';
   try {
-    const warehouseId = req.query.warehouseId;
-    const cacheKey = warehouseId ? `loading-stations:${warehouseId}` : 'loading-stations';
-    const hit = mcGet(cacheKey);
-    if (hit) return res.json({ success: true, data: hit });
-    const pool = getPool();
-    let query = `SELECT ls.*, w.WarehouseName FROM WMS_LoadingStations ls WITH (NOLOCK)
-                 LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON ls.WarehouseID = w.WarehouseID
-                 WHERE ls.IsActive = 1`;
-    const request = pool.request();
-    if (warehouseId) {
-      query += ' AND ls.WarehouseID = @WarehouseID';
-      request.input('WarehouseID', sql.Int, warehouseId);
-    }
-    query += ' ORDER BY ls.SortOrder, ls.StationName';
-    const result = await request.query(query);
-    mcSet(cacheKey, result.recordset, TTL_LONG);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(cacheKey, async () => {
+      const pool = getPool();
+      const request = pool.request();
+      let query = `SELECT ls.*, w.WarehouseName FROM WMS_LoadingStations ls WITH (NOLOCK)
+                   LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON ls.WarehouseID = w.WarehouseID
+                   WHERE ls.IsActive = 1`;
+      if (warehouseId) {
+        query += ' AND ls.WarehouseID = @WarehouseID';
+        request.input('WarehouseID', sql.Int, warehouseId);
+      }
+      query += ' ORDER BY ls.SortOrder, ls.StationName';
+      const result = await request.query(query);
+      return result.recordset;
+    }, TTL);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-router.post('/loading-stations', authenticate, requireAdmin, async (req, res) => { mcDel('loading-stations');
+router.post('/loading-stations', authenticate, requireAdmin, async (req, res) => { cache.del('loading-stations');
   try {
     const { stationCode, stationName, warehouseId, sortOrder } = req.body;
     const pool = getPool();
@@ -241,7 +239,7 @@ router.post('/loading-stations', authenticate, requireAdmin, async (req, res) =>
   }
 });
 
-router.put('/loading-stations/:id', authenticate, requireAdmin, async (req, res) => { mcDel('loading-stations');
+router.put('/loading-stations/:id', authenticate, requireAdmin, async (req, res) => { cache.del('loading-stations');
   try {
     const { stationCode, stationName, warehouseId, sortOrder, isActive } = req.body;
     const pool = getPool();
@@ -261,7 +259,7 @@ router.put('/loading-stations/:id', authenticate, requireAdmin, async (req, res)
   }
 });
 
-router.delete('/loading-stations/:id', authenticate, requireAdmin, async (req, res) => { mcDel('loading-stations');
+router.delete('/loading-stations/:id', authenticate, requireAdmin, async (req, res) => { cache.del('loading-stations');
   try {
     const pool = getPool();
     await pool.request()
@@ -273,7 +271,7 @@ router.delete('/loading-stations/:id', authenticate, requireAdmin, async (req, r
   }
 });
 
-router.delete('/vehicle-types/:id', authenticate, requireAdmin, async (req, res) => { mcDel('vehicle-types');
+router.delete('/vehicle-types/:id', authenticate, requireAdmin, async (req, res) => { cache.del('vehicle-types');
   try {
     const pool = getPool();
     const inUse = await pool.request()
@@ -290,7 +288,7 @@ router.delete('/vehicle-types/:id', authenticate, requireAdmin, async (req, res)
   }
 });
 
-router.delete('/warehouses/:id', authenticate, requireAdmin, async (req, res) => { mcDel('warehouses');
+router.delete('/warehouses/:id', authenticate, requireAdmin, async (req, res) => { cache.del('warehouses');
   try {
     const pool = getPool();
     await pool.request()
@@ -302,7 +300,7 @@ router.delete('/warehouses/:id', authenticate, requireAdmin, async (req, res) =>
   }
 });
 
-router.delete('/customers/:id', authenticate, requireAdmin, async (req, res) => { mcDel('customers');
+router.delete('/customers/:id', authenticate, requireAdmin, async (req, res) => { cache.del('customers');
   try {
     const pool = getPool();
     await pool.request()
@@ -368,7 +366,7 @@ router.post('/customers/import', authenticate, requireAdmin, upload.single('file
       await req2.query(`INSERT INTO WMS_Customers (CustomerCode,CustomerName,Phone,Address) VALUES ${vals.join(',')}`);
     }
 
-    mcDel('customers');
+    cache.del('customers');
     res.json({ success: true, message: `นำเข้าสำเร็จ ${newRows.length} รายการ (ข้ามซ้ำ ${skipped} รายการ)` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -665,14 +663,15 @@ router.post('/products/import', authenticate, requireAdmin, upload.single('file'
       });
       await r2.query(`INSERT INTO WMS_Products (ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight) VALUES ${vals.join(',')}`);
     }
-    for (const row of toUpdate) {
-      await pool.request()
+    // Run all updates concurrently — each uses its own pool connection
+    await Promise.all(toUpdate.map(row =>
+      pool.request()
         .input('c',sql.NVarChar,row.c).input('n',sql.NVarChar,row.name).input('s',sql.NVarChar,row.skuType)
         .input('cc',sql.NVarChar,row.catCode).input('cn',sql.NVarChar,row.catName).input('m',sql.NVarChar,row.matType)
         .input('f',sql.NVarChar,row.formCode).input('sz',sql.NVarChar,row.sizeCode).input('t',sql.Decimal(8,2),row.thickness)
         .input('tg',sql.NVarChar,row.target).input('w',sql.Decimal(10,3),row.weight)
-        .query(`UPDATE WMS_Products SET ProductName=@n,SKUType=@s,CategoryCode=@cc,CategoryName=@cn,MaterialType=@m,FormCode=@f,SizeCode=@sz,Thickness=@t,TargetGroup=@tg,UnitNetWeight=@w,UpdatedAt=GETDATE() WHERE ProductCode=@c`);
-    }
+        .query(`UPDATE WMS_Products SET ProductName=@n,SKUType=@s,CategoryCode=@cc,CategoryName=@cn,MaterialType=@m,FormCode=@f,SizeCode=@sz,Thickness=@t,TargetGroup=@tg,UnitNetWeight=@w,UpdatedAt=GETDATE() WHERE ProductCode=@c`)
+    ));
     res.json({ success: true, message: `นำเข้าสำเร็จ: เพิ่ม ${toInsert.length} รายการ, อัปเดต ${toUpdate.length} รายการ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });

@@ -2,10 +2,10 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const cache = require('../utils/cache');
 
-let _pendingCache = null;
-let _pendingCacheExp = 0;
-const invalidatePending = () => { _pendingCacheExp = 0; };
+const PENDING_KEY = 'ds:pending';
+const invalidatePending = () => cache.del(PENDING_KEY, 'trips:active', 'dashboard:live');
 
 // POST /api/data-station - Record data station visit (no pickDocumentNo required, multi-station)
 router.post('/', authenticate, async (req, res) => {
@@ -84,37 +84,35 @@ router.post('/', authenticate, async (req, res) => {
 
 // GET /api/data-station/pending
 router.get('/pending', authenticate, async (req, res) => {
-  if (_pendingCache && Date.now() < _pendingCacheExp) {
-    return res.json({ success: true, data: _pendingCache });
-  }
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query(`
-        SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-               t.DeliveryType, t.Priority, t.SOWaitStartedAt,
-               vt.TypeName as VehicleType,
-               w.WarehouseName,
-               c.CustomerName,
-               wi.TareWeight, wi.WeighDateTime,
-               DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as WaitMinutes,
-               CASE WHEN t.SOWaitStartedAt IS NOT NULL
-                    THEN DATEDIFF(SECOND, t.SOWaitStartedAt, DATEADD(HOUR,7,GETUTCDATE()))
-                    ELSE NULL END as SOWaitSeconds
-        FROM WMS_Trips t WITH (NOLOCK)
-        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
-        WHERE t.Status IN ('Data', 'WaitPick')
-        AND NOT EXISTS (SELECT 1 FROM WMS_LoadingRecord lr WITH (NOLOCK) WHERE lr.TripID = t.TripID)
-        AND NOT EXISTS (SELECT 1 FROM WMS_DataStationTargets d WITH (NOLOCK) WHERE d.TripID = t.TripID)
-        AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
-        ORDER BY t.CreatedAt ASC
-      `);
-    _pendingCache = result.recordset;
-    _pendingCacheExp = Date.now() + 10000;
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(PENDING_KEY, async () => {
+      const pool = getPool();
+      const result = await pool.request()
+        .query(`
+          SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+                 t.DeliveryType, t.Priority, t.SOWaitStartedAt,
+                 vt.TypeName as VehicleType,
+                 w.WarehouseName,
+                 c.CustomerName,
+                 wi.TareWeight, wi.WeighDateTime,
+                 DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) as WaitMinutes,
+                 CASE WHEN t.SOWaitStartedAt IS NOT NULL
+                      THEN DATEDIFF(SECOND, t.SOWaitStartedAt, DATEADD(HOUR,7,GETUTCDATE()))
+                      ELSE NULL END as SOWaitSeconds
+          FROM WMS_Trips t WITH (NOLOCK)
+          LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+          LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+          LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+          LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
+          WHERE t.Status IN ('Data', 'WaitPick')
+          AND NOT EXISTS (SELECT 1 FROM WMS_LoadingRecord lr WITH (NOLOCK) WHERE lr.TripID = t.TripID)
+          AND NOT EXISTS (SELECT 1 FROM WMS_DataStationTargets d WITH (NOLOCK) WHERE d.TripID = t.TripID)
+          AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
+          ORDER BY t.CreatedAt ASC
+        `);
+      return result.recordset;
+    }, 10_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

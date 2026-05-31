@@ -2,17 +2,12 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
-
-// Simple in-memory TTL cache — avoids re-running expensive queries on every poll
-const _cache = new Map();
-const getCache = (k) => { const e = _cache.get(k); return (e && Date.now() < e.exp) ? e.data : null; };
-const setCache = (k, d, ms) => _cache.set(k, { data: d, exp: Date.now() + ms });
+const cache = require('../utils/cache');
 
 // GET /api/dashboard/summary
 router.get('/summary', authenticate, async (req, res) => {
-  const cached = getCache('dashboard:summary');
-  if (cached) return res.json({ success: true, data: cached });
   try {
+    const data = await cache.wrap('dashboard:summary', async () => {
     const pool = getPool();
 
     const settle = r => r.status === 'fulfilled' ? r.value : null;
@@ -294,8 +289,9 @@ router.get('/summary', authenticate, async (req, res) => {
       overtimeByTypeMonth: overtimeByTypeMonth?.recordset || [],
       overtimeByTypeYear:  overtimeByTypeYear?.recordset  || []
     };
-    setCache('dashboard:summary', responseData, 60000); // 60s cache
-    res.json({ success: true, data: responseData });
+      return responseData;
+    }, 60_000); // 60s cache
+    res.json({ success: true, data });
   } catch (err) {
     console.error('Dashboard error:', err);
     res.status(500).json({ success: false, message: err.message });
@@ -361,9 +357,8 @@ router.get('/monthly-report', authenticate, async (req, res) => {
 
 // GET /api/dashboard/live - Live trip monitor
 router.get('/live', authenticate, async (req, res) => {
-  const cached = getCache('dashboard:live');
-  if (cached) return res.json({ success: true, data: cached });
   try {
+    const data = await cache.wrap('dashboard:live', async () => {
     const pool = getPool();
 
     // Replaced correlated STUFF/FOR XML PATH (1 sub-query per trip row) with
@@ -419,12 +414,11 @@ router.get('/live', authenticate, async (req, res) => {
       if (!stMap[r.TripID]) stMap[r.TripID] = [];
       stMap[r.TripID].push(`${r.StationName}:${r.IsDone}`);
     }
-    const data = tripRes.recordset.map(t => ({
+    return tripRes.recordset.map(t => ({
       ...t,
       TargetStations: stMap[t.TripID] ? stMap[t.TripID].join(',') : null
     }));
-
-    setCache('dashboard:live', data, 15000);
+    }, 15_000); // 15s cache
     res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

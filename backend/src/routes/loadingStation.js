@@ -2,11 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const cache = require('../utils/cache');
 
-const _lc = new Map();
-const lcGet = k => { const e = _lc.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
-const lcSet = (k, v, ms) => _lc.set(k, { v, exp: Date.now() + ms });
-const lcDel = (...keys) => keys.forEach(k => _lc.delete(k));
+const invalidateLS = () => cache.del('ls:active', 'ls:stations-status', 'trips:active', 'dashboard:live');
 
 // POST /api/loading-station/entry - Record entry to loading station
 router.post('/entry', authenticate, async (req, res) => {
@@ -60,7 +58,7 @@ router.post('/entry', authenticate, async (req, res) => {
     const recordId = result.recordset[0].RecordID;
     const info2 = info.recordset[0];
 
-    lcDel('ls:active', 'ls:stations-status');
+    invalidateLS();
     res.json({
       success: true,
       recordId,
@@ -135,7 +133,7 @@ router.put('/exit/:recordId', authenticate, async (req, res) => {
                 WHERE TripID=@TripID AND Status NOT IN ('Complete','Cancelled','WeighOut','Checker')`);
     }
 
-    lcDel('ls:active', 'ls:stations-status');
+    invalidateLS();
     res.json({
       success: true,
       message: `บันทึกออกจากสถานี "${r.StationName}" สำเร็จ | ทะเบียน: ${r.LicensePlate} | เวลาอยู่: ${durationMinutes} นาที`
@@ -166,41 +164,37 @@ router.put('/done/:tripId', authenticate, async (req, res) => {
 router.get('/active', authenticate, async (req, res) => {
   const { stationId } = req.query;
   const cacheKey = stationId ? `ls:active:${stationId}` : 'ls:active';
-  const hit = lcGet(cacheKey);
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-
-    let whereClause = 'WHERE lr.ExitTime IS NULL AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)';
-    const request = pool.request();
-
-    if (stationId) {
-      whereClause += ' AND lr.StationID = @StationID';
-      request.input('StationID', sql.Int, stationId);
-    }
-
-    const result = await request.query(`
-      SELECT lr.RecordID, lr.TripID, lr.StationID, lr.EntryTime, lr.Notes,
-             ls.StationName, ls.StationCode,
-             t.LicensePlate, t.Status, t.DeliveryType, t.Priority,
-             vt.TypeName as VehicleType,
-             c.CustomerName,
-             w.WarehouseName,
-             DATEDIFF(MINUTE, lr.EntryTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesAtStation,
-             u.FullName as OperatorName
-      FROM WMS_LoadingRecord lr WITH (NOLOCK)
-      JOIN WMS_LoadingStations ls WITH (NOLOCK) ON lr.StationID = ls.StationID
-      JOIN WMS_Trips t WITH (NOLOCK) ON lr.TripID = t.TripID
-      LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
-      LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
-      LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
-      LEFT JOIN WMS_Users u WITH (NOLOCK) ON lr.OperatorID = u.UserID
-      ${whereClause}
-      ORDER BY lr.EntryTime DESC
-    `);
-
-    lcSet(cacheKey, result.recordset, 20000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(cacheKey, async () => {
+      const pool = getPool();
+      let whereClause = 'WHERE lr.ExitTime IS NULL AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)';
+      const request = pool.request();
+      if (stationId) {
+        whereClause += ' AND lr.StationID = @StationID';
+        request.input('StationID', sql.Int, stationId);
+      }
+      const result = await request.query(`
+        SELECT lr.RecordID, lr.TripID, lr.StationID, lr.EntryTime, lr.Notes,
+               ls.StationName, ls.StationCode,
+               t.LicensePlate, t.Status, t.DeliveryType, t.Priority,
+               vt.TypeName as VehicleType,
+               c.CustomerName,
+               w.WarehouseName,
+               DATEDIFF(MINUTE, lr.EntryTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesAtStation,
+               u.FullName as OperatorName
+        FROM WMS_LoadingRecord lr WITH (NOLOCK)
+        JOIN WMS_LoadingStations ls WITH (NOLOCK) ON lr.StationID = ls.StationID
+        JOIN WMS_Trips t WITH (NOLOCK) ON lr.TripID = t.TripID
+        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Users u WITH (NOLOCK) ON lr.OperatorID = u.UserID
+        ${whereClause}
+        ORDER BY lr.EntryTime DESC
+      `);
+      return result.recordset;
+    }, 20_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -253,36 +247,36 @@ router.get('/trip/:tripId', authenticate, async (req, res) => {
 
 // GET /api/loading-station/stations-status - Get all stations with current occupancy
 router.get('/stations-status', authenticate, async (req, res) => {
-  const hit = lcGet('ls:stations-status');
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query(`
-        SELECT ls.StationID, ls.StationCode, ls.StationName, ls.WarehouseID,
-               w.WarehouseName,
-               COUNT(lr.RecordID) as ActiveTrucks,
-               ct.LicensePlate as CurrentTruck
-        FROM WMS_LoadingStations ls WITH (NOLOCK)
-        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON ls.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_LoadingRecord lr WITH (NOLOCK) ON ls.StationID = lr.StationID
-          AND lr.ExitTime IS NULL
-          AND EXISTS(SELECT 1 FROM WMS_Trips t WITH (NOLOCK) WHERE t.TripID = lr.TripID
-                     AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
-        LEFT JOIN (
-          SELECT lr2.StationID, t2.LicensePlate,
-                 ROW_NUMBER() OVER (PARTITION BY lr2.StationID ORDER BY lr2.EntryTime DESC) as rn
-          FROM WMS_LoadingRecord lr2 WITH (NOLOCK)
-          JOIN WMS_Trips t2 WITH (NOLOCK) ON lr2.TripID = t2.TripID
-          WHERE lr2.ExitTime IS NULL
-            AND CAST(t2.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
-        ) ct ON ct.StationID = ls.StationID AND ct.rn = 1
-        WHERE ls.IsActive = 1
-        GROUP BY ls.StationID, ls.StationCode, ls.StationName, ls.WarehouseID, w.WarehouseName, ct.LicensePlate
-        ORDER BY ls.SortOrder, ls.StationName
-      `);
-    lcSet('ls:stations-status', result.recordset, 5000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('ls:stations-status', async () => {
+      const pool = getPool();
+      const result = await pool.request()
+        .query(`
+          SELECT ls.StationID, ls.StationCode, ls.StationName, ls.WarehouseID,
+                 w.WarehouseName,
+                 COUNT(lr.RecordID) as ActiveTrucks,
+                 ct.LicensePlate as CurrentTruck
+          FROM WMS_LoadingStations ls WITH (NOLOCK)
+          LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON ls.WarehouseID = w.WarehouseID
+          LEFT JOIN WMS_LoadingRecord lr WITH (NOLOCK) ON ls.StationID = lr.StationID
+            AND lr.ExitTime IS NULL
+            AND EXISTS(SELECT 1 FROM WMS_Trips t WITH (NOLOCK) WHERE t.TripID = lr.TripID
+                       AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
+          LEFT JOIN (
+            SELECT lr2.StationID, t2.LicensePlate,
+                   ROW_NUMBER() OVER (PARTITION BY lr2.StationID ORDER BY lr2.EntryTime DESC) as rn
+            FROM WMS_LoadingRecord lr2 WITH (NOLOCK)
+            JOIN WMS_Trips t2 WITH (NOLOCK) ON lr2.TripID = t2.TripID
+            WHERE lr2.ExitTime IS NULL
+              AND CAST(t2.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+          ) ct ON ct.StationID = ls.StationID AND ct.rn = 1
+          WHERE ls.IsActive = 1
+          GROUP BY ls.StationID, ls.StationCode, ls.StationName, ls.WarehouseID, w.WarehouseName, ct.LicensePlate
+          ORDER BY ls.SortOrder, ls.StationName
+        `);
+      return result.recordset;
+    }, 5_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

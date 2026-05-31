@@ -2,6 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const cache = require('../utils/cache');
+
+const TODAY_KEY = 'weigh-in:today';
 
 // POST /api/weigh-in - Create new trip + weigh-in record
 router.post('/', authenticate, async (req, res) => {
@@ -67,6 +70,7 @@ router.post('/', authenticate, async (req, res) => {
 
       await transaction.commit();
 
+      cache.del('trips:active', TODAY_KEY);
       res.json({ success: true, tripId, message: `บันทึกชั่งเข้าสำเร็จ | Trip #${tripId} | ทะเบียน: ${licensePlate}` });
     } catch (err) {
       await transaction.rollback();
@@ -81,26 +85,29 @@ router.post('/', authenticate, async (req, res) => {
 // GET /api/weigh-in/today - Get today's weigh-in list
 router.get('/today', authenticate, async (req, res) => {
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query(`
-        SELECT t.TripID, t.LicensePlate, t.TripDate, t.Status,
-               t.VehicleTypeID, t.WarehouseID, t.CustomerID, t.DeliveryType,
-               vt.TypeName as VehicleType,
-               w.WarehouseName,
-               c.CustomerName, c.ARCode as CustomerARCode,
-               wi.TareWeight, wi.WeighDateTime, wi.Notes,
-               u.FullName as OperatorName
-        FROM WMS_WeighIn wi WITH (NOLOCK)
-        JOIN WMS_Trips t WITH (NOLOCK) ON wi.TripID = t.TripID
-        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_Users u WITH (NOLOCK) ON wi.OperatorID = u.UserID
-        WHERE CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
-        ORDER BY wi.WeighDateTime DESC
-      `);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(TODAY_KEY, async () => {
+      const pool = getPool();
+      const result = await pool.request()
+        .query(`
+          SELECT t.TripID, t.LicensePlate, t.TripDate, t.Status,
+                 t.VehicleTypeID, t.WarehouseID, t.CustomerID, t.DeliveryType,
+                 vt.TypeName as VehicleType,
+                 w.WarehouseName,
+                 c.CustomerName, c.ARCode as CustomerARCode,
+                 wi.TareWeight, wi.WeighDateTime, wi.Notes,
+                 u.FullName as OperatorName
+          FROM WMS_WeighIn wi WITH (NOLOCK)
+          JOIN WMS_Trips t WITH (NOLOCK) ON wi.TripID = t.TripID
+          LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+          LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+          LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+          LEFT JOIN WMS_Users u WITH (NOLOCK) ON wi.OperatorID = u.UserID
+          WHERE CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
+          ORDER BY wi.WeighDateTime DESC
+        `);
+      return result.recordset;
+    }, 10_000); // 10s — fresh enough for a fast-moving list
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -129,6 +136,7 @@ router.put('/:tripId', authenticate, async (req, res) => {
         .input('Notes', sql.NVarChar, notes || '')
         .query(`UPDATE WMS_WeighIn SET TareWeight=@TareWeight, Notes=@Notes WHERE TripID=@TripID`);
       await transaction.commit();
+      cache.del(TODAY_KEY, 'trips:active');
       res.json({ success: true, message: 'แก้ไขข้อมูลสำเร็จ' });
     } catch (err) {
       await transaction.rollback();

@@ -18,7 +18,7 @@ const dbConfig = {
     max: 50,
     min: 10,
     idleTimeoutMillis: 60000,
-    acquireTimeoutMillis: 5000
+    acquireTimeoutMillis: 15000  // 15s: enough headroom for 50+ concurrent users under peak load
   }
 };
 

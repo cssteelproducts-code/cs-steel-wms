@@ -487,9 +487,9 @@ const runMigrations = async () => {
     `IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Products') AND name='UpdatedAt')
        ALTER TABLE WMS_Products ADD UpdatedAt DATETIME NULL`,
   ];
-  for (const sql of productsAlters) {
-    try { await pool.request().query(sql); } catch (e) { console.warn('⚠ Products alter:', e.message); }
-  }
+  await Promise.all(productsAlters.map(q =>
+    pool.request().query(q).catch(e => console.warn('⚠ Products alter:', e.message))
+  ));
   console.log('✅ WMS_Products columns ready');
 
   try {

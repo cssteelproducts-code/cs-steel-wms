@@ -2,11 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const cache = require('../utils/cache');
 
-const _tc = new Map();
-const tcGet = k => { const e = _tc.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
-const tcSet = (k, v, ms) => _tc.set(k, { v, exp: Date.now() + ms });
-const tcDel = (...keys) => keys.forEach(k => _tc.delete(k));
+const ACTIVE_KEY = 'trips:active';
 
 // GET /api/trips - List trips with filters
 router.get('/', authenticate, async (req, res) => {
@@ -82,51 +80,51 @@ router.get('/', authenticate, async (req, res) => {
 
 // GET /api/trips/active - Get active trips (in warehouse)
 router.get('/active', authenticate, async (req, res) => {
-  const hit = tcGet('trips:active');
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query(`
-        SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-               t.DeliveryType, t.Priority,
-               vt.TypeName as VehicleType,
-               w.WarehouseName,
-               c.CustomerName,
-               wi.TareWeight, wi.WeighDateTime as WeighInTime,
-               ds.DataStationID, ds.PickDocumentNo, ds.TargetStationID,
-               ls_target.StationName as TargetStation,
-               ISNULL(rem.RemainingStations, 0) as RemainingStations,
-               DATEDIFF(MINUTE, t.CreatedAt, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
-               cur.StationName as CurrentStation
-        FROM WMS_Trips t WITH (NOLOCK)
-        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
-        LEFT JOIN WMS_DataStation ds WITH (NOLOCK) ON t.TripID = ds.TripID
-        LEFT JOIN WMS_LoadingStations ls_target WITH (NOLOCK) ON ds.TargetStationID = ls_target.StationID
-        LEFT JOIN (
-          SELECT dst.TripID,
-            SUM(CASE WHEN lrc.RecordID IS NULL THEN 1 ELSE 0 END) as RemainingStations
-          FROM WMS_DataStationTargets dst WITH (NOLOCK)
-          LEFT JOIN WMS_LoadingRecord lrc WITH (NOLOCK) ON lrc.TripID = dst.TripID
-            AND lrc.StationID = dst.StationID AND lrc.ExitTime IS NOT NULL
-          GROUP BY dst.TripID
-        ) rem ON rem.TripID = t.TripID
-        LEFT JOIN (
-          SELECT lr.TripID, ls.StationName,
-            ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
-          FROM WMS_LoadingRecord lr WITH (NOLOCK)
-          JOIN WMS_LoadingStations ls WITH (NOLOCK) ON lr.StationID = ls.StationID
-          WHERE lr.ExitTime IS NULL
-        ) cur ON cur.TripID = t.TripID AND cur.rn = 1
-        WHERE t.Status NOT IN ('Complete', 'Cancelled')
-        AND t.TripDate >= DATEADD(DAY, -1, CAST(GETUTCDATE() AS DATE))
-        ORDER BY t.CreatedAt DESC
-      `);
-    tcSet('trips:active', result.recordset, 20000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(ACTIVE_KEY, async () => {
+      const pool = getPool();
+      const result = await pool.request()
+        .query(`
+          SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+                 t.DeliveryType, t.Priority,
+                 vt.TypeName as VehicleType,
+                 w.WarehouseName,
+                 c.CustomerName,
+                 wi.TareWeight, wi.WeighDateTime as WeighInTime,
+                 ds.DataStationID, ds.PickDocumentNo, ds.TargetStationID,
+                 ls_target.StationName as TargetStation,
+                 ISNULL(rem.RemainingStations, 0) as RemainingStations,
+                 DATEDIFF(MINUTE, t.CreatedAt, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
+                 cur.StationName as CurrentStation
+          FROM WMS_Trips t WITH (NOLOCK)
+          LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+          LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+          LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+          LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
+          LEFT JOIN WMS_DataStation ds WITH (NOLOCK) ON t.TripID = ds.TripID
+          LEFT JOIN WMS_LoadingStations ls_target WITH (NOLOCK) ON ds.TargetStationID = ls_target.StationID
+          LEFT JOIN (
+            SELECT dst.TripID,
+              SUM(CASE WHEN lrc.RecordID IS NULL THEN 1 ELSE 0 END) as RemainingStations
+            FROM WMS_DataStationTargets dst WITH (NOLOCK)
+            LEFT JOIN WMS_LoadingRecord lrc WITH (NOLOCK) ON lrc.TripID = dst.TripID
+              AND lrc.StationID = dst.StationID AND lrc.ExitTime IS NOT NULL
+            GROUP BY dst.TripID
+          ) rem ON rem.TripID = t.TripID
+          LEFT JOIN (
+            SELECT lr.TripID, ls.StationName,
+              ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
+            FROM WMS_LoadingRecord lr WITH (NOLOCK)
+            JOIN WMS_LoadingStations ls WITH (NOLOCK) ON lr.StationID = ls.StationID
+            WHERE lr.ExitTime IS NULL
+          ) cur ON cur.TripID = t.TripID AND cur.rn = 1
+          WHERE t.Status NOT IN ('Complete', 'Cancelled')
+          AND t.TripDate >= DATEADD(DAY, -1, CAST(GETUTCDATE() AS DATE))
+          ORDER BY t.CreatedAt DESC
+        `);
+      return result.recordset;
+    }, 20_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -207,7 +205,7 @@ router.put('/:id/cancel', authenticate, async (req, res) => {
     await pool.request()
       .input('TripID', sql.Int, req.params.id)
       .query(`UPDATE WMS_Trips SET Status = 'Cancelled' WHERE TripID = @TripID`);
-    tcDel('trips:active');
+    cache.del(ACTIVE_KEY);
     res.json({ success: true, message: 'ยกเลิก Trip สำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
