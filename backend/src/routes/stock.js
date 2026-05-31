@@ -248,21 +248,22 @@ router.post('/count/:id/import-excel', upload.single('file'), async (req, res) =
     await pool.request().input('cid', sql.Int, req.params.id)
       .query('DELETE FROM WMS_StockCountItems WHERE CountID=@cid');
 
-    let inserted = 0;
-    for (const row of dataRows) {
-      const itemCode = String(row[col('Itemcode')] || '').trim();
-      if (!itemCode) continue;
-      await pool.request()
-        .input('cid', sql.Int, parseInt(req.params.id))
-        .input('ic', sql.NVarChar, itemCode)
-        .input('en', sql.NVarChar, String(row[col('ItemName')] || '').trim())
-        .input('loc', sql.NVarChar, String(row[col('Location')] || '').trim() || null)
-        .input('wc', sql.NVarChar, String(row[col('Warehouse')] || '').trim() || null)
-        .input('sku', sql.NVarChar, String(row[col('TypeSUK')] || '').trim() || null)
-        .input('sq', sql.Decimal(12,3), parseFloat(row[col('Quantity')]) || 0)
-        .query(`INSERT INTO WMS_StockCountItems (CountID,ItemCode,ExternalName,Location,WarehouseCode,TypeSKU,SystemQty,IsClosed) VALUES (@cid,@ic,@en,@loc,@wc,@sku,@sq,0)`);
-      inserted++;
+    const validRows = dataRows.filter(row => String(row[col('Itemcode')] || '').trim());
+    const BATCH = 30;
+    for (let i = 0; i < validRows.length; i += BATCH) {
+      await Promise.all(validRows.slice(i, i + BATCH).map(row =>
+        pool.request()
+          .input('cid', sql.Int, parseInt(req.params.id))
+          .input('ic', sql.NVarChar, String(row[col('Itemcode')] || '').trim())
+          .input('en', sql.NVarChar, String(row[col('ItemName')] || '').trim())
+          .input('loc', sql.NVarChar, String(row[col('Location')] || '').trim() || null)
+          .input('wc', sql.NVarChar, String(row[col('Warehouse')] || '').trim() || null)
+          .input('sku', sql.NVarChar, String(row[col('TypeSUK')] || '').trim() || null)
+          .input('sq', sql.Decimal(12,3), parseFloat(row[col('Quantity')]) || 0)
+          .query(`INSERT INTO WMS_StockCountItems (CountID,ItemCode,ExternalName,Location,WarehouseCode,TypeSKU,SystemQty,IsClosed) VALUES (@cid,@ic,@en,@loc,@wc,@sku,@sq,0)`)
+      ));
     }
+    const inserted = validRows.length;
     await pool.request().input('id', sql.Int, parseInt(req.params.id))
       .query("UPDATE WMS_StockCount SET Status='OPEN' WHERE CountID=@id");
     res.json({ success: true, message: `นำเข้าสำเร็จ ${inserted} รายการ`, imported: inserted });
@@ -335,9 +336,11 @@ router.put('/count/:id/close-items', async (req, res) => {
       await pool.request().input('cid', sql.Int, req.params.id).input('by', sql.Int, by)
         .query('UPDATE WMS_StockCountItems SET IsClosed=1,ClosedBy=@by,ClosedAt=GETDATE() WHERE CountID=@cid AND IsClosed=0');
     } else if (itemIds?.length) {
-      for (const iid of itemIds)
-        await pool.request().input('iid', sql.Int, iid).input('by', sql.Int, by)
-          .query('UPDATE WMS_StockCountItems SET IsClosed=1,ClosedBy=@by,ClosedAt=GETDATE() WHERE ItemID=@iid');
+      const safeIds = itemIds.map(id => parseInt(id)).filter(n => Number.isInteger(n) && n > 0).join(',');
+      if (safeIds) {
+        await pool.request().input('by', sql.Int, by)
+          .query(`UPDATE WMS_StockCountItems SET IsClosed=1,ClosedBy=@by,ClosedAt=GETDATE() WHERE ItemID IN (${safeIds})`);
+      }
     }
     const rem = await pool.request().input('cid', sql.Int, req.params.id)
       .query('SELECT COUNT(*) AS cnt FROM WMS_StockCountItems WHERE CountID=@cid AND IsClosed=0');
@@ -356,9 +359,11 @@ router.put('/count/:id/reopen-items', async (req, res) => {
     const pool = getPool();
     const { itemIds } = req.body;
     if (itemIds?.length) {
-      for (const iid of itemIds)
-        await pool.request().input('iid', sql.Int, iid)
-          .query('UPDATE WMS_StockCountItems SET IsClosed=0,ClosedBy=NULL,ClosedAt=NULL WHERE ItemID=@iid');
+      const safeIds = itemIds.map(id => parseInt(id)).filter(n => Number.isInteger(n) && n > 0).join(',');
+      if (safeIds) {
+        await pool.request()
+          .query(`UPDATE WMS_StockCountItems SET IsClosed=0,ClosedBy=NULL,ClosedAt=NULL WHERE ItemID IN (${safeIds})`);
+      }
       await pool.request().input('cid', sql.Int, req.params.id)
         .query("UPDATE WMS_StockCount SET Status='OPEN' WHERE CountID=@cid AND Status='CLOSED'");
     }

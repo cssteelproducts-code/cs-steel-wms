@@ -20,6 +20,7 @@ app.use(cors({
 
 // Rate limiting
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 50 }));
+app.use('/api/', rateLimit({ windowMs: 60 * 1000, max: 300, skip: (req) => req.path === '/health' }));
 
 // Logging & parsing
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -521,10 +522,12 @@ const runMigrations = async () => {
     [`IX_LoadingRecord_TripID_ExitTime`, `WMS_LoadingRecord`, `TripID, ExitTime`],
     [`IX_LoadingRecord_StationID_Exit`, `WMS_LoadingRecord`, `StationID, ExitTime`],
     [`IX_DataStationTargets_TripID`, `WMS_DataStationTargets`, `TripID`],
+    [`IX_DataStationTargets_StationID`, `WMS_DataStationTargets`, `StationID`],
     [`IX_WeighIn_TripID`, `WMS_WeighIn`, `TripID`],
     [`IX_WeighOut_TripID`, `WMS_WeighOut`, `TripID`],
     [`IX_Alerts_IsRead_IsResolved`, `WMS_Alerts`, `IsRead, IsResolved`],
     [`IX_CheckerRecord_TripID`, `WMS_CheckerRecord`, `TripID`],
+    [`IX_Users_IsActive`, `WMS_Users`, `IsActive, UserID`],
   ];
   for (const [name, table, cols] of indexes) {
     try {

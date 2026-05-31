@@ -294,7 +294,7 @@ router.get('/summary', authenticate, async (req, res) => {
       overtimeByTypeMonth: overtimeByTypeMonth?.recordset || [],
       overtimeByTypeYear:  overtimeByTypeYear?.recordset  || []
     };
-    setCache('dashboard:summary', responseData, 12000); // 12s cache
+    setCache('dashboard:summary', responseData, 60000); // 60s cache
     res.json({ success: true, data: responseData });
   } catch (err) {
     console.error('Dashboard error:', err);
@@ -423,7 +423,7 @@ router.get('/live', authenticate, async (req, res) => {
       TargetStations: stMap[t.TripID] ? stMap[t.TripID].join(',') : null
     }));
 
-    setCache('dashboard:live', data, 8000);
+    setCache('dashboard:live', data, 15000);
     res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -135,7 +135,7 @@ router.get('/active', authenticate, async (req, res) => {
         AND t.TripDate >= DATEADD(DAY, -1, CAST(GETUTCDATE() AS DATE))
         ORDER BY t.CreatedAt DESC
       `);
-    tcSet('trips:active', result.recordset, 5000);
+    tcSet('trips:active', result.recordset, 20000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

@@ -199,7 +199,7 @@ router.get('/active', authenticate, async (req, res) => {
       ORDER BY lr.EntryTime DESC
     `);
 
-    lcSet(cacheKey, result.recordset, 5000);
+    lcSet(cacheKey, result.recordset, 20000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

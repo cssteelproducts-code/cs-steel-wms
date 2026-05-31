@@ -15,10 +15,10 @@ const dbConfig = {
     requestTimeout: 30000
   },
   pool: {
-    max: 30,
-    min: 2,
-    idleTimeoutMillis: 30000,
-    acquireTimeoutMillis: 15000
+    max: 50,
+    min: 10,
+    idleTimeoutMillis: 60000,
+    acquireTimeoutMillis: 5000
   }
 };
 

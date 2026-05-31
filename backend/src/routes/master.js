@@ -883,26 +883,29 @@ router.post('/internal-vehicles/import', authenticate, requireAdmin, upload.sing
       existingPlates.add(p);
     }
 
-    for (const row of newRows) {
-      await pool.request()
-        .input('LicensePlate', sql.NVarChar, row.plate)
-        .input('VehicleName', sql.NVarChar, row.name)
-        .input('VehicleCategory', sql.NVarChar, row.category)
-        .input('InsuranceCompany', sql.NVarChar, row.insuranceCompany)
-        .input('InsuranceType', sql.NVarChar, row.insuranceType)
-        .input('InsuranceExpiry', sql.Date, row.insuranceExpiry || null)
-        .input('ActCompany', sql.NVarChar, row.actCompany)
-        .input('ActExpiry', sql.Date, row.actExpiry || null)
-        .input('TaxExpiry', sql.Date, row.taxExpiry || null)
-        .input('BedWidth', sql.Decimal(8,2), row.bedWidth)
-        .input('BedLength', sql.Decimal(8,2), row.bedLength)
-        .input('BedHeight', sql.Decimal(8,2), row.bedHeight)
-        .input('PayloadKg', sql.Decimal(10,2), row.payloadKg)
-        .query(`INSERT INTO WMS_InternalVehicles
-          (LicensePlate,VehicleName,VehicleCategory,InsuranceCompany,InsuranceType,InsuranceExpiry,ActCompany,ActExpiry,TaxExpiry,
-           BedWidth,BedLength,BedHeight,PayloadKg,VehicleStatus,IsActive)
-          VALUES (@LicensePlate,@VehicleName,@VehicleCategory,@InsuranceCompany,@InsuranceType,@InsuranceExpiry,@ActCompany,@ActExpiry,@TaxExpiry,
-           @BedWidth,@BedLength,@BedHeight,@PayloadKg,N'พร้อมใช้',1)`);
+    const BATCH = 20;
+    for (let i = 0; i < newRows.length; i += BATCH) {
+      await Promise.all(newRows.slice(i, i + BATCH).map(row =>
+        pool.request()
+          .input('LicensePlate', sql.NVarChar, row.plate)
+          .input('VehicleName', sql.NVarChar, row.name)
+          .input('VehicleCategory', sql.NVarChar, row.category)
+          .input('InsuranceCompany', sql.NVarChar, row.insuranceCompany)
+          .input('InsuranceType', sql.NVarChar, row.insuranceType)
+          .input('InsuranceExpiry', sql.Date, row.insuranceExpiry || null)
+          .input('ActCompany', sql.NVarChar, row.actCompany)
+          .input('ActExpiry', sql.Date, row.actExpiry || null)
+          .input('TaxExpiry', sql.Date, row.taxExpiry || null)
+          .input('BedWidth', sql.Decimal(8,2), row.bedWidth)
+          .input('BedLength', sql.Decimal(8,2), row.bedLength)
+          .input('BedHeight', sql.Decimal(8,2), row.bedHeight)
+          .input('PayloadKg', sql.Decimal(10,2), row.payloadKg)
+          .query(`INSERT INTO WMS_InternalVehicles
+            (LicensePlate,VehicleName,VehicleCategory,InsuranceCompany,InsuranceType,InsuranceExpiry,ActCompany,ActExpiry,TaxExpiry,
+             BedWidth,BedLength,BedHeight,PayloadKg,VehicleStatus,IsActive)
+            VALUES (@LicensePlate,@VehicleName,@VehicleCategory,@InsuranceCompany,@InsuranceType,@InsuranceExpiry,@ActCompany,@ActExpiry,@TaxExpiry,
+             @BedWidth,@BedLength,@BedHeight,@PayloadKg,N'พร้อมใช้',1)`)
+      ));
     }
 
     res.json({ success: true, message: `นำเข้าสำเร็จ ${newRows.length} รายการ (ข้ามซ้ำ ${skipped} รายการ)` });
