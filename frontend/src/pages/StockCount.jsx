@@ -945,7 +945,7 @@ export default function StockCount() {
                 )}
               </div>
 
-              <div className="flex gap-2 flex-wrap">
+              <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex gap-2 flex-wrap items-center">
                 {[
                   { v: 'all', l: 'ทั้งหมด' },
                   { v: 'recount', l: 'ตรวจนับซ้ำ' },
@@ -953,7 +953,7 @@ export default function StockCount() {
                   { v: 'done', l: 'นับแล้ว' },
                 ].map(({ v, l }) => (
                   <button key={v} onClick={() => setFieldFilter(v)}
-                    className={`px-3 h-8 rounded-xl text-xs font-bold transition-all ${fieldFilter === v ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600'}`}>
+                    className={`px-3 h-8 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${fieldFilter === v ? 'bg-red-600 text-white' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}>
                     {l}
                     {v === 'recount' && fieldData?.items?.filter(i => i.NeedsRecount).length > 0 && (
                       <span className="ml-1 px-1.5 rounded-full bg-amber-200 text-amber-800 text-[9px]">
@@ -964,19 +964,19 @@ export default function StockCount() {
                 ))}
                 {fieldWarehouses.length > 0 && (
                   <SearchSelect value={filterFieldWH} onChange={v => { setFilterFieldWH(v); setFilterFieldLoc(''); }}
-                    options={fieldWarehouses} placeholder="— คลัง —" className="w-28" />
+                    options={fieldWarehouses} placeholder="— คลัง —" className="w-28 flex-shrink-0" />
                 )}
                 {fieldLocations.length > 0 && (
                   <SearchSelect value={filterFieldLoc} onChange={setFilterFieldLoc}
-                    options={fieldLocations} placeholder="— Location —" className="w-32" />
+                    options={fieldLocations} placeholder="— Location —" className="w-32 flex-shrink-0" />
                 )}
-                <div className="relative flex-1 min-w-[160px]">
+                <div className="relative flex-1 min-w-[140px]">
                   <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
                     placeholder="ค้นหา..." className="input-field pl-8 text-sm h-8" />
                 </div>
                 <button onClick={() => fetchFieldData(fieldSessionId)}
-                  className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-500 transition-colors">
+                  className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0">
                   <RefreshCw size={14} className={fieldLoading ? 'animate-spin' : ''} />
                 </button>
               </div>

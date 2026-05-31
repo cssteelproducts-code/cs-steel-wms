@@ -381,18 +381,19 @@ router.get('/live', authenticate, async (req, res) => {
                ISNULL(lr_ex.HasRecord, 0) as HasLoadingRecord,
                ISNULL(dst_ex.HasTargets, 0) as HasDataStationTargets,
                cur.StationName as CurrentStation
-        FROM WMS_Trips t
-        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-        LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord) lr_ex ON lr_ex.TripID = t.TripID
-        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets) dst_ex ON dst_ex.TripID = t.TripID
+        FROM WMS_Trips t WITH (NOLOCK)
+        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
+        LEFT JOIN WMS_DataStation ds WITH (NOLOCK) ON t.TripID = ds.TripID
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasRecord FROM WMS_LoadingRecord WITH (NOLOCK)) lr_ex ON lr_ex.TripID = t.TripID
+        LEFT JOIN (SELECT DISTINCT TripID, 1 as HasTargets FROM WMS_DataStationTargets WITH (NOLOCK)) dst_ex ON dst_ex.TripID = t.TripID
         LEFT JOIN (
           SELECT lr.TripID, ls2.StationName,
             ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
-          FROM WMS_LoadingRecord lr JOIN WMS_LoadingStations ls2 ON lr.StationID=ls2.StationID
+          FROM WMS_LoadingRecord lr WITH (NOLOCK)
+          JOIN WMS_LoadingStations ls2 WITH (NOLOCK) ON lr.StationID=ls2.StationID
           WHERE lr.ExitTime IS NULL
         ) cur ON cur.TripID = t.TripID AND cur.rn = 1
         WHERE t.Status NOT IN ('Complete','Cancelled')
@@ -402,12 +403,12 @@ router.get('/live', authenticate, async (req, res) => {
       pool.request().query(`
         SELECT dst.TripID, ls.StationName,
           CASE WHEN EXISTS(
-            SELECT 1 FROM WMS_LoadingRecord lr
+            SELECT 1 FROM WMS_LoadingRecord lr WITH (NOLOCK)
             WHERE lr.TripID = dst.TripID AND lr.StationID = dst.StationID AND lr.ExitTime IS NOT NULL
           ) THEN 1 ELSE 0 END as IsDone
-        FROM WMS_DataStationTargets dst
-        JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
-        JOIN WMS_Trips t ON dst.TripID = t.TripID
+        FROM WMS_DataStationTargets dst WITH (NOLOCK)
+        JOIN WMS_LoadingStations ls WITH (NOLOCK) ON dst.StationID = ls.StationID
+        JOIN WMS_Trips t WITH (NOLOCK) ON dst.TripID = t.TripID
         WHERE t.Status NOT IN ('Complete','Cancelled')
           AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
       `)

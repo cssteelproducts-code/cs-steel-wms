@@ -40,48 +40,38 @@ router.get('/', authenticate, async (req, res) => {
       request.input('Search', sql.NVarChar, `%${search}%`);
     }
 
-    const countResult = await request.query(`
-      SELECT COUNT(*) as Total
-      FROM WMS_Trips t
-      LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-      ${whereClause}
-    `);
+    request.input('Offset', sql.Int, offset);
+    request.input('Limit', sql.Int, parseInt(limit));
 
-    const request2 = pool.request();
-    if (date) request2.input('Date', sql.Date, date);
-    if (status) request2.input('Status', sql.NVarChar, status);
-    if (warehouseId) request2.input('WarehouseID', sql.Int, warehouseId);
-    if (search) request2.input('Search', sql.NVarChar, `%${search}%`);
-    request2.input('Offset', sql.Int, offset);
-    request2.input('Limit', sql.Int, parseInt(limit));
-
-    const result = await request2.query(`
+    const result = await request.query(`
       SELECT t.TripID, t.TripDate, t.LicensePlate, t.Status, t.CreatedAt, t.CompletedAt,
              vt.TypeName as VehicleType,
              w.WarehouseName,
              c.CustomerName,
              wi.TareWeight, wi.WeighDateTime as WeighInTime,
              wo.NetWeight, wo.WeighDateTime as WeighOutTime,
-             DATEDIFF(MINUTE, t.CreatedAt, ISNULL(t.CompletedAt, DATEADD(HOUR,7,GETUTCDATE()))) as DurationMinutes
-      FROM WMS_Trips t
-      LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-      LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-      LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-      LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-      LEFT JOIN WMS_WeighOut wo ON t.TripID = wo.TripID
+             DATEDIFF(MINUTE, t.CreatedAt, ISNULL(t.CompletedAt, DATEADD(HOUR,7,GETUTCDATE()))) as DurationMinutes,
+             COUNT(*) OVER() AS TotalRows
+      FROM WMS_Trips t WITH (NOLOCK)
+      LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+      LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+      LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+      LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
+      LEFT JOIN WMS_WeighOut wo WITH (NOLOCK) ON t.TripID = wo.TripID
       ${whereClause}
       ORDER BY t.CreatedAt DESC
       OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
     `);
 
+    const total = result.recordset[0]?.TotalRows ?? 0;
     res.json({
       success: true,
       data: result.recordset,
       pagination: {
-        total: countResult.recordset[0].Total,
+        total,
         page: parseInt(page),
         limit: parseInt(limit),
-        totalPages: Math.ceil(countResult.recordset[0].Total / parseInt(limit))
+        totalPages: Math.ceil(total / parseInt(limit))
       }
     });
   } catch (err) {
@@ -109,26 +99,26 @@ router.get('/active', authenticate, async (req, res) => {
                ISNULL(rem.RemainingStations, 0) as RemainingStations,
                DATEDIFF(MINUTE, t.CreatedAt, DATEADD(HOUR,7,GETUTCDATE())) as MinutesInWarehouse,
                cur.StationName as CurrentStation
-        FROM WMS_Trips t
-        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
-        LEFT JOIN WMS_DataStation ds ON t.TripID = ds.TripID
-        LEFT JOIN WMS_LoadingStations ls_target ON ds.TargetStationID = ls_target.StationID
+        FROM WMS_Trips t WITH (NOLOCK)
+        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
+        LEFT JOIN WMS_DataStation ds WITH (NOLOCK) ON t.TripID = ds.TripID
+        LEFT JOIN WMS_LoadingStations ls_target WITH (NOLOCK) ON ds.TargetStationID = ls_target.StationID
         LEFT JOIN (
           SELECT dst.TripID,
             SUM(CASE WHEN lrc.RecordID IS NULL THEN 1 ELSE 0 END) as RemainingStations
-          FROM WMS_DataStationTargets dst
-          LEFT JOIN WMS_LoadingRecord lrc ON lrc.TripID = dst.TripID
+          FROM WMS_DataStationTargets dst WITH (NOLOCK)
+          LEFT JOIN WMS_LoadingRecord lrc WITH (NOLOCK) ON lrc.TripID = dst.TripID
             AND lrc.StationID = dst.StationID AND lrc.ExitTime IS NOT NULL
           GROUP BY dst.TripID
         ) rem ON rem.TripID = t.TripID
         LEFT JOIN (
           SELECT lr.TripID, ls.StationName,
             ROW_NUMBER() OVER (PARTITION BY lr.TripID ORDER BY lr.EntryTime DESC) as rn
-          FROM WMS_LoadingRecord lr
-          JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+          FROM WMS_LoadingRecord lr WITH (NOLOCK)
+          JOIN WMS_LoadingStations ls WITH (NOLOCK) ON lr.StationID = ls.StationID
           WHERE lr.ExitTime IS NULL
         ) cur ON cur.TripID = t.TripID AND cur.rn = 1
         WHERE t.Status NOT IN ('Complete', 'Cancelled')
@@ -153,11 +143,11 @@ router.get('/:id', authenticate, async (req, res) => {
         SELECT t.*, vt.TypeName as VehicleType, w.WarehouseName,
                c.CustomerName, c.CustomerCode,
                u.FullName as CreatedByName
-        FROM WMS_Trips t
-        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_Users u ON t.CreatedBy = u.UserID
+        FROM WMS_Trips t WITH (NOLOCK)
+        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_Users u WITH (NOLOCK) ON t.CreatedBy = u.UserID
         WHERE t.TripID = @TripID
       `);
 

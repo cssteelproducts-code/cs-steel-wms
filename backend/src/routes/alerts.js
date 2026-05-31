@@ -6,6 +6,9 @@ const { runAlertCheck } = require('../jobs/alertJob');
 
 router.use(authenticate);
 
+let _unreadCache = null;
+let _unreadCacheExp = 0;
+
 // GET /api/alerts - recent alerts
 router.get('/', async (req, res) => {
   try {
@@ -19,9 +22,9 @@ router.get('/', async (req, res) => {
           a.AlertID, a.AlertType, a.Severity, a.TripID, a.WarehouseID,
           a.Message, a.IsRead, a.IsResolved, a.CreatedAt, a.ResolvedAt,
           w.WarehouseName, t.LicensePlate
-        FROM WMS_Alerts a
-        LEFT JOIN WMS_Warehouses w ON a.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Trips t ON a.TripID = t.TripID
+        FROM WMS_Alerts a WITH (NOLOCK)
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON a.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Trips t WITH (NOLOCK) ON a.TripID = t.TripID
         ${where}
         ORDER BY a.CreatedAt DESC
       `);
@@ -31,13 +34,18 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/alerts/unread-count
+// GET /api/alerts/unread-count — cached 20s to reduce DB load from polling
 router.get('/unread-count', async (req, res) => {
+  if (_unreadCache !== null && Date.now() < _unreadCacheExp) {
+    return res.json({ success: true, count: _unreadCache });
+  }
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT COUNT(*) AS cnt FROM WMS_Alerts WHERE IsRead = 0 AND IsResolved = 0');
-    res.json({ success: true, count: result.recordset[0].cnt });
+      .query('SELECT COUNT(*) AS cnt FROM WMS_Alerts WITH (NOLOCK) WHERE IsRead = 0 AND IsResolved = 0');
+    _unreadCache = result.recordset[0].cnt;
+    _unreadCacheExp = Date.now() + 20000;
+    res.json({ success: true, count: _unreadCache });
   } catch (err) {
     res.status(500).json({ success: false, count: 0 });
   }
@@ -48,6 +56,7 @@ router.put('/read-all', async (req, res) => {
   try {
     const pool = getPool();
     await pool.request().query('UPDATE WMS_Alerts SET IsRead = 1 WHERE IsRead = 0');
+    _unreadCache = 0; _unreadCacheExp = Date.now() + 20000;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -61,6 +70,7 @@ router.put('/:id/read', async (req, res) => {
     await pool.request()
       .input('id', sql.Int, req.params.id)
       .query('UPDATE WMS_Alerts SET IsRead = 1 WHERE AlertID = @id');
+    _unreadCacheExp = 0;
     res.json({ success: true });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

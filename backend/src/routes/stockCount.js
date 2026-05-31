@@ -99,13 +99,13 @@ router.get('/', authenticate, async (req, res) => {
         ISNULL(c.ItemCount,0) AS ItemCount,
         ISNULL(c.LockedCount,0) AS LockedCount,
         ISNULL(c.RecountCount,0) AS RecountCount
-      FROM WMS_StockCountSessions s
+      FROM WMS_StockCountSessions s WITH (NOLOCK)
       LEFT JOIN (
         SELECT SessionID,
           COUNT(*) AS ItemCount,
           SUM(CASE WHEN IsLocked=1 THEN 1 ELSE 0 END) AS LockedCount,
           SUM(CASE WHEN NeedsRecount=1 THEN 1 ELSE 0 END) AS RecountCount
-        FROM WMS_StockCountItems GROUP BY SessionID
+        FROM WMS_StockCountItems WITH (NOLOCK) GROUP BY SessionID
       ) c ON c.SessionID=s.SessionID
       WHERE s.IsActive=1 ORDER BY s.CreatedAt DESC`);
     res.json({ success: true, data: result.recordset });
@@ -139,10 +139,10 @@ router.get('/:id', authenticate, async (req, res) => {
       .query(`SELECT i.*,
         ISNULL(e.TotalCounted,0) AS TotalCounted,
         ISNULL(e.EntryCount,0) AS EntryCount
-        FROM WMS_StockCountItems i
+        FROM WMS_StockCountItems i WITH (NOLOCK)
         LEFT JOIN (
           SELECT ItemID, SUM(CountedQty) AS TotalCounted, COUNT(*) AS EntryCount
-          FROM WMS_StockCountEntries WHERE SessionID=@ID GROUP BY ItemID
+          FROM WMS_StockCountEntries WITH (NOLOCK) WHERE SessionID=@ID GROUP BY ItemID
         ) e ON e.ItemID=i.ItemID
         WHERE i.SessionID=@ID ORDER BY i.Location,i.ItemCode`);
     res.json({ success: true, data: { session: sess.recordset[0], items: items.recordset } });

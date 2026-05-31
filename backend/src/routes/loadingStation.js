@@ -188,13 +188,13 @@ router.get('/active', authenticate, async (req, res) => {
              w.WarehouseName,
              DATEDIFF(MINUTE, lr.EntryTime, DATEADD(HOUR,7,GETUTCDATE())) as MinutesAtStation,
              u.FullName as OperatorName
-      FROM WMS_LoadingRecord lr
-      JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
-      JOIN WMS_Trips t ON lr.TripID = t.TripID
-      LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-      LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-      LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-      LEFT JOIN WMS_Users u ON lr.OperatorID = u.UserID
+      FROM WMS_LoadingRecord lr WITH (NOLOCK)
+      JOIN WMS_LoadingStations ls WITH (NOLOCK) ON lr.StationID = ls.StationID
+      JOIN WMS_Trips t WITH (NOLOCK) ON lr.TripID = t.TripID
+      LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+      LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+      LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+      LEFT JOIN WMS_Users u WITH (NOLOCK) ON lr.OperatorID = u.UserID
       ${whereClause}
       ORDER BY lr.EntryTime DESC
     `);
@@ -263,17 +263,17 @@ router.get('/stations-status', authenticate, async (req, res) => {
                w.WarehouseName,
                COUNT(lr.RecordID) as ActiveTrucks,
                ct.LicensePlate as CurrentTruck
-        FROM WMS_LoadingStations ls
-        LEFT JOIN WMS_Warehouses w ON ls.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_LoadingRecord lr ON ls.StationID = lr.StationID
+        FROM WMS_LoadingStations ls WITH (NOLOCK)
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON ls.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_LoadingRecord lr WITH (NOLOCK) ON ls.StationID = lr.StationID
           AND lr.ExitTime IS NULL
-          AND EXISTS(SELECT 1 FROM WMS_Trips t WHERE t.TripID = lr.TripID
+          AND EXISTS(SELECT 1 FROM WMS_Trips t WITH (NOLOCK) WHERE t.TripID = lr.TripID
                      AND CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
         LEFT JOIN (
           SELECT lr2.StationID, t2.LicensePlate,
                  ROW_NUMBER() OVER (PARTITION BY lr2.StationID ORDER BY lr2.EntryTime DESC) as rn
-          FROM WMS_LoadingRecord lr2
-          JOIN WMS_Trips t2 ON lr2.TripID = t2.TripID
+          FROM WMS_LoadingRecord lr2 WITH (NOLOCK)
+          JOIN WMS_Trips t2 WITH (NOLOCK) ON lr2.TripID = t2.TripID
           WHERE lr2.ExitTime IS NULL
             AND CAST(t2.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         ) ct ON ct.StationID = ls.StationID AND ct.rn = 1

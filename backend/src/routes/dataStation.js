@@ -93,14 +93,14 @@ router.get('/pending', authenticate, async (req, res) => {
                CASE WHEN t.SOWaitStartedAt IS NOT NULL
                     THEN DATEDIFF(SECOND, t.SOWaitStartedAt, DATEADD(HOUR,7,GETUTCDATE()))
                     ELSE NULL END as SOWaitSeconds
-        FROM WMS_Trips t
-        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        FROM WMS_Trips t WITH (NOLOCK)
+        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_WeighIn wi WITH (NOLOCK) ON t.TripID = wi.TripID
         WHERE t.Status IN ('Data', 'WaitPick')
-        AND NOT EXISTS (SELECT 1 FROM WMS_LoadingRecord lr     WHERE lr.TripID = t.TripID)
-        AND NOT EXISTS (SELECT 1 FROM WMS_DataStationTargets d WHERE d.TripID  = t.TripID)
+        AND NOT EXISTS (SELECT 1 FROM WMS_LoadingRecord lr WITH (NOLOCK) WHERE lr.TripID = t.TripID)
+        AND NOT EXISTS (SELECT 1 FROM WMS_DataStationTargets d WITH (NOLOCK) WHERE d.TripID = t.TripID)
         AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
