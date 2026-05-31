@@ -43,14 +43,20 @@ function calcOT1(endTime, cfg) {
   return toHrs((endMin - cutoff) * cfg.s1.emp);
 }
 
-function calcOT2(endTime, cfg) {
-  const endMin = toMin(endTime);
-  let total = 0;
-  for (const s of cfg.s2) {
-    const cut = toMin(s.end);
-    if (endMin > cut) total += toHrs((endMin - cut) * s.emp);
-  }
-  return +total.toFixed(2);
+function calcShiftOTs(shiftEndTimes, cfg) {
+  return cfg.s2.map((s, i) => {
+    const actual = toMin(shiftEndTimes[i] ?? s.end);
+    const cutoff = toMin(s.end);
+    return actual > cutoff ? +toHrs((actual - cutoff) * s.emp).toFixed(2) : 0;
+  });
+}
+
+function calcOT2(shiftEndTimes, cfg) {
+  return +calcShiftOTs(shiftEndTimes, cfg).reduce((a, b) => a + b, 0).toFixed(2);
+}
+
+function defaultShiftEnds(cfg) {
+  return cfg.s2.map(s => s.end);
 }
 
 export default function ShiftPlanning() {
@@ -58,9 +64,9 @@ export default function ShiftPlanning() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('records');
-  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
+  const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), endTime: '17:00', shiftEndTimes: DEFAULT_CONFIG.s2.map(s => s.end) });
   const [addMode, setAddMode] = useState('single');
-  const [batchForm, setBatchForm] = useState({ fromDate: new Date().toISOString().slice(0, 10), toDate: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
+  const [batchForm, setBatchForm] = useState({ fromDate: new Date().toISOString().slice(0, 10), toDate: new Date().toISOString().slice(0, 10), endTime: '17:00', shiftEndTimes: DEFAULT_CONFIG.s2.map(s => s.end) });
   const [editingId, setEditingId] = useState(null);
   const [editRow, setEditRow] = useState({});
   const [batchLoading, setBatchLoading] = useState(false);
@@ -95,21 +101,26 @@ export default function ShiftPlanning() {
   const updateShift = (i, key, val) => setCfg(c => ({
     ...c, s2: c.s2.map((s, idx) => idx === i ? { ...s, [key]: val } : s)
   }));
-  const addShift = () => setCfg(c => ({
-    ...c, s2: [...c.s2, { start: '08:00', end: '17:00', emp: 0 }]
-  }));
-  const removeShift = (i) => setCfg(c => ({
-    ...c, s2: c.s2.filter((_, idx) => idx !== i)
-  }));
+  const addShift = () => {
+    setCfg(c => ({ ...c, s2: [...c.s2, { start: '08:00', end: '17:00', emp: 0 }] }));
+    setForm(f => ({ ...f, shiftEndTimes: [...f.shiftEndTimes, '17:00'] }));
+    setBatchForm(f => ({ ...f, shiftEndTimes: [...f.shiftEndTimes, '17:00'] }));
+  };
+  const removeShift = (i) => {
+    setCfg(c => ({ ...c, s2: c.s2.filter((_, idx) => idx !== i) }));
+    setForm(f => ({ ...f, shiftEndTimes: f.shiftEndTimes.filter((_, idx) => idx !== i) }));
+    setBatchForm(f => ({ ...f, shiftEndTimes: f.shiftEndTimes.filter((_, idx) => idx !== i) }));
+  };
 
   const addRecord = async () => {
     if (!form.date || !form.endTime) return;
     const ot1 = calcOT1(form.endTime, cfg);
-    const ot2 = parseFloat(form.otHrs2) || calcOT2(form.endTime, cfg);
+    const ot2 = calcOT2(form.shiftEndTimes, cfg);
+    const otEmpAuto = cfg.s2.filter((s, i) => toMin(form.shiftEndTimes[i] ?? s.end) > toMin(s.end)).reduce((sum, s) => sum + s.emp, 0);
     try {
-      const res = await api.post('/shift-plan/records', { date: form.date, endTime: form.endTime, otEmp: parseInt(form.otEmp) || 0, otHrs1: ot1, otHrs2: ot2 });
+      const res = await api.post('/shift-plan/records', { date: form.date, endTime: form.endTime, otEmp: otEmpAuto, otHrs1: ot1, otHrs2: ot2 });
       setRecords(r => [...r, ...res.data.data].sort((a, b) => a.date.localeCompare(b.date)));
-      setForm(f => ({ ...f, endTime: '17:00', otEmp: '', otHrs2: '' }));
+      setForm(f => ({ ...f, endTime: '17:00', shiftEndTimes: defaultShiftEnds(cfg) }));
     } catch {}
   };
 
@@ -120,14 +131,18 @@ export default function ShiftPlanning() {
     } catch {}
   };
 
-  const startEdit = (r) => { setEditingId(r.id); setEditRow({ endTime: r.endTime, otEmp: r.otEmp, otHrs2: r.otHrs2 }); };
+  const startEdit = (r) => {
+    setEditingId(r.id);
+    setEditRow({ endTime: r.endTime, shiftEndTimes: defaultShiftEnds(cfg) });
+  };
   const cancelEdit = () => setEditingId(null);
   const saveEdit = async (id) => {
     const ot1 = calcOT1(editRow.endTime, cfg);
-    const ot2 = parseFloat(editRow.otHrs2) || calcOT2(editRow.endTime, cfg);
+    const ot2 = calcOT2(editRow.shiftEndTimes, cfg);
+    const otEmpAuto = cfg.s2.filter((s, i) => toMin(editRow.shiftEndTimes[i] ?? s.end) > toMin(s.end)).reduce((sum, s) => sum + s.emp, 0);
     try {
-      await api.put(`/shift-plan/records/${id}`, { endTime: editRow.endTime, otEmp: parseInt(editRow.otEmp) || 0, otHrs1: ot1, otHrs2: ot2 });
-      setRecords(r => r.map(x => x.id === id ? { ...x, endTime: editRow.endTime, otEmp: parseInt(editRow.otEmp) || 0, otHrs2: ot2, otHrs1: ot1 } : x));
+      await api.put(`/shift-plan/records/${id}`, { endTime: editRow.endTime, otEmp: otEmpAuto, otHrs1: ot1, otHrs2: ot2 });
+      setRecords(r => r.map(x => x.id === id ? { ...x, endTime: editRow.endTime, otEmp: otEmpAuto, otHrs2: ot2, otHrs1: ot1 } : x));
       setEditingId(null);
     } catch {}
   };
@@ -138,18 +153,20 @@ export default function ShiftPlanning() {
     const end = new Date(batchForm.toDate);
     if (end < start) { alert('วันสิ้นสุดต้องมากกว่าหรือเท่ากับวันเริ่มต้น'); return; }
     const existDates = new Set(records.map(r => r.date));
-    const newRecs = [];
-    for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-      const dateStr = d.toISOString().slice(0, 10);
-      if (existDates.has(dateStr)) continue;
-      const ot1 = calcOT1(batchForm.endTime, cfg);
-      const ot2 = parseFloat(batchForm.otHrs2) || calcOT2(batchForm.endTime, cfg);
-      newRecs.push({ date: dateStr, endTime: batchForm.endTime, otEmp: parseInt(batchForm.otEmp) || 0, otHrs1: ot1, otHrs2: ot2 });
-    }
-    if (!newRecs.length) { alert('ไม่มีวันใหม่ (วันที่ซ้ำถูกข้ามแล้ว)'); return; }
+    const hasNew = (() => { for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) { if (!existDates.has(d.toISOString().slice(0, 10))) return true; } return false; })();
+    if (!hasNew) { alert('ไม่มีวันใหม่ (วันที่ซ้ำถูกข้ามแล้ว)'); return; }
     setBatchLoading(true);
     try {
-      const res = await api.post('/shift-plan/records', newRecs);
+      const ot1 = calcOT1(batchForm.endTime, cfg);
+      const ot2 = calcOT2(batchForm.shiftEndTimes, cfg);
+      const otEmpAuto = cfg.s2.filter((s, i) => toMin(batchForm.shiftEndTimes[i] ?? s.end) > toMin(s.end)).reduce((sum, s) => sum + s.emp, 0);
+      const builtRecs = [];
+      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
+        const dateStr = d.toISOString().slice(0, 10);
+        if (existDates.has(dateStr)) continue;
+        builtRecs.push({ date: dateStr, endTime: batchForm.endTime, otEmp: otEmpAuto, otHrs1: ot1, otHrs2: ot2 });
+      }
+      const res = await api.post('/shift-plan/records', builtRecs);
       setRecords(r => [...r, ...res.data.data].sort((a, b) => a.date.localeCompare(b.date)));
     } catch {}
     finally { setBatchLoading(false); }
@@ -302,32 +319,57 @@ export default function ShiftPlanning() {
           </div>
 
           {addMode === 'single' && (
-            <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 p-3 bg-slate-50 rounded-xl">
-              <div>
-                <label className="label text-xs">วันที่</label>
-                <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="input-field text-sm" />
+            <div className="mb-4 p-3 bg-slate-50 rounded-xl space-y-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+                <div>
+                  <label className="label text-xs">วันที่</label>
+                  <input type="date" value={form.date} onChange={e => setForm(f => ({ ...f, date: e.target.value }))} className="input-field text-sm" />
+                </div>
+                <div>
+                  <label className="label text-xs">เวลาเลิก (แบบ 1)</label>
+                  <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm" />
+                </div>
+                <div className="text-xs text-blue-500 font-semibold flex items-end pb-2">
+                  OT แบบ 1: {fmtHr(calcOT1(form.endTime, cfg))}
+                </div>
+                <div className="flex items-end">
+                  <button onClick={addRecord} className="btn-primary w-full text-sm flex items-center gap-1.5">
+                    <Plus size={14} />เพิ่ม
+                  </button>
+                </div>
               </div>
-              <div>
-                <label className="label text-xs">เวลาเลิกงาน</label>
-                <input type="time" value={form.endTime} onChange={e => setForm(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm" />
-              </div>
-              <InputNum label="OT พนักงาน (แบบ 2)" value={form.otEmp} onChange={v => setForm(f => ({ ...f, otEmp: v }))} placeholder="คน" />
-              <div>
-                <label className="label text-xs">OT ชม. (แบบ 2) — ว่างไว้=คำนวณ</label>
-                <input type="number" step="0.5" min="0" value={form.otHrs2} onChange={e => setForm(f => ({ ...f, otHrs2: e.target.value }))}
-                  placeholder={`≈ ${calcOT2(form.endTime, cfg)} ชม.`} className="input-field text-sm" />
-              </div>
-              <div className="flex items-end">
-                <button onClick={addRecord} className="btn-primary w-full text-sm flex items-center gap-1.5">
-                  <Plus size={14} />เพิ่ม
-                </button>
+              <div className="border-t border-slate-200 pt-3">
+                <p className="text-xs font-bold text-orange-600 mb-2 flex items-center gap-1.5">
+                  <Clock size={12} />กะแบบ 2 — กำหนดเวลาเลิกต่อกะ (ปล่อยไว้ = ปกติ / ไม่มี OT)
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {cfg.s2.map((s, i) => {
+                    const shiftOT = calcShiftOTs(form.shiftEndTimes, cfg)[i];
+                    return (
+                      <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${shiftOT > 0 ? 'border-orange-200 bg-orange-50' : 'border-slate-200 bg-white'}`}>
+                        <span className="text-xs font-black text-orange-600 w-8">กะ {shiftLabel(i)}</span>
+                        <span className="text-[10px] text-slate-400 w-12">{s.emp} คน</span>
+                        <input type="time"
+                          value={form.shiftEndTimes[i] ?? s.end}
+                          onChange={e => setForm(f => { const t = [...f.shiftEndTimes]; t[i] = e.target.value; return { ...f, shiftEndTimes: t }; })}
+                          className="input-field text-xs py-1 flex-1 min-w-0" />
+                        <span className={`text-xs font-bold whitespace-nowrap ${shiftOT > 0 ? 'text-orange-500' : 'text-slate-300'}`}>
+                          {shiftOT > 0 ? `+${shiftOT.toFixed(2)}h` : 'ปกติ'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs font-bold text-orange-500 mt-2">
+                  รวม OT แบบ 2: {calcOT2(form.shiftEndTimes, cfg).toFixed(2)} ชม.
+                </p>
               </div>
             </div>
           )}
 
           {addMode === 'range' && (
             <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl mb-4 space-y-3">
-              <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="label text-xs">วันเริ่มต้น</label>
                   <input type="date" value={batchForm.fromDate} onChange={e => setBatchForm(f => ({ ...f, fromDate: e.target.value }))} className="input-field text-sm" />
@@ -337,15 +379,38 @@ export default function ShiftPlanning() {
                   <input type="date" value={batchForm.toDate} onChange={e => setBatchForm(f => ({ ...f, toDate: e.target.value }))} className="input-field text-sm" />
                 </div>
                 <div>
-                  <label className="label text-xs">เวลาเลิกงาน (ทุกวัน)</label>
+                  <label className="label text-xs">เวลาเลิก (แบบ 1)</label>
                   <input type="time" value={batchForm.endTime} onChange={e => setBatchForm(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm" />
                 </div>
-                <InputNum label="OT พนักงาน (แบบ 2)" value={batchForm.otEmp} onChange={v => setBatchForm(f => ({ ...f, otEmp: v }))} placeholder="คน" />
-                <div>
-                  <label className="label text-xs">OT ชม. (แบบ 2) — ว่างไว้=คำนวณ</label>
-                  <input type="number" step="0.5" min="0" value={batchForm.otHrs2} onChange={e => setBatchForm(f => ({ ...f, otHrs2: e.target.value }))}
-                    placeholder={`≈ ${calcOT2(batchForm.endTime, cfg)} ชม.`} className="input-field text-sm" />
+                <div className="text-xs text-blue-500 font-semibold flex items-end pb-2">
+                  OT แบบ 1: {fmtHr(calcOT1(batchForm.endTime, cfg))}
                 </div>
+              </div>
+              <div className="border-t border-indigo-200 pt-3">
+                <p className="text-xs font-bold text-orange-600 mb-2 flex items-center gap-1.5">
+                  <Clock size={12} />กะแบบ 2 — กำหนดเวลาเลิกต่อกะ (ทุกวันในช่วงนี้)
+                </p>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {cfg.s2.map((s, i) => {
+                    const shiftOT = calcShiftOTs(batchForm.shiftEndTimes, cfg)[i];
+                    return (
+                      <div key={i} className={`flex items-center gap-2 rounded-lg px-3 py-2 border ${shiftOT > 0 ? 'border-orange-200 bg-orange-100/60' : 'border-indigo-200 bg-white'}`}>
+                        <span className="text-xs font-black text-orange-600 w-8">กะ {shiftLabel(i)}</span>
+                        <span className="text-[10px] text-slate-400 w-12">{s.emp} คน</span>
+                        <input type="time"
+                          value={batchForm.shiftEndTimes[i] ?? s.end}
+                          onChange={e => setBatchForm(f => { const t = [...f.shiftEndTimes]; t[i] = e.target.value; return { ...f, shiftEndTimes: t }; })}
+                          className="input-field text-xs py-1 flex-1 min-w-0" />
+                        <span className={`text-xs font-bold whitespace-nowrap ${shiftOT > 0 ? 'text-orange-500' : 'text-slate-300'}`}>
+                          {shiftOT > 0 ? `+${shiftOT.toFixed(2)}h` : 'ปกติ'}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                <p className="text-xs font-bold text-orange-500 mt-2">
+                  รวม OT แบบ 2: {calcOT2(batchForm.shiftEndTimes, cfg).toFixed(2)} ชม. / วัน
+                </p>
               </div>
               <div className="flex items-center gap-3">
                 <button onClick={addBatchRecords} disabled={batchLoading} className="btn-primary text-sm flex items-center gap-1.5 disabled:opacity-70">
@@ -383,19 +448,35 @@ export default function ShiftPlanning() {
                   const diff = +(r.otHrs1 - r.otHrs2).toFixed(2);
                   if (isEditing) {
                     const previewOT1 = calcOT1(editRow.endTime, cfg);
-                    const previewOT2 = parseFloat(editRow.otHrs2) || calcOT2(editRow.endTime, cfg);
+                    const shiftTimes = editRow.shiftEndTimes ?? defaultShiftEnds(cfg);
+                    const previewShiftOTs = calcShiftOTs(shiftTimes, cfg);
+                    const previewOT2 = calcOT2(shiftTimes, cfg);
                     return (
                       <tr key={r.id} className="border-b border-indigo-100 bg-indigo-50">
                         <td className="px-3 py-1.5 font-medium text-indigo-700">{r.date}</td>
                         <td className="px-3 py-1.5">
                           <input type="time" value={editRow.endTime} onChange={e => setEditRow(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm py-1 w-28" />
                         </td>
-                        <td className="px-3 py-1.5">
-                          <input type="number" min="0" value={editRow.otEmp} onChange={e => setEditRow(f => ({ ...f, otEmp: e.target.value }))} placeholder="คน" className="input-field text-sm py-1 w-20 text-center" />
+                        <td className="px-3 py-1.5 text-center text-xs text-slate-400">
+                          {cfg.s2.filter((s, i) => previewShiftOTs[i] > 0).reduce((sum, s) => sum + s.emp, 0) || '-'} คน
                         </td>
                         <td className="px-3 py-1.5 text-right text-xs text-blue-400">{fmtHr(previewOT1)}</td>
                         <td className="px-3 py-1.5">
-                          <input type="number" step="0.5" min="0" value={editRow.otHrs2} onChange={e => setEditRow(f => ({ ...f, otHrs2: e.target.value }))} placeholder={`≈${previewOT2}`} className="input-field text-sm py-1 w-24 text-right" />
+                          <div className="space-y-1">
+                            {cfg.s2.map((s, i) => (
+                              <div key={i} className="flex items-center gap-1">
+                                <span className="text-[10px] font-bold text-orange-500 w-7">กะ{shiftLabel(i)}</span>
+                                <input type="time"
+                                  value={shiftTimes[i] ?? s.end}
+                                  onChange={e => setEditRow(f => { const t = [...(f.shiftEndTimes ?? defaultShiftEnds(cfg))]; t[i] = e.target.value; return { ...f, shiftEndTimes: t }; })}
+                                  className="input-field text-xs py-0.5 w-24" />
+                                <span className={`text-[10px] font-bold ${previewShiftOTs[i] > 0 ? 'text-orange-400' : 'text-slate-300'}`}>
+                                  {previewShiftOTs[i] > 0 ? `+${previewShiftOTs[i]}h` : '-'}
+                                </span>
+                              </div>
+                            ))}
+                            <div className="text-[10px] font-bold text-orange-600">รวม {previewOT2.toFixed(2)} ชม.</div>
+                          </div>
                         </td>
                         <td className="px-3 py-1.5 text-right text-xs text-slate-400">-</td>
                         <td className="px-3 py-1.5">

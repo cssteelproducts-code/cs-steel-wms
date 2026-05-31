@@ -507,19 +507,20 @@ export default function StockCount() {
 
   const items = useMemo(() => sessionData?.items || [], [sessionData]);
   const warehouses = useMemo(() => [...new Set(items.map(i => i.Warehouse).filter(Boolean))].sort(), [items]);
-  const locations  = useMemo(() => [...new Set(items.filter(i => !filterWH || i.Warehouse === filterWH).map(i => i.Location).filter(Boolean))].sort(), [items, filterWH]);
-  const gnames     = useMemo(() => [...new Set(items.map(i => i.CategoryName).filter(Boolean))].sort(), [items]);
 
-  const baseFiltered = useMemo(() => items.filter(i =>
-    (!filterWH    || i.Warehouse    === filterWH)    &&
-    (!filterLoc   || i.Location     === filterLoc)   &&
-    (!filterGname || i.CategoryName === filterGname) &&
-    (!filterSize  || i.SizeCode     === filterSize)  &&
-    (!filterThick || i.Thickness    === filterThick)
-  ), [items, filterWH, filterLoc, filterGname, filterSize, filterThick]);
+  const itemsByWH    = useMemo(() => !filterWH    ? items      : items.filter(i => i.Warehouse    === filterWH),              [items, filterWH]);
+  const locations    = useMemo(() => [...new Set(itemsByWH.map(i => i.Location).filter(Boolean))].sort(),                    [itemsByWH]);
 
-  const sizes  = useMemo(() => [...new Set(baseFiltered.map(i => i.SizeCode).filter(Boolean))].sort(), [baseFiltered]);
-  const thicks = useMemo(() => [...new Set(baseFiltered.map(i => i.Thickness).filter(v => v != null && String(v) !== '0' && String(v) !== ''))].map(String).sort(), [baseFiltered]);
+  const itemsByLoc   = useMemo(() => !filterLoc   ? itemsByWH  : itemsByWH.filter(i => i.Location   === filterLoc),           [itemsByWH, filterLoc]);
+  const gnames       = useMemo(() => [...new Set(itemsByLoc.map(i => i.CategoryName).filter(Boolean))].sort(),               [itemsByLoc]);
+
+  const itemsByGname = useMemo(() => !filterGname ? itemsByLoc : itemsByLoc.filter(i => i.CategoryName === filterGname),      [itemsByLoc, filterGname]);
+  const sizes        = useMemo(() => [...new Set(itemsByGname.map(i => i.SizeCode).filter(Boolean))].sort(),                 [itemsByGname]);
+
+  const itemsBySize  = useMemo(() => !filterSize  ? itemsByGname : itemsByGname.filter(i => i.SizeCode === filterSize),       [itemsByGname, filterSize]);
+  const thicks       = useMemo(() => [...new Set(itemsBySize.map(i => i.Thickness).filter(v => v != null && String(v) !== '0' && String(v) !== ''))].map(String).sort(), [itemsBySize]);
+
+  const baseFiltered = useMemo(() => !filterThick ? itemsBySize : itemsBySize.filter(i => i.Thickness === filterThick),       [itemsBySize, filterThick]);
 
   const filteredItems = useMemo(() => {
     if (!search) return baseFiltered;
@@ -748,13 +749,13 @@ export default function StockCount() {
 
               {!showSelected && (
                 <div className="flex gap-2 flex-wrap">
-                  <SearchSelect value={filterWH} onChange={v => { setFilterWH(v); setFilterLoc(''); }}
+                  <SearchSelect value={filterWH} onChange={v => { setFilterWH(v); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); }}
                     options={warehouses} placeholder="— คลัง —" className="w-32" />
-                  <SearchSelect value={filterLoc} onChange={setFilterLoc}
+                  <SearchSelect value={filterLoc} onChange={v => { setFilterLoc(v); setFilterGname(''); setFilterSize(''); setFilterThick(''); }}
                     options={locations} placeholder="— Location —" className="w-36" />
-                  <SearchSelect value={filterGname} onChange={setFilterGname}
+                  <SearchSelect value={filterGname} onChange={v => { setFilterGname(v); setFilterSize(''); setFilterThick(''); }}
                     options={gnames} placeholder="— หมวดหมู่ —" className="w-36" />
-                  <SearchSelect value={filterSize} onChange={setFilterSize}
+                  <SearchSelect value={filterSize} onChange={v => { setFilterSize(v); setFilterThick(''); }}
                     options={sizes} placeholder="— SizeCode —" className="w-36" />
                   <SearchSelect value={filterThick} onChange={setFilterThick}
                     options={thicks} placeholder="— Thickness —" className="w-32" />
