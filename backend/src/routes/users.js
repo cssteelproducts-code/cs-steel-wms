@@ -4,8 +4,16 @@ const bcrypt = require('bcryptjs');
 const { sql, getPool } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 
+// TTL cache for frequently-read, rarely-changing data
+const _c = new Map();
+const cGet = k => { const e = _c.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
+const cSet = (k, v, ms) => _c.set(k, { v, exp: Date.now() + ms });
+const cDel = (...keys) => keys.forEach(k => _c.delete(k));
+
 // GET /api/users - List all users
 router.get('/', authenticate, requireAdmin, async (req, res) => {
+  const hit = cGet('users:list');
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
     const result = await pool.request().query(`
@@ -13,11 +21,12 @@ router.get('/', authenticate, requireAdmin, async (req, res) => {
              u.SessionDurationHours, u.UserLevel,
              r.RoleName, r.RoleID,
              w.WarehouseName, w.WarehouseID
-      FROM WMS_Users u
-      LEFT JOIN WMS_Roles r ON u.RoleID = r.RoleID
-      LEFT JOIN WMS_Warehouses w ON u.WarehouseID = w.WarehouseID
+      FROM WMS_Users u WITH (NOLOCK)
+      LEFT JOIN WMS_Roles r WITH (NOLOCK) ON u.RoleID = r.RoleID
+      LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON u.WarehouseID = w.WarehouseID
       ORDER BY u.UserLevel DESC, u.CreatedAt DESC
     `);
+    cSet('users:list', result.recordset, 10000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -37,13 +46,13 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
 
     const existing = await pool.request()
       .input('Username', sql.NVarChar, username)
-      .query('SELECT UserID FROM WMS_Users WHERE Username = @Username');
+      .query('SELECT UserID FROM WMS_Users WITH (NOLOCK) WHERE Username = @Username');
 
     if (existing.recordset.length > 0) {
       return res.status(400).json({ success: false, message: 'Username นี้มีในระบบแล้ว' });
     }
 
-    const hashed = await bcrypt.hash(password, 10);
+    const hashed = await bcrypt.hash(password, 8);
     const sessionHours = sessionDurationHours ? parseInt(sessionDurationHours) : null;
     await pool.request()
       .input('Username', sql.NVarChar, username)
@@ -57,6 +66,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       .query(`INSERT INTO WMS_Users (Username, Password, FullName, Email, RoleID, WarehouseID, SessionDurationHours, UserLevel)
               VALUES (@Username, @Password, @FullName, @Email, @RoleID, @WarehouseID, @SessionDurationHours, @UserLevel)`);
 
+    cDel('users:list');
     res.json({ success: true, message: `สร้างผู้ใช้ "${username}" สำเร็จ` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -84,7 +94,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
       .input('UserLevel', sql.Int, userLevel ? parseInt(userLevel) : 0);
 
     if (password) {
-      const hashed = await bcrypt.hash(password, 10);
+      const hashed = await bcrypt.hash(password, 8);
       updateQuery += ', Password=@Password';
       request.input('Password', sql.NVarChar, hashed);
     }
@@ -92,6 +102,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     updateQuery += ' WHERE UserID=@UserID';
     await request.query(updateQuery);
 
+    cDel('users:list');
     res.json({ success: true, message: 'แก้ไขผู้ใช้สำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -105,6 +116,7 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
     await pool.request()
       .input('UserID', sql.Int, req.params.id)
       .query('UPDATE WMS_Users SET IsActive = 0 WHERE UserID = @UserID');
+    cDel('users:list');
     res.json({ success: true, message: 'ระงับการใช้งานผู้ใช้สำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -113,10 +125,13 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
 
 // GET /api/users/roles - List roles
 router.get('/roles', authenticate, async (req, res) => {
+  const hit = cGet('users:roles');
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_Roles WHERE IsActive=1 ORDER BY SortOrder ASC, RoleName');
+      .query('SELECT * FROM WMS_Roles WITH (NOLOCK) WHERE IsActive=1 ORDER BY SortOrder ASC, RoleName');
+    cSet('users:roles', result.recordset, 30000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -130,7 +145,7 @@ router.post('/roles', authenticate, requireAdmin, async (req, res) => {
     const pool = getPool();
     const exists = await pool.request()
       .input('RoleName', sql.NVarChar, roleName)
-      .query('SELECT RoleID, IsActive FROM WMS_Roles WHERE RoleName=@RoleName');
+      .query('SELECT RoleID, IsActive FROM WMS_Roles WITH (NOLOCK) WHERE RoleName=@RoleName');
     if (exists.recordset.length > 0) {
       const row = exists.recordset[0];
       if (row.IsActive) return res.status(400).json({ success: false, message: 'มีบทบาทนี้อยู่แล้ว' });
@@ -139,6 +154,7 @@ router.post('/roles', authenticate, requireAdmin, async (req, res) => {
         .input('Description', sql.NVarChar, description || '')
         .input('SortOrder', sql.Int, sortOrder || 0)
         .query('UPDATE WMS_Roles SET IsActive=1, Description=@Description, SortOrder=@SortOrder WHERE RoleID=@RoleID');
+      cDel('users:roles');
       return res.json({ success: true, message: 'เพิ่มบทบาทสำเร็จ' });
     }
     await pool.request()
@@ -146,6 +162,7 @@ router.post('/roles', authenticate, requireAdmin, async (req, res) => {
       .input('Description', sql.NVarChar, description || '')
       .input('SortOrder', sql.Int, sortOrder || 0)
       .query('INSERT INTO WMS_Roles (RoleName, Description, SortOrder) VALUES (@RoleName, @Description, @SortOrder)');
+    cDel('users:roles');
     res.json({ success: true, message: 'เพิ่มบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -164,6 +181,7 @@ router.put('/roles/:roleId', authenticate, requireAdmin, async (req, res) => {
       .input('Description', sql.NVarChar, description || '')
       .input('SortOrder', sql.Int, sortOrder || 0)
       .query('UPDATE WMS_Roles SET RoleName=@RoleName, Description=@Description, SortOrder=@SortOrder WHERE RoleID=@RoleID');
+    cDel('users:roles');
     res.json({ success: true, message: 'แก้ไขบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -176,12 +194,13 @@ router.delete('/roles/:roleId', authenticate, requireAdmin, async (req, res) => 
     const pool = getPool();
     const inUse = await pool.request()
       .input('RoleID', sql.Int, req.params.roleId)
-      .query('SELECT COUNT(1) AS cnt FROM WMS_Users WHERE RoleID=@RoleID AND IsActive=1');
+      .query('SELECT COUNT(1) AS cnt FROM WMS_Users WITH (NOLOCK) WHERE RoleID=@RoleID AND IsActive=1');
     if (inUse.recordset[0].cnt > 0)
       return res.status(400).json({ success: false, message: 'ไม่สามารถลบได้ — มีผู้ใช้ที่ใช้บทบาทนี้อยู่' });
     await pool.request()
       .input('RoleID', sql.Int, req.params.roleId)
       .query('UPDATE WMS_Roles SET IsActive=0 WHERE RoleID=@RoleID');
+    cDel('users:roles');
     res.json({ success: true, message: 'ลบบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -190,33 +209,39 @@ router.delete('/roles/:roleId', authenticate, requireAdmin, async (req, res) => 
 
 // GET /api/users/permissions/:roleId
 router.get('/permissions/:roleId', authenticate, requireAdmin, async (req, res) => {
+  const key = `users:perms:${req.params.roleId}`;
+  const hit = cGet(key);
+  if (hit) return res.json({ success: true, data: hit });
   try {
     const pool = getPool();
     const result = await pool.request()
       .input('RoleID', sql.Int, req.params.roleId)
-      .query(`SELECT * FROM WMS_MenuPermissions WHERE RoleID = @RoleID ORDER BY MenuCode`);
+      .query(`SELECT * FROM WMS_MenuPermissions WITH (NOLOCK) WHERE RoleID = @RoleID ORDER BY MenuCode`);
+    cSet(key, result.recordset, 15000);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
 });
 
-// POST /api/users/permissions - Set permissions for a role (2 round trips: DELETE + bulk INSERT)
+// POST /api/users/permissions - DELETE + INSERT in a single batch (one round-trip)
 router.post('/permissions', authenticate, requireAdmin, async (req, res) => {
   try {
     const { roleId, permissions } = req.body;
     const pool = getPool();
+    const rid = parseInt(roleId);
     const esc = s => String(s || '').replace(/'/g, "''");
-    await pool.request().input('RoleID', sql.Int, roleId)
-      .query('DELETE FROM WMS_MenuPermissions WHERE RoleID=@RoleID');
+
+    let batch = `DELETE FROM WMS_MenuPermissions WHERE RoleID=${rid};`;
     if (permissions && permissions.length > 0) {
       const vals = permissions.map(p =>
-        `(${parseInt(roleId)},N'${esc(p.menuCode)}',N'${esc(p.menuName)}',${p.canView?1:0},${p.canCreate?1:0},${p.canEdit?1:0},${p.canDelete?1:0})`
+        `(${rid},N'${esc(p.menuCode)}',N'${esc(p.menuName)}',${p.canView?1:0},${p.canCreate?1:0},${p.canEdit?1:0},${p.canDelete?1:0})`
       );
-      await pool.request().query(
-        `INSERT INTO WMS_MenuPermissions (RoleID,MenuCode,MenuName,CanView,CanCreate,CanEdit,CanDelete) VALUES ${vals.join(',')}`
-      );
+      batch += `INSERT INTO WMS_MenuPermissions (RoleID,MenuCode,MenuName,CanView,CanCreate,CanEdit,CanDelete) VALUES ${vals.join(',')};`;
     }
+
+    await pool.request().query(batch);
+    cDel(`users:perms:${rid}`);
     res.json({ success: true, message: 'บันทึกสิทธิ์การใช้งานสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
