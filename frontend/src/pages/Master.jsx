@@ -64,8 +64,8 @@ export default function Master() {
   const internalVehiclesImportRef = useRef(null);
   const [locationTypes, setLocationTypes] = useState([]);
   const [selected, setSelected] = useState(new Set());
-  const [printLocation, setPrintLocation] = useState(null);
-  const printLabelRef = useRef(null);
+  const [printItem, setPrintItem] = useState(null);
+  const printItemRef = useRef(null);
   // Location search state
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState([]);
@@ -74,7 +74,7 @@ export default function Master() {
   const importRef = useRef(null);
 
   const handlePrintLabel = useReactToPrint({
-    content: () => printLabelRef.current,
+    content: () => printItemRef.current,
     pageStyle: `
       @page { size: 8cm 6cm; margin: 0.3cm; }
       @media print { body { margin: 0; font-family: sans-serif; } }
@@ -464,6 +464,7 @@ export default function Master() {
                   </div>
                   <div className="flex-shrink-0"><VehicleStatusBadge status={i.VehicleStatus} /></div>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.LicensePlate, line1: i.LicensePlate, line2: i.VehicleName, line3: i.VehicleCategory, title: 'พิมพ์บาร์โค้ด รถขนส่ง' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                     <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                   </div>
@@ -508,6 +509,7 @@ export default function Master() {
                   </div>
                   <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.WarehouseCode, line1: i.WarehouseCode, line2: i.WarehouseName, line3: null, title: 'พิมพ์บาร์โค้ด คลังสินค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
                     <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                   </div>
@@ -534,6 +536,7 @@ export default function Master() {
                   {i.Phone && <span className="hide-mobile flex-shrink-0 text-xs text-gray-500 font-medium">{i.Phone}</span>}
                   <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.CustomerCode, line1: i.CustomerCode, line2: i.CustomerName, line3: i.Phone || null, title: 'พิมพ์บาร์โค้ด ลูกค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
                     <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                   </div>
@@ -569,6 +572,7 @@ export default function Master() {
                     <span className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-amber-50 text-amber-700">{ch}:{cm}</span>
                   </div>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.TypeName, line1: i.TypeName, line2: i.Description || null, line3: null, title: 'พิมพ์บาร์โค้ด ประเภทรถ' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
                     <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                   </div>
@@ -595,6 +599,7 @@ export default function Master() {
                   {i.SortOrder > 0 && <span className="hide-mobile flex-shrink-0 text-xs text-gray-400">ลำดับ {i.SortOrder}</span>}
                   <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.StationCode, line1: i.StationCode, line2: i.StationName, line3: i.WarehouseName || null, title: 'พิมพ์บาร์โค้ด สถานีขึ้นสินค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
                     <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                   </div>
@@ -614,6 +619,7 @@ export default function Master() {
               <div className="flex-1"><p className="text-sm font-semibold text-gray-900">{i.TypeName}</p><p className="text-xs text-gray-400">ลำดับ {i.SortOrder}</p></div>
               <span className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
               <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.TypeCode, line1: i.TypeCode, line2: i.TypeName, line3: null, title: 'พิมพ์บาร์โค้ด ประเภท Location' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                 <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                 <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
               </div>
@@ -638,14 +644,8 @@ export default function Master() {
                 <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${ltColor}`}>
                   {i.LocationTypeName || 'ไม่ระบุประเภท'}
                 </span>
-                <button
-                  onClick={(e) => { e.stopPropagation(); setPrintLocation(i); }}
-                  title="พิมพ์บาร์โค้ด"
-                  className="flex-shrink-0 p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors"
-                >
-                  <Printer size={14} />
-                </button>
                 <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.LocationCode, line1: i.LocationCode, line2: i.LocationName !== i.LocationCode ? i.LocationName : null, line3: i.WarehouseName || null, badge: i.LocationTypeName || null, badgeClass: 'bg-purple-100 text-purple-700', title: 'พิมพ์บาร์โค้ด Location' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                   <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                   <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                 </div>
@@ -694,6 +694,7 @@ export default function Master() {
                     </div>
                     {i.SKUType && <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${skuColor[i.SKUType] || 'bg-slate-100 text-slate-500'}`}>{i.SKUType}</span>}
                     <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                      <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.ProductCode, line1: i.ProductCode, line2: i.ProductName, line3: i.CategoryName || null, badge: i.SKUType || null, badgeClass: skuColor[i.SKUType] || 'bg-slate-100 text-slate-500', title: 'พิมพ์บาร์โค้ด สินค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                       <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                       <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                     </div>
@@ -1147,36 +1148,36 @@ export default function Master() {
         <div className="overflow-x-auto">{renderTable()}</div>
       </div>
 
-      {printLocation && (
+      {printItem && (
         <div className="fixed inset-0 flex items-center justify-center z-[200] p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
           <div className="bg-white rounded-2xl shadow-2xl w-80 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-              <span className="font-bold text-slate-800 flex items-center gap-2"><Printer size={15} />พิมพ์บาร์โค้ด Location</span>
-              <button onClick={() => setPrintLocation(null)} className="text-gray-400 hover:text-gray-700 p-1"><X size={16} /></button>
+              <span className="font-bold text-slate-800 flex items-center gap-2"><Printer size={15} />{printItem.title}</span>
+              <button onClick={() => setPrintItem(null)} className="text-gray-400 hover:text-gray-700 p-1"><X size={16} /></button>
             </div>
             <div className="p-6 flex justify-center">
-              <div ref={printLabelRef} className="border border-gray-200 rounded-xl p-5 text-center" style={{ width: 220 }}>
+              <div ref={printItemRef} className="border border-gray-200 rounded-xl p-5 text-center" style={{ width: 220 }}>
                 <QRCodeSVG
-                  value={printLocation.LocationCode}
+                  value={printItem.qrValue}
                   size={170}
                   level="M"
                   includeMargin={false}
                 />
-                <div className="mt-3 font-black text-2xl font-mono tracking-wide text-slate-900">
-                  {printLocation.LocationCode}
+                <div className="mt-3 font-black text-xl font-mono tracking-wide text-slate-900 break-all leading-tight">
+                  {printItem.line1}
                 </div>
-                {printLocation.LocationName && printLocation.LocationName !== printLocation.LocationCode && (
-                  <div className="text-sm text-gray-600 mt-1 leading-tight">{printLocation.LocationName}</div>
+                {printItem.line2 && (
+                  <div className="text-sm text-gray-600 mt-1 leading-tight">{printItem.line2}</div>
                 )}
-                {printLocation.WarehouseName && (
+                {printItem.line3 && (
                   <div className="text-xs text-gray-400 mt-1 flex items-center justify-center gap-1">
-                    <Warehouse size={10} />{printLocation.WarehouseName}
+                    <Warehouse size={10} />{printItem.line3}
                   </div>
                 )}
-                {printLocation.LocationTypeName && (
+                {printItem.badge && (
                   <div className="mt-2">
-                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
-                      {printLocation.LocationTypeName}
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-semibold ${printItem.badgeClass || 'bg-slate-100 text-slate-500'}`}>
+                      {printItem.badge}
                     </span>
                   </div>
                 )}
@@ -1186,7 +1187,7 @@ export default function Master() {
               <button onClick={handlePrintLabel} className="btn-primary flex-1 flex items-center justify-center gap-2">
                 <Printer size={14} />พิมพ์
               </button>
-              <button onClick={() => setPrintLocation(null)} className="btn-secondary px-5">ปิด</button>
+              <button onClick={() => setPrintItem(null)} className="btn-secondary px-5">ปิด</button>
             </div>
           </div>
         </div>
