@@ -633,7 +633,7 @@ export default function StockCount() {
           {view === 'list' && (
             <div className="card">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="card-header mb-0">รายการรอบตรวจนับ</h3>
+                <h3 className="card-header mb-0">{t('stockCount.listTitle')}</h3>
                 <button onClick={() => setCreateModal(true)} className="btn-primary text-sm">
                   <Plus size={14} />{t('stockCount.createSession')}
                 </button>

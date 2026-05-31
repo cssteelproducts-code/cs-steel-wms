@@ -201,9 +201,6 @@ export default function LocationCheck() {
             }}
           />
         </div>
-        <div className="text-sm font-semibold" style={{ color: '#dc2626', whiteSpace: 'nowrap' }}>
-          {fmtMonth(selectedMonth)}
-        </div>
       </div>
 
       {/* Scan location */}

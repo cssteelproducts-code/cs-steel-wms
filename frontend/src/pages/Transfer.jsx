@@ -13,19 +13,19 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
 
 const JOB_STATUS = {
-  PENDING:     { label: 'รอมอบหมาย',    color: '#f59e0b', bg: '#fffbeb' },
-  ASSIGNED:    { label: 'มอบหมาย',      color: '#8b5cf6', bg: '#f5f3ff' },
-  IN_PROGRESS: { label: 'กำลังดำเนินการ', color: '#3b82f6', bg: '#eff6ff' },
-  COMPLETE:    { label: 'เสร็จสิ้น',    color: '#10b981', bg: '#f0fdf4' },
-  CANCELLED:   { label: 'ยกเลิก',       color: '#6b7280', bg: '#f9fafb' },
+  PENDING:     { labelKey: 'transfer.jobPending',    color: '#f59e0b', bg: '#fffbeb' },
+  ASSIGNED:    { labelKey: 'transfer.jobAssigned',   color: '#8b5cf6', bg: '#f5f3ff' },
+  IN_PROGRESS: { labelKey: 'transfer.jobInProgress', color: '#3b82f6', bg: '#eff6ff' },
+  COMPLETE:    { labelKey: 'transfer.jobComplete',   color: '#10b981', bg: '#f0fdf4' },
+  CANCELLED:   { labelKey: 'transfer.jobCancelled',  color: '#6b7280', bg: '#f9fafb' },
 };
 
 const TRIP_STATUS = {
-  PENDING:      { label: 'รอเริ่ม',             color: '#9ca3af' },
-  SOURCE_ENTRY: { label: 'เข้าต้นทางแล้ว',      color: '#f59e0b' },
-  SOURCE_EXIT:  { label: 'ออกต้นทาง/กำลังขนส่ง', color: '#3b82f6' },
-  DEST_ENTRY:   { label: 'เข้าปลายทางแล้ว',     color: '#8b5cf6' },
-  COMPLETE:     { label: 'เสร็จแล้ว',           color: '#10b981' },
+  PENDING:      { labelKey: 'transfer.tripPending',      color: '#9ca3af' },
+  SOURCE_ENTRY: { labelKey: 'transfer.tripSourceEntry',  color: '#f59e0b' },
+  SOURCE_EXIT:  { labelKey: 'transfer.tripSourceExit',   color: '#3b82f6' },
+  DEST_ENTRY:   { labelKey: 'transfer.tripDestEntry',    color: '#8b5cf6' },
+  COMPLETE:     { labelKey: 'transfer.tripComplete',     color: '#10b981' },
 };
 
 const PRIORITY_LABEL = { NORMAL: 'ปกติ', HIGH: 'เร่งด่วน', URGENT: 'ด่วนมาก' };
@@ -453,11 +453,11 @@ export default function Transfer() {
           <div className="flex flex-wrap gap-2">
             {[
               { v: '', l: t('transfer.allStatus') },
-              { v: 'PENDING', l: JOB_STATUS.PENDING.label },
-              { v: 'ASSIGNED', l: JOB_STATUS.ASSIGNED.label },
-              { v: 'IN_PROGRESS', l: JOB_STATUS.IN_PROGRESS.label },
-              { v: 'COMPLETE', l: JOB_STATUS.COMPLETE.label },
-              { v: 'CANCELLED', l: JOB_STATUS.CANCELLED.label },
+              { v: 'PENDING', l: t(JOB_STATUS.PENDING.labelKey) },
+              { v: 'ASSIGNED', l: t(JOB_STATUS.ASSIGNED.labelKey) },
+              { v: 'IN_PROGRESS', l: t(JOB_STATUS.IN_PROGRESS.labelKey) },
+              { v: 'COMPLETE', l: t(JOB_STATUS.COMPLETE.labelKey) },
+              { v: 'CANCELLED', l: t(JOB_STATUS.CANCELLED.labelKey) },
             ].map(({ v, l }) => (
               <button key={v} onClick={() => setStatusFilter(v)}
                 className="px-3 h-8 rounded-xl text-xs font-bold transition-all"
@@ -495,7 +495,7 @@ export default function Transfer() {
                         {/* Badges */}
                         <div className="flex items-center gap-2 flex-wrap mb-2">
                           <span className="font-black text-sm" style={{ color: '#111827' }}>{job.JobCode}</span>
-                          <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: st.bg, color: st.color }}>{st.label}</span>
+                          <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: st.bg, color: st.color }}>{t(st.labelKey)}</span>
                           {job.Priority !== 'NORMAL' && (
                             <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: '#fff7ed', color: PRIORITY_COLOR[job.Priority] }}>
                               {PRIORITY_LABEL[job.Priority]}
@@ -622,7 +622,7 @@ export default function Transfer() {
                                   </div>
                                   <div className="flex-1 min-w-0">
                                     <div className="flex items-center gap-2 flex-wrap">
-                                      <span className="text-xs font-bold" style={{ color: ts.color }}>{ts.label}</span>
+                                      <span className="text-xs font-bold" style={{ color: ts.color }}>{t(ts.labelKey)}</span>
                                       {trip.VehiclePlate && (
                                         <span className="px-1.5 py-0.5 rounded-lg text-xs font-bold" style={{ background: '#eff6ff', color: '#3b82f6' }}>
                                           {trip.VehiclePlate}
@@ -791,8 +791,8 @@ export default function Transfer() {
                         </td>
                         <td className="px-4 py-3 text-xs" style={{ color: '#6b7280', maxWidth: 180 }}>
                           {v.StatusNote && <div className="truncate">{v.StatusNote}</div>}
-                          {v.RepairStartDate && <div>เข้าซ่อม: {v.RepairStartDate.slice(0, 10)}</div>}
-                          {v.RepairExpectedDate && <div>คาดเสร็จ: {v.RepairExpectedDate.slice(0, 10)}</div>}
+                          {v.RepairStartDate && <div>{t('master.repairEntry')} {v.RepairStartDate.slice(0, 10)}</div>}
+                          {v.RepairExpectedDate && <div>{t('master.estCompletion')} {v.RepairExpectedDate.slice(0, 10)}</div>}
                         </td>
                         <td className="px-4 py-3 text-right">
                           <div className="flex items-center justify-end gap-1">
