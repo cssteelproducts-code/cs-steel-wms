@@ -1,6 +1,18 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import api from '../services/api';
 
+// Pre-warm server-side caches so first page navigation is instant.
+// Fire-and-forget — errors are silently ignored.
+const warmupCaches = () => {
+  Promise.allSettled([
+    api.get('/master/vehicle-types'),
+    api.get('/master/warehouses'),
+    api.get('/master/customers'),
+    api.get('/master/loading-stations'),
+    api.get('/trips/active'),
+  ]);
+};
+
 const AuthContext = createContext(null);
 
 export const AuthProvider = ({ children }) => {
@@ -17,6 +29,7 @@ export const AuthProvider = ({ children }) => {
           if (res.data.success) {
             setUser(res.data.user);
             setPermissions(res.data.permissions);
+            warmupCaches();
           } else {
             logout();
           }
@@ -36,6 +49,7 @@ export const AuthProvider = ({ children }) => {
       api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
       setUser(userData);
       setPermissions(perms);
+      warmupCaches();
     }
     return res.data;
   };

@@ -3,6 +3,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const { sql, getPool } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
+const { clearPermsCache } = require('./auth');
 
 // TTL cache for frequently-read, rarely-changing data
 const _c = new Map();
@@ -242,6 +243,7 @@ router.post('/permissions', authenticate, requireAdmin, async (req, res) => {
 
     await pool.request().query(batch);
     cDel(`users:perms:${rid}`);
+    try { clearPermsCache(rid); } catch {}
     res.json({ success: true, message: 'บันทึกสิทธิ์การใช้งานสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

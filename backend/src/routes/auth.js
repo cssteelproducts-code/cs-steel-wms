@@ -5,6 +5,34 @@ const jwt = require('jsonwebtoken');
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
+// Permissions cache by roleId — 60s TTL (matches auth middleware cache window)
+const _permsCache = new Map();
+const permsGet = k => { const e = _permsCache.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
+const permsSet = (k, v) => _permsCache.set(k, { v, exp: Date.now() + 60000 });
+
+async function fetchPermissions(pool, roleId) {
+  const key = `p:${roleId}`;
+  const hit = permsGet(key);
+  if (hit) return hit;
+  const result = await pool.request()
+    .input('RoleID', sql.Int, roleId)
+    .query(`SELECT MenuCode, CanView, CanCreate, CanEdit, CanDelete
+            FROM WMS_MenuPermissions WITH (NOLOCK)
+            WHERE RoleID = @RoleID AND CanView = 1`);
+  const perms = {};
+  result.recordset.forEach(p => {
+    perms[p.MenuCode] = {
+      canView: p.CanView, canCreate: p.CanCreate,
+      canEdit: p.CanEdit, canDelete: p.CanDelete
+    };
+  });
+  permsSet(key, perms);
+  return perms;
+}
+
+// Called from users.js after saving permissions to a role
+const clearPermsCache = (roleId) => _permsCache.delete(`p:${roleId}`);
+
 // POST /api/auth/login
 router.post('/login', async (req, res) => {
   try {
@@ -19,9 +47,9 @@ router.post('/login', async (req, res) => {
       .query(`
         SELECT u.UserID, u.Username, u.Password, u.FullName, u.RoleID, u.WarehouseID, u.IsActive,
                u.SessionDurationHours, r.RoleName, w.WarehouseName
-        FROM WMS_Users u
-        LEFT JOIN WMS_Roles r ON u.RoleID = r.RoleID
-        LEFT JOIN WMS_Warehouses w ON u.WarehouseID = w.WarehouseID
+        FROM WMS_Users u WITH (NOLOCK)
+        LEFT JOIN WMS_Roles r      WITH (NOLOCK) ON u.RoleID      = r.RoleID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON u.WarehouseID = w.WarehouseID
         WHERE u.Username = @Username
       `);
 
@@ -39,29 +67,13 @@ router.post('/login', async (req, res) => {
       return res.status(401).json({ success: false, message: 'Username หรือ Password ไม่ถูกต้อง' });
     }
 
-    // Update last login
-    await pool.request()
-      .input('UserID', sql.Int, user.UserID)
-      .query('UPDATE WMS_Users SET LastLogin = GETDATE() WHERE UserID = @UserID');
-
-    // Get menu permissions
-    const perms = await pool.request()
-      .input('RoleID', sql.Int, user.RoleID)
-      .query(`
-        SELECT MenuCode, CanView, CanCreate, CanEdit, CanDelete
-        FROM WMS_MenuPermissions
-        WHERE RoleID = @RoleID AND CanView = 1
-      `);
-
-    const permissions = {};
-    perms.recordset.forEach(p => {
-      permissions[p.MenuCode] = {
-        canView: p.CanView,
-        canCreate: p.CanCreate,
-        canEdit: p.CanEdit,
-        canDelete: p.CanDelete
-      };
-    });
+    // Run LastLogin update + permissions fetch in parallel (independent after bcrypt passes)
+    const [permissions] = await Promise.all([
+      fetchPermissions(pool, user.RoleID),
+      pool.request()
+        .input('UserID', sql.Int, user.UserID)
+        .query('UPDATE WMS_Users SET LastLogin = GETDATE() WHERE UserID = @UserID')
+    ]);
 
     const sessionHours = user.SessionDurationHours || parseInt(process.env.JWT_EXPIRES_HOURS || '24');
     const token = jwt.sign(
@@ -93,24 +105,7 @@ router.post('/login', async (req, res) => {
 router.get('/me', authenticate, async (req, res) => {
   try {
     const pool = getPool();
-    const perms = await pool.request()
-      .input('RoleID', sql.Int, req.user.RoleID)
-      .query(`
-        SELECT MenuCode, CanView, CanCreate, CanEdit, CanDelete
-        FROM WMS_MenuPermissions
-        WHERE RoleID = @RoleID AND CanView = 1
-      `);
-
-    const permissions = {};
-    perms.recordset.forEach(p => {
-      permissions[p.MenuCode] = {
-        canView: p.CanView,
-        canCreate: p.CanCreate,
-        canEdit: p.CanEdit,
-        canDelete: p.CanDelete
-      };
-    });
-
+    const permissions = await fetchPermissions(pool, req.user.RoleID);
     res.json({
       success: true,
       user: {
@@ -135,14 +130,14 @@ router.post('/change-password', authenticate, async (req, res) => {
 
     const userResult = await pool.request()
       .input('UserID', sql.Int, req.user.UserID)
-      .query('SELECT Password FROM WMS_Users WHERE UserID = @UserID');
+      .query('SELECT Password FROM WMS_Users WITH (NOLOCK) WHERE UserID = @UserID');
 
     const match = await bcrypt.compare(currentPassword, userResult.recordset[0].Password);
     if (!match) {
       return res.status(400).json({ success: false, message: 'รหัสผ่านเดิมไม่ถูกต้อง' });
     }
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 8);
     await pool.request()
       .input('UserID', sql.Int, req.user.UserID)
       .input('Password', sql.NVarChar, hashed)
@@ -155,7 +150,6 @@ router.post('/change-password', authenticate, async (req, res) => {
 });
 
 // POST /api/auth/reset-password — self-service, no token required
-// Verification: username + fullName must match a record in WMS_Users
 router.post('/reset-password', async (req, res) => {
   try {
     const { username, fullName, newPassword } = req.body;
@@ -169,7 +163,7 @@ router.post('/reset-password', async (req, res) => {
     const pool = getPool();
     const result = await pool.request()
       .input('Username', sql.NVarChar, username.trim())
-      .query('SELECT UserID, FullName, IsActive FROM WMS_Users WHERE Username = @Username');
+      .query('SELECT UserID, FullName, IsActive FROM WMS_Users WITH (NOLOCK) WHERE Username = @Username');
 
     if (result.recordset.length === 0) {
       return res.status(400).json({ success: false, message: 'ไม่พบ Username ในระบบ' });
@@ -185,7 +179,7 @@ router.post('/reset-password', async (req, res) => {
       return res.status(400).json({ success: false, message: 'ชื่อ-นามสกุลไม่ตรงกับที่ลงทะเบียนไว้' });
     }
 
-    const hashed = await bcrypt.hash(newPassword, 10);
+    const hashed = await bcrypt.hash(newPassword, 8);
     await pool.request()
       .input('UserID', sql.Int, user.UserID)
       .input('Password', sql.NVarChar, hashed)
@@ -199,3 +193,4 @@ router.post('/reset-password', async (req, res) => {
 });
 
 module.exports = router;
+module.exports.clearPermsCache = clearPermsCache;
