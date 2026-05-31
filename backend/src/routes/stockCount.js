@@ -85,10 +85,17 @@ router.get('/', authenticate, async (req, res) => {
     await ensureTables();
     const result = await getPool().request().query(`
       SELECT s.*,
-        (SELECT COUNT(*) FROM WMS_StockCountItems WHERE SessionID=s.SessionID) AS ItemCount,
-        (SELECT COUNT(*) FROM WMS_StockCountItems WHERE SessionID=s.SessionID AND IsLocked=1) AS LockedCount,
-        (SELECT COUNT(*) FROM WMS_StockCountItems WHERE SessionID=s.SessionID AND NeedsRecount=1) AS RecountCount
+        ISNULL(c.ItemCount,0) AS ItemCount,
+        ISNULL(c.LockedCount,0) AS LockedCount,
+        ISNULL(c.RecountCount,0) AS RecountCount
       FROM WMS_StockCountSessions s
+      LEFT JOIN (
+        SELECT SessionID,
+          COUNT(*) AS ItemCount,
+          SUM(CASE WHEN IsLocked=1 THEN 1 ELSE 0 END) AS LockedCount,
+          SUM(CASE WHEN NeedsRecount=1 THEN 1 ELSE 0 END) AS RecountCount
+        FROM WMS_StockCountItems GROUP BY SessionID
+      ) c ON c.SessionID=s.SessionID
       WHERE s.IsActive=1 ORDER BY s.CreatedAt DESC`);
     res.json({ success: true, data: result.recordset });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
@@ -119,9 +126,14 @@ router.get('/:id', authenticate, async (req, res) => {
     if (!sess.recordset.length) return res.status(404).json({ success: false, message: 'ไม่พบรอบ' });
     const items = await pool.request().input('ID', sql.Int, req.params.id)
       .query(`SELECT i.*,
-        ISNULL((SELECT SUM(e.CountedQty) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID),0) AS TotalCounted,
-        (SELECT COUNT(*) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID) AS EntryCount
-        FROM WMS_StockCountItems i WHERE i.SessionID=@ID ORDER BY i.Location,i.ItemCode`);
+        ISNULL(e.TotalCounted,0) AS TotalCounted,
+        ISNULL(e.EntryCount,0) AS EntryCount
+        FROM WMS_StockCountItems i
+        LEFT JOIN (
+          SELECT ItemID, SUM(CountedQty) AS TotalCounted, COUNT(*) AS EntryCount
+          FROM WMS_StockCountEntries GROUP BY ItemID
+        ) e ON e.ItemID=i.ItemID
+        WHERE i.SessionID=@ID ORDER BY i.Location,i.ItemCode`);
     res.json({ success: true, data: { session: sess.recordset[0], items: items.recordset } });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -270,20 +282,19 @@ router.post('/:id/lock-correct', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const items = await pool.request().input('ID', sql.Int, req.params.id)
-      .query(`SELECT i.ItemID, i.SystemQty,
-        ISNULL((SELECT SUM(e.CountedQty) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID),0) AS TotalCounted
-        FROM WMS_StockCountItems i WHERE i.SessionID=@ID AND i.IsLocked=0`);
-    let count = 0;
-    for (const item of items.recordset) {
-      if (Math.abs(item.SystemQty - item.TotalCounted) < 0.001) {
-        await pool.request()
-          .input('IID', sql.Int, item.ItemID)
-          .input('BY', sql.NVarChar, req.user?.FullName || req.user?.Username)
-          .query(`UPDATE WMS_StockCountItems SET IsLocked=1,NeedsRecount=0,LockedAt=GETDATE(),LockedBy=@BY WHERE ItemID=@IID`);
-        count++;
-      }
+      .query(`SELECT i.ItemID, i.SystemQty, ISNULL(e.TotalCounted,0) AS TotalCounted
+        FROM WMS_StockCountItems i
+        LEFT JOIN (SELECT ItemID, SUM(CountedQty) AS TotalCounted FROM WMS_StockCountEntries GROUP BY ItemID) e ON e.ItemID=i.ItemID
+        WHERE i.SessionID=@ID AND i.IsLocked=0`);
+    const matchIds = items.recordset
+      .filter(i => Math.abs(i.SystemQty - i.TotalCounted) < 0.001)
+      .map(i => i.ItemID);
+    if (matchIds.length > 0) {
+      await pool.request()
+        .input('BY', sql.NVarChar, req.user?.FullName || req.user?.Username)
+        .query(`UPDATE WMS_StockCountItems SET IsLocked=1,NeedsRecount=0,LockedAt=GETDATE(),LockedBy=@BY WHERE ItemID IN (${matchIds.join(',')})`);
     }
-    res.json({ success: true, message: `Lock ${count} รายการที่ถูกต้องสำเร็จ` });
+    res.json({ success: true, message: `Lock ${matchIds.length} รายการที่ถูกต้องสำเร็จ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -292,20 +303,19 @@ router.post('/:id/recount-diff', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const items = await pool.request().input('ID', sql.Int, req.params.id)
-      .query(`SELECT i.ItemID, i.SystemQty,
-        ISNULL((SELECT SUM(e.CountedQty) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID),0) AS TotalCounted
-        FROM WMS_StockCountItems i WHERE i.SessionID=@ID AND i.IsLocked=0 AND i.NeedsRecount=0`);
-    let count = 0;
-    for (const item of items.recordset) {
-      if (Math.abs(item.SystemQty - item.TotalCounted) >= 0.001) {
-        await pool.request().input('IID', sql.Int, item.ItemID)
-          .query('DELETE FROM WMS_StockCountEntries WHERE ItemID=@IID');
-        await pool.request().input('IID', sql.Int, item.ItemID)
-          .query('UPDATE WMS_StockCountItems SET NeedsRecount=1,IsLocked=0 WHERE ItemID=@IID');
-        count++;
-      }
+      .query(`SELECT i.ItemID, i.SystemQty, ISNULL(e.TotalCounted,0) AS TotalCounted
+        FROM WMS_StockCountItems i
+        LEFT JOIN (SELECT ItemID, SUM(CountedQty) AS TotalCounted FROM WMS_StockCountEntries GROUP BY ItemID) e ON e.ItemID=i.ItemID
+        WHERE i.SessionID=@ID AND i.IsLocked=0 AND i.NeedsRecount=0`);
+    const diffIds = items.recordset
+      .filter(i => Math.abs(i.SystemQty - i.TotalCounted) >= 0.001)
+      .map(i => i.ItemID);
+    if (diffIds.length > 0) {
+      const idList = diffIds.join(',');
+      await pool.request().query(`DELETE FROM WMS_StockCountEntries WHERE ItemID IN (${idList})`);
+      await pool.request().query(`UPDATE WMS_StockCountItems SET NeedsRecount=1,IsLocked=0 WHERE ItemID IN (${idList})`);
     }
-    res.json({ success: true, message: `ส่งกลับ ${count} รายการที่มีผลต่างสำเร็จ` });
+    res.json({ success: true, message: `ส่งกลับ ${diffIds.length} รายการที่มีผลต่างสำเร็จ` });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
@@ -345,10 +355,15 @@ router.get('/:id/report', authenticate, async (req, res) => {
     const s = sess.recordset[0];
     const items = await pool.request().input('ID', sql.Int, req.params.id)
       .query(`SELECT i.*,
-        ISNULL((SELECT SUM(e.CountedQty) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID),0) AS TotalCounted,
-        (SELECT MAX(e.CountedBy) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID) AS CountedBy,
-        (SELECT MAX(e.CountedAt) FROM WMS_StockCountEntries e WHERE e.ItemID=i.ItemID) AS LastCountedAt
-        FROM WMS_StockCountItems i WHERE i.SessionID=@ID ORDER BY i.Location,i.ItemCode`);
+        ISNULL(e.TotalCounted,0) AS TotalCounted,
+        e.CountedBy,
+        e.LastCountedAt
+        FROM WMS_StockCountItems i
+        LEFT JOIN (
+          SELECT ItemID, SUM(CountedQty) AS TotalCounted, MAX(CountedBy) AS CountedBy, MAX(CountedAt) AS LastCountedAt
+          FROM WMS_StockCountEntries GROUP BY ItemID
+        ) e ON e.ItemID=i.ItemID
+        WHERE i.SessionID=@ID ORDER BY i.Location,i.ItemCode`);
 
     const wb = XLSX.utils.book_new();
     const hdr = ['Warehouse','Location','รหัสสินค้า','ชื่อสินค้า','ประเภท SKU','หมวดหมู่','ยอดระบบ','ยอดนับได้','ผลต่าง','สถานะ','ผู้นับ','เวลานับล่าสุด'];

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -197,24 +197,30 @@ export default function StockCount() {
   };
 
   const handleLock = async (itemId) => {
+    setSessionData(prev => ({ ...prev, items: prev.items.map(i => i.ItemID === itemId ? { ...i, IsLocked: 1, NeedsRecount: 0 } : i) }));
     try {
       const res = await api.put(`/stock-count/${selectedSession.SessionID}/items/${itemId}/lock`);
-      if (res.data.success) { toast.success(res.data.message); fetchDetail(selectedSession.SessionID); }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+      if (res.data.success) toast.success(res.data.message);
+      else fetchDetail(selectedSession.SessionID);
+    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession.SessionID); }
   };
 
   const handleUnlock = async (itemId) => {
+    setSessionData(prev => ({ ...prev, items: prev.items.map(i => i.ItemID === itemId ? { ...i, IsLocked: 0, LockedAt: null, LockedBy: null } : i) }));
     try {
       const res = await api.put(`/stock-count/${selectedSession.SessionID}/items/${itemId}/unlock`);
-      if (res.data.success) { toast.success(res.data.message); fetchDetail(selectedSession.SessionID); }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+      if (res.data.success) toast.success(res.data.message);
+      else fetchDetail(selectedSession.SessionID);
+    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession.SessionID); }
   };
 
   const handleRecount = async (itemId) => {
+    setSessionData(prev => ({ ...prev, items: prev.items.map(i => i.ItemID === itemId ? { ...i, NeedsRecount: 1, IsLocked: 0, TotalCounted: 0, EntryCount: 0 } : i) }));
     try {
       const res = await api.put(`/stock-count/${selectedSession.SessionID}/items/${itemId}/recount`);
-      if (res.data.success) { toast.success(res.data.message); fetchDetail(selectedSession.SessionID); }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+      if (res.data.success) toast.success(res.data.message);
+      else fetchDetail(selectedSession.SessionID);
+    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession.SessionID); }
   };
 
   const handleLockCorrect = async () => {
@@ -260,40 +266,48 @@ export default function StockCount() {
   const handleSubmitCount = async (itemId) => {
     const qty = countInputs[itemId];
     if (qty === '' || qty == null) return toast.error('กรุณาระบุจำนวน');
+    const parsedQty = parseFloat(qty);
     setSubmitting(p => ({ ...p, [itemId]: true }));
+    setCountInputs(p => ({ ...p, [itemId]: '' }));
+    setFieldData(prev => ({
+      ...prev,
+      items: prev.items.map(i => i.ItemID !== itemId ? i : {
+        ...i, TotalCounted: Number(i.TotalCounted) + parsedQty, EntryCount: (i.EntryCount || 0) + 1, NeedsRecount: 0
+      })
+    }));
     try {
       const res = await api.post(`/stock-count/${fieldSessionId}/count`, {
-        itemId, countedQty: parseFloat(qty), notes: countNotes[itemId] || ''
+        itemId, countedQty: parsedQty, notes: countNotes[itemId] || ''
       });
-      if (res.data.success) {
-        toast.success(res.data.message);
-        setCountInputs(p => ({ ...p, [itemId]: '' }));
-        fetchFieldData(fieldSessionId);
-      }
-    } catch (err) { toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ'); }
+      if (res.data.success) toast.success(res.data.message);
+      else fetchFieldData(fieldSessionId);
+    } catch (err) { toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ'); fetchFieldData(fieldSessionId); }
     finally { setSubmitting(p => ({ ...p, [itemId]: false })); }
   };
 
   // ── Derived data ──────────────────────────────────────
 
-  const items = sessionData?.items || [];
-  const baseFiltered = items.filter(i =>
+  const items = useMemo(() => sessionData?.items || [], [sessionData]);
+  const warehouses = useMemo(() => [...new Set(items.map(i => i.Warehouse).filter(Boolean))].sort(), [items]);
+  const locations  = useMemo(() => [...new Set(items.filter(i => !filterWH || i.Warehouse === filterWH).map(i => i.Location).filter(Boolean))].sort(), [items, filterWH]);
+  const gnames     = useMemo(() => [...new Set(items.map(i => i.CategoryName).filter(Boolean))].sort(), [items]);
+
+  const baseFiltered = useMemo(() => items.filter(i =>
     (!filterWH    || i.Warehouse    === filterWH)    &&
     (!filterLoc   || i.Location     === filterLoc)   &&
     (!filterGname || i.CategoryName === filterGname) &&
     (!filterSize  || i.SizeCode     === filterSize)  &&
     (!filterThick || i.Thickness    === filterThick)
-  );
-  const warehouses = [...new Set(items.map(i => i.Warehouse).filter(Boolean))].sort();
-  const locations  = [...new Set(items.filter(i => !filterWH || i.Warehouse === filterWH).map(i => i.Location).filter(Boolean))].sort();
-  const gnames     = [...new Set(items.map(i => i.CategoryName).filter(Boolean))].sort();
-  const sizes      = [...new Set(baseFiltered.map(i => i.SizeCode).filter(Boolean))].sort();
-  const thicks     = [...new Set(baseFiltered.map(i => i.Thickness).filter(v => v != null && String(v) !== '0' && String(v) !== ''))].map(String).sort();
-  const filteredItems = baseFiltered.filter(i => {
-    if (!search) return true;
+  ), [items, filterWH, filterLoc, filterGname, filterSize, filterThick]);
+
+  const sizes  = useMemo(() => [...new Set(baseFiltered.map(i => i.SizeCode).filter(Boolean))].sort(), [baseFiltered]);
+  const thicks = useMemo(() => [...new Set(baseFiltered.map(i => i.Thickness).filter(v => v != null && String(v) !== '0' && String(v) !== ''))].map(String).sort(), [baseFiltered]);
+
+  const filteredItems = useMemo(() => {
+    if (!search) return baseFiltered;
     const q = search.toLowerCase();
-    return i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q);
-  });
+    return baseFiltered.filter(i => i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q));
+  }, [baseFiltered, search]);
 
   const toggleSelect = (itemId) => {
     setSelectedIds(prev => {
@@ -314,19 +328,19 @@ export default function StockCount() {
   };
   const allFilteredSelected = filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.ItemID));
   const someFilteredSelected = !allFilteredSelected && filteredItems.some(i => selectedIds.has(i.ItemID));
-  const displayItems = showSelected ? items.filter(i => selectedIds.has(i.ItemID)) : filteredItems;
+  const displayItems = useMemo(() => showSelected ? items.filter(i => selectedIds.has(i.ItemID)) : filteredItems, [showSelected, items, filteredItems, selectedIds]);
   const isDraft = sessionData?.session?.Status === 'DRAFT';
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: items.length,
     counted: items.filter(i => i.EntryCount > 0).length,
     locked: items.filter(i => i.IsLocked).length,
     recount: items.filter(i => i.NeedsRecount).length,
     diff: items.filter(i => i.EntryCount > 0 && Math.abs(Number(i.TotalCounted) - Number(i.SystemQty)) >= 0.001).length,
-  };
+  }), [items]);
 
-  const fieldItems = fieldData?.items || [];
-  const filteredFieldItems = fieldItems.filter(i => {
+  const fieldItems = useMemo(() => fieldData?.items || [], [fieldData]);
+  const filteredFieldItems = useMemo(() => fieldItems.filter(i => {
     const q = fieldSearch.toLowerCase();
     const matchSearch = !q || i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q) || i.Location?.toLowerCase().includes(q);
     if (!matchSearch) return false;
@@ -334,7 +348,7 @@ export default function StockCount() {
     if (fieldFilter === 'pending') return !i.IsLocked && i.EntryCount === 0;
     if (fieldFilter === 'done') return i.EntryCount > 0 || i.IsLocked;
     return !i.IsLocked;
-  });
+  }), [fieldItems, fieldSearch, fieldFilter]);
 
   // ── Render ────────────────────────────────────────────
 

@@ -1165,7 +1165,10 @@ export default function Master() {
                   {printItem.line1}
                 </div>
                 {printItem.line2 && (
-                  <div className="text-xs text-gray-600 mt-1 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{printItem.line2}</div>
+                  <div className="text-xs text-gray-600 mt-1 leading-tight">{printItem.line2}</div>
+                )}
+                {printItem.line2b && (
+                  <div className="text-xs text-gray-500 mt-0.5 leading-tight">{printItem.line2b}</div>
                 )}
                 {printItem.line3 && (
                   <div className="text-xs text-gray-400 mt-1 flex items-center justify-center gap-1">
