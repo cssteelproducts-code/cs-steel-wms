@@ -63,6 +63,7 @@ export default function ShiftPlanning() {
   const [batchForm, setBatchForm] = useState({ fromDate: new Date().toISOString().slice(0, 10), toDate: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
   const [editingId, setEditingId] = useState(null);
   const [editRow, setEditRow] = useState({});
+  const [batchLoading, setBatchLoading] = useState(false);
   const cfgSaveTimer = useRef(null);
   const cfgInitialized = useRef(false);
 
@@ -146,10 +147,12 @@ export default function ShiftPlanning() {
       newRecs.push({ date: dateStr, endTime: batchForm.endTime, otEmp: parseInt(batchForm.otEmp) || 0, otHrs1: ot1, otHrs2: ot2 });
     }
     if (!newRecs.length) { alert('ไม่มีวันใหม่ (วันที่ซ้ำถูกข้ามแล้ว)'); return; }
+    setBatchLoading(true);
     try {
       const res = await api.post('/shift-plan/records', newRecs);
       setRecords(r => [...r, ...res.data.data].sort((a, b) => a.date.localeCompare(b.date)));
     } catch {}
+    finally { setBatchLoading(false); }
   };
 
   const clearAll = async () => {
@@ -345,8 +348,10 @@ export default function ShiftPlanning() {
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <button onClick={addBatchRecords} className="btn-primary text-sm flex items-center gap-1.5">
-                  <Plus size={14} />เพิ่มทุกวันในช่วงนี้
+                <button onClick={addBatchRecords} disabled={batchLoading} className="btn-primary text-sm flex items-center gap-1.5 disabled:opacity-70">
+                  {batchLoading
+                    ? <><Loader2 size={14} className="animate-spin" />กำลังเพิ่ม...</>
+                    : <><Plus size={14} />เพิ่มทุกวันในช่วงนี้</>}
                 </button>
                 {batchForm.fromDate && batchForm.toDate && (
                   <span className="text-xs text-indigo-500">
