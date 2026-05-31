@@ -91,12 +91,12 @@ router.get('/today', authenticate, async (req, res) => {
                c.CustomerName, c.ARCode as CustomerARCode,
                wi.TareWeight, wi.WeighDateTime, wi.Notes,
                u.FullName as OperatorName
-        FROM WMS_WeighIn wi
-        JOIN WMS_Trips t ON wi.TripID = t.TripID
-        LEFT JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
-        LEFT JOIN WMS_Warehouses w ON t.WarehouseID = w.WarehouseID
-        LEFT JOIN WMS_Customers c ON t.CustomerID = c.CustomerID
-        LEFT JOIN WMS_Users u ON wi.OperatorID = u.UserID
+        FROM WMS_WeighIn wi WITH (NOLOCK)
+        JOIN WMS_Trips t WITH (NOLOCK) ON wi.TripID = t.TripID
+        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON t.VehicleTypeID = vt.TypeID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON t.WarehouseID = w.WarehouseID
+        LEFT JOIN WMS_Customers c WITH (NOLOCK) ON t.CustomerID = c.CustomerID
+        LEFT JOIN WMS_Users u WITH (NOLOCK) ON wi.OperatorID = u.UserID
         WHERE CAST(t.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
         ORDER BY wi.WeighDateTime DESC
       `);
@@ -147,7 +147,7 @@ router.get('/check/:licensePlate', authenticate, async (req, res) => {
       .input('LicensePlate', sql.NVarChar, req.params.licensePlate.toUpperCase())
       .query(`
         SELECT TripID, LicensePlate, Status, CreatedAt
-        FROM WMS_Trips
+        FROM WMS_Trips WITH (NOLOCK)
         WHERE LicensePlate = @LicensePlate
         AND Status NOT IN ('Complete', 'Cancelled')
         AND CAST(TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)

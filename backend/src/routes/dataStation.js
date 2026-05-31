@@ -3,6 +3,10 @@ const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
+let _pendingCache = null;
+let _pendingCacheExp = 0;
+const invalidatePending = () => { _pendingCacheExp = 0; };
+
 // POST /api/data-station - Record data station visit (no pickDocumentNo required, multi-station)
 router.post('/', authenticate, async (req, res) => {
   try {
@@ -66,6 +70,7 @@ router.post('/', authenticate, async (req, res) => {
       .input('TripID', sql.Int, tripId)
       .query(`UPDATE WMS_Trips SET Status = 'WaitPick' WHERE TripID = @TripID`);
 
+    invalidatePending();
     const trip = tripCheck.recordset[0];
     res.json({
       success: true,
@@ -79,6 +84,9 @@ router.post('/', authenticate, async (req, res) => {
 
 // GET /api/data-station/pending
 router.get('/pending', authenticate, async (req, res) => {
+  if (_pendingCache && Date.now() < _pendingCacheExp) {
+    return res.json({ success: true, data: _pendingCache });
+  }
   try {
     const pool = getPool();
     const result = await pool.request()
@@ -104,6 +112,8 @@ router.get('/pending', authenticate, async (req, res) => {
         AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
         ORDER BY t.CreatedAt ASC
       `);
+    _pendingCache = result.recordset;
+    _pendingCacheExp = Date.now() + 10000;
     res.json({ success: true, data: result.recordset });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });

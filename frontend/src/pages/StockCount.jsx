@@ -447,8 +447,20 @@ export default function StockCount() {
     } catch (err) { toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ'); }
   };
 
-  const handleReport = () => {
-    window.open(`${api.defaults.baseURL}/stock-count/${selectedSession.SessionID}/report`, '_blank');
+  const handleReport = async () => {
+    try {
+      const res = await api.get(`/stock-count/${selectedSession.SessionID}/report`, { responseType: 'blob' });
+      const url = URL.createObjectURL(res.data);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `stock_count_${selectedSession.SessionName || selectedSession.SessionID}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch {
+      toast.error('ดาวน์โหลดรายงานไม่สำเร็จ');
+    }
   };
 
   const onOpenEntries = useCallback(async (item) => {

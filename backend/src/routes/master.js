@@ -12,7 +12,7 @@ const mcGet = k => { const e = _mc.get(k); return (e && Date.now() < e.exp) ? e.
 const mcSet = (k, v, ms) => _mc.set(k, { v, exp: Date.now() + ms });
 const mcDel = (...keys) => keys.forEach(k => _mc.delete(k));
 const TTL_LONG = 5 * 60000;   // 5 min — vehicle types, warehouses, loading stations
-const TTL_MED  = 2 * 60000;   // 2 min — customers (larger set, updated more often)
+const TTL_MED  = 5 * 60000;   // 5 min — customers (increased from 2 min; rarely change)
 
 // ==================== WAREHOUSES ====================
 router.get('/warehouses', authenticate, async (req, res) => {
@@ -21,7 +21,7 @@ router.get('/warehouses', authenticate, async (req, res) => {
     if (hit) return res.json({ success: true, data: hit });
     const pool = getPool();
     const result = await pool.request()
-      .query('SELECT * FROM WMS_Warehouses WHERE IsActive = 1 ORDER BY WarehouseName ASC');
+      .query('SELECT * FROM WMS_Warehouses WITH (NOLOCK) WHERE IsActive = 1 ORDER BY WarehouseName ASC');
     mcSet('warehouses', result.recordset, TTL_LONG);
     res.json({ success: true, data: result.recordset });
   } catch (err) {
@@ -83,7 +83,7 @@ router.get('/customers', authenticate, async (req, res) => {
     const result = await pool.request()
       .input('Search', sql.NVarChar, `%${search}%`)
       .query(`SELECT CustomerID, CustomerCode, ARCode, CustomerName, Phone, Address
-              FROM WMS_Customers
+              FROM WMS_Customers WITH (NOLOCK)
               WHERE IsActive = 1 AND (CustomerName LIKE @Search OR CustomerCode LIKE @Search OR ARCode LIKE @Search)
               ORDER BY CustomerCode ASC`);
     if (!search) mcSet('customers', result.recordset, TTL_MED);
@@ -137,7 +137,7 @@ router.get('/vehicle-types', authenticate, async (req, res) => {
     if (hit) return res.json({ success: true, data: hit });
     const pool = getPool();
     const result = await pool.request()
-      .query(`SELECT * FROM WMS_VehicleTypes WHERE IsActive = 1 ORDER BY
+      .query(`SELECT * FROM WMS_VehicleTypes WITH (NOLOCK) WHERE IsActive = 1 ORDER BY
         CASE
           WHEN TypeName LIKE N'%4 ล้อ%'    THEN 1
           WHEN TypeName LIKE N'%6 ล้อ%'    THEN 2
@@ -207,8 +207,8 @@ router.get('/loading-stations', authenticate, async (req, res) => {
     const hit = mcGet(cacheKey);
     if (hit) return res.json({ success: true, data: hit });
     const pool = getPool();
-    let query = `SELECT ls.*, w.WarehouseName FROM WMS_LoadingStations ls
-                 LEFT JOIN WMS_Warehouses w ON ls.WarehouseID = w.WarehouseID
+    let query = `SELECT ls.*, w.WarehouseName FROM WMS_LoadingStations ls WITH (NOLOCK)
+                 LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON ls.WarehouseID = w.WarehouseID
                  WHERE ls.IsActive = 1`;
     const request = pool.request();
     if (warehouseId) {

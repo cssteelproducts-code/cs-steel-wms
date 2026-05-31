@@ -31,8 +31,8 @@ const authenticate = async (req, res, next) => {
       .query(`
         SELECT u.UserID, u.Username, u.FullName, u.RoleID, u.WarehouseID, u.IsActive,
                r.RoleName
-        FROM WMS_Users u
-        LEFT JOIN WMS_Roles r ON u.RoleID = r.RoleID
+        FROM WMS_Users u WITH (NOLOCK)
+        LEFT JOIN WMS_Roles r WITH (NOLOCK) ON u.RoleID = r.RoleID
         WHERE u.UserID = @UserID AND u.IsActive = 1
       `);
 
