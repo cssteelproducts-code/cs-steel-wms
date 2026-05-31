@@ -11,6 +11,9 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
 import '../utils/helpers';
 
+const PAGE_SIZE = 100;
+const FIELD_PAGE_SIZE = 50;
+
 const STATUS_LABEL = {
   DRAFT:     { label: 'ร่าง',         cls: 'bg-slate-100 text-slate-600' },
   OPEN:      { label: 'เปิดรอบ',      cls: 'bg-blue-100 text-blue-700' },
@@ -68,6 +71,8 @@ export default function StockCount() {
   const [submitting, setSubmitting] = useState({});
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showSelected, setShowSelected] = useState(false);
+  const [page, setPage] = useState(0);
+  const [fieldPage, setFieldPage] = useState(0);
 
   // ── Fetch ─────────────────────────────────────────────
 
@@ -111,6 +116,8 @@ export default function StockCount() {
   useEffect(() => { if (tab === 'office') fetchSessions(); }, [tab, fetchSessions]);
   useEffect(() => { if (tab === 'field') fetchFieldSessions(); }, [tab, fetchFieldSessions]);
   useEffect(() => { if (fieldSessionId) fetchFieldData(fieldSessionId); }, [fieldSessionId, fetchFieldData]);
+  useEffect(() => { setPage(0); }, [filterWH, filterLoc, filterGname, filterSize, filterThick, search, showSelected]);
+  useEffect(() => { setFieldPage(0); }, [fieldSearch, fieldFilter, fieldSessionId]);
 
   // ── Office actions ────────────────────────────────────
 
@@ -121,6 +128,7 @@ export default function StockCount() {
     setSearch('');
     setSelectedIds(new Set());
     setShowSelected(false);
+    setPage(0);
     fetchDetail(session.SessionID);
   };
 
@@ -339,6 +347,9 @@ export default function StockCount() {
     diff: items.filter(i => i.EntryCount > 0 && Math.abs(Number(i.TotalCounted) - Number(i.SystemQty)) >= 0.001).length,
   }), [items]);
 
+  const pageItems = useMemo(() => displayItems.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE), [displayItems, page]);
+  const totalPages = Math.max(1, Math.ceil(displayItems.length / PAGE_SIZE));
+
   const fieldItems = useMemo(() => fieldData?.items || [], [fieldData]);
   const filteredFieldItems = useMemo(() => fieldItems.filter(i => {
     const q = fieldSearch.toLowerCase();
@@ -349,6 +360,8 @@ export default function StockCount() {
     if (fieldFilter === 'done') return i.EntryCount > 0 || i.IsLocked;
     return !i.IsLocked;
   }), [fieldItems, fieldSearch, fieldFilter]);
+  const fieldPageItems = useMemo(() => filteredFieldItems.slice(fieldPage * FIELD_PAGE_SIZE, (fieldPage + 1) * FIELD_PAGE_SIZE), [filteredFieldItems, fieldPage]);
+  const fieldTotalPages = Math.max(1, Math.ceil(filteredFieldItems.length / FIELD_PAGE_SIZE));
 
   // ── Render ────────────────────────────────────────────
 
@@ -602,6 +615,20 @@ export default function StockCount() {
                 <LoadingSpinner text={importing ? 'กำลังนำเข้าข้อมูล...' : 'กำลังโหลด...'} />
               ) : (
                 <div className="card overflow-x-auto">
+                  {displayItems.length > PAGE_SIZE && (
+                    <div className="flex items-center justify-between mb-2 px-1">
+                      <span className="text-xs text-slate-400">
+                        แสดง {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, displayItems.length)} จาก {displayItems.length} รายการ
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+                        <span className="text-xs text-slate-500 px-1">{page + 1} / {totalPages}</span>
+                        <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+                      </div>
+                    </div>
+                  )}
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="border-b border-slate-100">
@@ -632,7 +659,7 @@ export default function StockCount() {
                           {showSelected ? 'ยังไม่ได้เลือกรายการ' : 'ไม่พบรายการ'}
                         </td></tr>
                       )}
-                      {displayItems.map(item => {
+                      {pageItems.map(item => {
                         const diff = Number(item.TotalCounted) - Number(item.SystemQty);
                         const hasDiff = item.EntryCount > 0 && Math.abs(diff) >= 0.001;
                         const rowCls = item.IsLocked ? 'bg-emerald-50/40' : item.NeedsRecount ? 'bg-amber-50/50' : hasDiff ? 'bg-red-50/30' : '';
@@ -711,6 +738,15 @@ export default function StockCount() {
                       })}
                     </tbody>
                   </table>
+                  {totalPages > 1 && (
+                    <div className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-slate-100">
+                      <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹ ก่อนหน้า</button>
+                      <span className="text-xs text-slate-400 px-3">หน้า {page + 1} จาก {totalPages}</span>
+                      <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">ถัดไป ›</button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -773,7 +809,21 @@ export default function StockCount() {
                   {filteredFieldItems.length === 0 && (
                     <div className="text-center py-10 text-slate-400 text-sm">ไม่พบรายการ</div>
                   )}
-                  {filteredFieldItems.map(item => (
+                  {filteredFieldItems.length > FIELD_PAGE_SIZE && (
+                    <div className="flex items-center justify-between px-1">
+                      <span className="text-xs text-slate-400">
+                        แสดง {fieldPage * FIELD_PAGE_SIZE + 1}–{Math.min((fieldPage + 1) * FIELD_PAGE_SIZE, filteredFieldItems.length)} จาก {filteredFieldItems.length} รายการ
+                      </span>
+                      <div className="flex items-center gap-1">
+                        <button onClick={() => setFieldPage(p => Math.max(0, p - 1))} disabled={fieldPage === 0}
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+                        <span className="text-xs text-slate-500 px-1">{fieldPage + 1} / {fieldTotalPages}</span>
+                        <button onClick={() => setFieldPage(p => Math.min(fieldTotalPages - 1, p + 1))} disabled={fieldPage >= fieldTotalPages - 1}
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+                      </div>
+                    </div>
+                  )}
+                  {fieldPageItems.map(item => (
                     <div key={item.ItemID}
                       className={`card py-3 px-4 space-y-2 ${item.NeedsRecount ? 'border-amber-200 bg-amber-50/30' : ''} ${item.IsLocked ? 'border-emerald-200 bg-emerald-50/20 opacity-60' : ''}`}>
                       <div className="flex items-start justify-between gap-2">
@@ -817,6 +867,15 @@ export default function StockCount() {
                       )}
                     </div>
                   ))}
+                  {fieldTotalPages > 1 && (
+                    <div className="flex items-center justify-center gap-1 pt-2">
+                      <button onClick={() => setFieldPage(p => Math.max(0, p - 1))} disabled={fieldPage === 0}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹ ก่อนหน้า</button>
+                      <span className="text-xs text-slate-400 px-3">หน้า {fieldPage + 1} จาก {fieldTotalPages}</span>
+                      <button onClick={() => setFieldPage(p => Math.min(fieldTotalPages - 1, p + 1))} disabled={fieldPage >= fieldTotalPages - 1}
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">ถัดไป ›</button>
+                    </div>
+                  )}
                 </div>
               )}
             </>
