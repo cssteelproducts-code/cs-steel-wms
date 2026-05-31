@@ -131,15 +131,16 @@ export default function App() {
         <div id="global-loading-bar" />
         <AppRoutes />
         <Toaster
-          position="top-right"
+          position="bottom-center"
           toastOptions={{
-            duration: 4000,
+            duration: 2500,
             style: {
               background: '#1e293b',
               color: '#f1f5f9',
               border: '1px solid #334155',
               borderRadius: '12px',
-              fontSize: '14px'
+              fontSize: '14px',
+              marginBottom: 'env(safe-area-inset-bottom, 0px)'
             },
             success: { iconTheme: { primary: '#10b981', secondary: '#f1f5f9' } },
             error: { iconTheme: { primary: '#ef4444', secondary: '#f1f5f9' } }
