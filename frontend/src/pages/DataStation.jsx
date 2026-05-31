@@ -5,9 +5,10 @@ import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
 import PriorityBadge from '../components/PriorityBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useLang } from '../context/LanguageContext';
 
 // Isolated timer — only this component re-renders every second, not the whole list.
-function LiveSOWait({ startedAt }) {
+function LiveSOWait({ startedAt, t }) {
   const [secs, setSecs] = useState(() =>
     Math.max(0, Math.floor((Date.now() - new Date(startedAt).getTime()) / 1000))
   );
@@ -17,13 +18,14 @@ function LiveSOWait({ startedAt }) {
     return () => clearInterval(id);
   }, [startedAt]);
 
-  if (secs < 60) return <span className="text-xs font-semibold text-rose-500">⏱ {secs} วินาที</span>;
+  if (secs < 60) return <span className="text-xs font-semibold text-rose-500">⏱ {secs} {t('unit.seconds')}</span>;
   const mins = Math.floor(secs / 60);
-  if (mins < 60) return <span className="text-xs font-semibold text-rose-500">⏱ {mins} นาที</span>;
-  return <span className="text-xs font-semibold text-rose-500">⏱ {Math.floor(mins / 60)} ชม. {mins % 60} นาที</span>;
+  if (mins < 60) return <span className="text-xs font-semibold text-rose-500">⏱ {mins} {t('unit.minutes')}</span>;
+  return <span className="text-xs font-semibold text-rose-500">⏱ {Math.floor(mins / 60)} {t('unit.hours')} {mins % 60} {t('unit.minutes')}</span>;
 }
 
 export default function DataStation() {
+  const { t } = useLang();
   const [pending, setPending] = useState([]);
   const [stations, setStations] = useState([]);
   const [selected, setSelected] = useState(null);
@@ -67,13 +69,13 @@ export default function DataStation() {
     try {
       const res = await api.put(`/data-station/${selected.TripID}/wait-pick`);
       if (res.data.success) {
-        toast.success(`${selected.LicensePlate} — รอเอกสาร SO แล้ว`);
+        toast.success(`${selected.LicensePlate} — ${t('dataStation.waitSO')}`);
         const updated = { ...selected, Status: 'WaitPick', SOWaitStartedAt: new Date().toISOString(), SOWaitMinutes: 0 };
         setSelected(updated);
         fetchPending();
       }
     } catch {
-      toast.error('ไม่สามารถเปลี่ยนสถานะได้');
+      toast.error(t('common.noData'));
     } finally {
       setWaitLoading(false);
     }
@@ -91,16 +93,21 @@ export default function DataStation() {
         fetchPending();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('common.noData'));
     } finally {
       setLoading(false);
     }
   };
 
+  const formatWait = (mins) => {
+    if (!mins || mins <= 0) return t('common.justArrived');
+    if (mins < 60) return `${mins} ${t('unit.minutes')}`;
+    return `${Math.floor(mins / 60)} ${t('unit.hours')} ${mins % 60} ${t('unit.minutes')}`;
+  };
 
   if (pageLoading) return (
     <div className="flex items-center justify-center h-64">
-      <LoadingSpinner size="lg" text="กำลังโหลดรายการรอ Data..." />
+      <LoadingSpinner size="lg" text={t('common.loading')} />
     </div>
   );
 
@@ -112,7 +119,7 @@ export default function DataStation() {
           <div className="flex items-center justify-between mb-4 flex-shrink-0">
             <h3 className="card-header mb-0 flex items-center gap-2">
               <Clock size={18} className="text-purple-500" />
-              รออยู่ที่สถานี Data ({pending.length})
+              {t('dataStation.waitingTitle')} ({pending.length})
             </h3>
             <button onClick={fetchPending} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors"><RefreshCw size={15} /></button>
           </div>
@@ -139,22 +146,18 @@ export default function DataStation() {
                   </div>
                   <div className="text-right flex-shrink-0">
                     <div className="text-amber-500 text-sm font-medium">
-                      {trip.WaitMinutes > 0
-                        ? trip.WaitMinutes < 60
-                          ? `รอ ${trip.WaitMinutes} นาที`
-                          : `รอ ${Math.floor(trip.WaitMinutes / 60)} ชั่วโมง ${trip.WaitMinutes % 60} นาที`
-                        : 'เพิ่งเข้า'}
+                      {formatWait(trip.WaitMinutes)}
                     </div>
                     <div className="text-slate-400 text-xs">{formatDateTime(trip.WeighDateTime)}</div>
                     <div className="mt-1 flex items-center justify-end gap-1.5">
                       {(trip.Status === 'Data' || (trip.Status === 'WaitPick' && !trip.SOWaitStartedAt)) && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-medium">รอเอกสาร Pick</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-purple-50 text-purple-600 border border-purple-200 font-medium">{t('status.waitPick')}</span>
                       )}
                       {trip.Status === 'WaitPick' && trip.SOWaitStartedAt && (
-                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">รอเอกสาร SO</span>
+                        <span className="text-xs px-1.5 py-0.5 rounded-full bg-rose-50 text-rose-600 border border-rose-200 font-medium">{t('status.soWait')}</span>
                       )}
                       {trip.Status === 'WaitPick' && trip.SOWaitStartedAt && (
-                        <LiveSOWait startedAt={trip.SOWaitStartedAt} />
+                        <LiveSOWait startedAt={trip.SOWaitStartedAt} t={t} />
                       )}
                     </div>
                   </div>
@@ -162,7 +165,7 @@ export default function DataStation() {
               </div>
             ))}
             {!pending.length && (
-              <p className="text-center text-slate-400 py-8">ไม่มีรถรอที่สถานี Data</p>
+              <p className="text-center text-slate-400 py-8">{t('dataStation.noTrips')}</p>
             )}
           </div>
         </div>
@@ -171,28 +174,28 @@ export default function DataStation() {
         <div className="card">
           <h3 className="card-header flex items-center gap-2">
             <FileText size={18} className="text-purple-500" />
-            บันทึกจ่ายงานสถานีขึ้นสินค้า
+            {t('dataStation.formTitle')}
           </h3>
 
           {selected ? (
             <form onSubmit={handleSubmit} className="space-y-4">
               {/* Selected trip info */}
               <div className="bg-purple-50 border border-purple-200 rounded-lg p-4">
-                <div className="text-purple-600 text-sm font-medium mb-1">รถที่เลือก</div>
+                <div className="text-purple-600 text-sm font-medium mb-1">{t('common.selectedVehicle')}</div>
                 <div className="text-slate-900 text-xl font-bold">{selected.LicensePlate}</div>
                 <div className="text-slate-500 text-sm">
                   {selected.VehicleType} | {selected.DeliveryType || '-'} | {selected.WarehouseName}
                 </div>
                 <div className="text-slate-400 text-xs mt-1">
-                  ชั่งเข้า: {formatDateTime(selected.WeighDateTime)}
+                  {t('dataStation.weighInTime')} {formatDateTime(selected.WeighDateTime)}
                 </div>
               </div>
 
               <div>
-                <label className="label">สถานีที่ต้องไป <span className="text-slate-400 font-normal">(เลือกได้หลายสถานี)</span></label>
+                <label className="label">{t('dataStation.stationLabel')} <span className="text-slate-400 font-normal">({t('dataStation.multiSelectHint')})</span></label>
                 <div className="border border-slate-200 rounded-lg divide-y divide-slate-100 max-h-60 overflow-y-auto">
                   {stations.length === 0 ? (
-                    <p className="text-slate-400 text-xs p-3">ยังไม่มีสถานี — เพิ่มในเมนูข้อมูลหลัก</p>
+                    <p className="text-slate-400 text-xs p-3">{t('dataStation.noStations')}</p>
                   ) : stations.map(s => {
                     const checked = form.stationIds.includes(s.StationID);
                     return (
@@ -215,35 +218,35 @@ export default function DataStation() {
                   })}
                 </div>
                 {form.stationIds.length > 0 && (
-                  <p className="text-purple-600 text-xs mt-1">เลือก {form.stationIds.length} สถานี</p>
+                  <p className="text-purple-600 text-xs mt-1">{t('dataStation.selectedCount').replace('{n}', form.stationIds.length)}</p>
                 )}
               </div>
 
               <div>
-                <label className="label">หมายเหตุ</label>
+                <label className="label">{t('common.note')}</label>
                 <textarea value={form.notes} onChange={e => setForm(p => ({ ...p, notes: e.target.value }))}
-                  className="input-field resize-none" rows={2} placeholder="หมายเหตุ (ถ้ามี)" />
+                  className="input-field resize-none" rows={2} placeholder={t('weighIn.notesPlaceholder')} />
               </div>
 
               <div className="flex gap-3">
                 <button type="submit" disabled={loading} className="btn-success flex-1 py-3">
-                  {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Check size={16} />บันทึก</>}
+                  {loading ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Check size={16} />{t('common.record')}</>}
                 </button>
-                <button type="button" onClick={() => setSelected(null)} className="btn-secondary px-6">ยกเลิก</button>
+                <button type="button" onClick={() => setSelected(null)} className="btn-secondary px-6">{t('common.cancel')}</button>
               </div>
               {selected.Status !== 'WaitPick' && (
                 <button type="button" onClick={markWaitPick} disabled={waitLoading}
                   className="w-full py-2.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-600 text-sm font-medium hover:bg-rose-100 transition-colors flex items-center justify-center gap-2">
                   {waitLoading
                     ? <span className="w-4 h-4 border-2 border-rose-300 border-t-rose-600 rounded-full animate-spin" />
-                    : <><HourglassIcon size={14} />รอเอกสาร SO</>}
+                    : <><HourglassIcon size={14} />{t('dataStation.markWaitSO')}</>}
                 </button>
               )}
             </form>
           ) : (
             <div className="flex flex-col items-center justify-center py-16 text-slate-400">
               <FileText size={48} className="mb-4 opacity-30" />
-              <p>เลือกรถจากรายการด้านซ้ายเพื่อบันทึก</p>
+              <p>{t('dataStation.selectToRecord')}</p>
             </div>
           )}
         </div>

@@ -7,7 +7,7 @@ import VehicleMap from '../components/VehicleMap';
 import { useLang } from '../context/LanguageContext';
 
 export default function ETA() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [vehicles, setVehicles] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -36,11 +36,11 @@ export default function ETA() {
         setLastUpdate(new Date());
       }
     } catch {
-      toast.error('ไม่สามารถดึงข้อมูล GPS ได้');
+      toast.error(t('eta.errFetchGps'));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   useEffect(() => {
     fetchVehicles();
@@ -55,7 +55,7 @@ export default function ETA() {
       const res = await api.get('/eta/all-vehicles');
       setAllVehicles(res.data.data || []);
     } catch {
-      toast.error('โหลดรายชื่อรถไม่สำเร็จ');
+      toast.error(t('eta.errLoadVehicles'));
     } finally {
       setLoadingManage(false);
     }
@@ -67,7 +67,7 @@ export default function ETA() {
       await api.put(`/eta/vehicles/${vehicleId}/transport`, { isTransport: current ? 0 : 1 });
       setAllVehicles(p => p.map(v => v.VehicleID === vehicleId ? { ...v, IsTransport: current ? 0 : 1 } : v));
     } catch {
-      toast.error('บันทึกไม่สำเร็จ');
+      toast.error(t('eta.errSave'));
     } finally {
       setSavingTransport(p => ({ ...p, [vehicleId]: false }));
     }
@@ -79,7 +79,7 @@ export default function ETA() {
       await api.put(`/eta/assignments/${vehicleId}`, { warehouseId: parseInt(warehouseId) });
       await fetchVehicles();
     } catch {
-      toast.error('บันทึกคลังประจำไม่สำเร็จ');
+      toast.error(t('eta.errSaveWarehouse'));
     } finally {
       setSavingAssign(p => ({ ...p, [vehicleId]: false }));
     }
@@ -112,13 +112,13 @@ export default function ETA() {
   };
 
   const fmtEta = (v) => {
-    if (v.withinRadius) return <span className="inline-flex items-center gap-1 text-emerald-600 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />อยู่ภายในคลัง</span>;
+    if (v.withinRadius) return <span className="inline-flex items-center gap-1 text-emerald-600 font-bold"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />{t('eta.inWarehouseLabel')}</span>;
     if (v.etaMinutes === null || v.etaMinutes === undefined) return '-';
-    if (v.etaMinutes <= 0) return <span className="text-emerald-600 font-bold">ถึงแล้ว</span>;
-    if (v.etaMinutes < 60) return <span className="font-bold text-amber-600">{v.etaMinutes} นาที</span>;
+    if (v.etaMinutes <= 0) return <span className="text-emerald-600 font-bold">{t('eta.arrived')}</span>;
+    if (v.etaMinutes < 60) return <span className="font-bold text-amber-600">{v.etaMinutes} {t('unit.minutes')}</span>;
     const h = Math.floor(v.etaMinutes / 60);
     const m = v.etaMinutes % 60;
-    return <span className="font-bold text-blue-600">{h} ชั่วโมง{m > 0 ? ` ${m} นาที` : ''}</span>;
+    return <span className="font-bold text-blue-600">{h} {t('unit.hours')}{m > 0 ? ` ${m} ${t('unit.minutes')}` : ''}</span>;
   };
 
   return (
@@ -132,15 +132,14 @@ export default function ETA() {
           </h2>
           <p className="text-gray-400 text-xs mt-0.5">
             {source === 'mock' && <span className="text-amber-500 mr-1">⚠ Mock ·</span>}
-            {lastUpdate ? `อัพเดต ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
+            {lastUpdate ? t('eta.updateTime').replace('{time}', lastUpdate.toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US')) : t('common.loading')}
           </p>
         </div>
         <div className="flex gap-1.5 flex-shrink-0">
           <button onClick={openManage}
             className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
             <Settings size={13} />
-            <span className="hidden sm:inline">จัดการรถขนส่ง</span>
-            <span className="sm:hidden">จัดการ</span>
+            <span>{t('eta.manageBtn')}</span>
           </button>
           <button onClick={fetchVehicles} disabled={loading}
             className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
@@ -154,7 +153,7 @@ export default function ETA() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-start gap-3">
           <AlertCircle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-amber-700 text-sm">
-            กำลังแสดงข้อมูลจำลอง — ตั้งค่า <code className="bg-amber-100 px-1 rounded">DTC_API_URL</code> และ <code className="bg-amber-100 px-1 rounded">DTC_API_KEY</code>
+            {t('eta.mockWarning')} — Set <code className="bg-amber-100 px-1 rounded">DTC_API_URL</code> &amp; <code className="bg-amber-100 px-1 rounded">DTC_API_KEY</code>
           </p>
         </div>
       )}
@@ -163,7 +162,7 @@ export default function ETA() {
         <div className="bg-blue-50 border border-blue-200 rounded-2xl p-3 flex items-start gap-3">
           <AlertCircle size={16} className="text-blue-500 flex-shrink-0 mt-0.5" />
           <p className="text-blue-700 text-sm">
-            แสดงรถทั้งหมด — กด <button onClick={openManage} className="underline font-semibold">จัดการรถขนส่ง</button> เพื่อเลือกเฉพาะรถขนส่ง
+            {t('eta.configMsgPrefix')} <button onClick={openManage} className="underline font-semibold">{t('eta.manageBtn')}</button> {t('eta.configMsgSuffix')}
           </p>
         </div>
       )}
@@ -171,19 +170,19 @@ export default function ETA() {
       {/* Stats */}
       <div className="grid grid-cols-4 gap-3">
         {[
-          { label: 'รถทั้งหมด',             value: vehicles.length, color: 'text-gray-900',  filter: null,        ring: 'ring-gray-400' },
-          { label: 'อยู่ภายในคลัง',         value: inRadius,        color: 'text-red-600',   filter: 'inRadius',  ring: 'ring-red-500'  },
-          { label: 'ถึงคลังภายใน 60 นาที',  value: arriving,        color: 'text-amber-500', filter: 'arriving',  ring: 'ring-amber-500'},
-          { label: 'ห่างจากคลัง 180 นาที+', value: farAway,         color: 'text-blue-600',  filter: 'farAway',   ring: 'ring-blue-500' },
+          { labelKey: 'eta.allVehicles',  value: vehicles.length, color: 'text-gray-900',  filter: null,        ring: 'ring-gray-400' },
+          { labelKey: 'eta.inRadius',     value: inRadius,        color: 'text-red-600',   filter: 'inRadius',  ring: 'ring-red-500'  },
+          { labelKey: 'eta.arriving30',   value: arriving,        color: 'text-amber-500', filter: 'arriving',  ring: 'ring-amber-500'},
+          { labelKey: 'eta.far2h',        value: farAway,         color: 'text-blue-600',  filter: 'farAway',   ring: 'ring-blue-500' },
         ].map(s => {
           const active = statFilter === s.filter;
           return (
-            <div key={s.label}
+            <div key={s.labelKey}
               onClick={() => setStatFilter(f => f === s.filter ? null : s.filter)}
               className={`card text-center py-3 cursor-pointer transition-all hover:shadow-md select-none ${active ? `ring-2 ${s.ring}` : 'hover:ring-1 hover:ring-slate-300'}`}>
               <div className={`text-2xl font-black ${s.color}`}>{s.value}</div>
-              <div className="text-gray-400 text-xs mt-0.5">{s.label}</div>
-              {active && <div className="text-[10px] text-slate-400 mt-1">กดอีกครั้งเพื่อยกเลิก</div>}
+              <div className="text-gray-400 text-xs mt-0.5">{t(s.labelKey)}</div>
+              {active && <div className="text-[10px] text-slate-400 mt-1">{t('eta.clickAgainCancel')}</div>}
             </div>
           );
         })}
@@ -199,7 +198,7 @@ export default function ETA() {
         <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
         <input type="text" value={search} onChange={e => setSearch(e.target.value)}
           className="input-field pl-8 py-2 text-sm w-full"
-          placeholder="ค้นหาทะเบียน / คลัง..." />
+          placeholder={t('eta.searchPlaceholder')} />
       </div>
 
       {/* Table */}
@@ -207,22 +206,22 @@ export default function ETA() {
         <div className="px-5 py-3 border-b border-gray-100 flex items-center justify-between">
           <span className="font-bold text-gray-800 text-sm flex items-center gap-2">
             <Truck size={15} className="text-red-600" />
-            รายการรถ
-            <span className="text-gray-400 font-normal">({filtered.length} คัน)</span>
+            {t('eta.vehicleList')}
+            <span className="text-gray-400 font-normal">({filtered.length} {t('unit.vehicles')})</span>
           </span>
           {selectedId && (
             <button onClick={() => setSelectedId(null)} className="text-xs text-gray-400 hover:text-red-600 transition-colors">
-              ยกเลิกเลือก ×
+              {t('eta.cancelSelect')}
             </button>
           )}
         </div>
 
         {loading ? (
-          <div className="py-16 text-center text-gray-400 text-sm">กำลังโหลดข้อมูล GPS...</div>
+          <div className="py-16 text-center text-gray-400 text-sm">{t('eta.loadingGps')}</div>
         ) : filtered.length === 0 ? (
           <div className="py-16 text-center text-gray-400">
             <Truck size={36} className="mx-auto mb-2 opacity-20" />
-            <p className="text-sm">ไม่พบข้อมูลรถ</p>
+            <p className="text-sm">{t('eta.noVehicles')}</p>
           </div>
         ) : (
           <div>
@@ -240,7 +239,7 @@ export default function ETA() {
                       <div className="flex items-center gap-2">
                         <span className="font-bold text-gray-900">{v.licensePlate}</span>
                         {v.distanceKm != null && (
-                          <span className="text-xs text-gray-500">{v.distanceKm} กม.</span>
+                          <span className="text-xs text-gray-500">{v.distanceKm} {t('unit.km')}</span>
                         )}
                       </div>
                       {v.address && (
@@ -257,7 +256,7 @@ export default function ETA() {
                             disabled={savingAssign[v.vehicleId]}
                             className="text-xs rounded-lg border border-gray-200 px-2 py-1 bg-white text-gray-600 focus:outline-none focus:border-red-400 appearance-none cursor-pointer max-w-[140px]"
                             style={{ backgroundImage: 'none' }}>
-                            <option value="">-- เลือกคลัง --</option>
+                            <option value="">{t('eta.selectWarehouse')}</option>
                             {warehouses.map(w => (
                               <option key={w.WarehouseID} value={w.WarehouseID}>{w.WarehouseName}</option>
                             ))}
@@ -290,9 +289,9 @@ export default function ETA() {
               <div>
                 <h3 className="font-bold text-gray-900 flex items-center gap-2">
                   <Truck size={16} className="text-red-600" />
-                  จัดการรถขนส่ง
+                  {t('eta.manageTitle')}
                 </h3>
-                <p className="text-xs text-gray-400 mt-0.5">เลือกรถที่เป็นรถขนส่งเพื่อแสดงในหน้า ETA</p>
+                <p className="text-xs text-gray-400 mt-0.5">{t('eta.manageDesc')}</p>
               </div>
               <button onClick={() => { setShowManage(false); fetchVehicles(); }}
                 className="p-1.5 rounded-xl hover:bg-gray-100 text-gray-400 transition-colors">
@@ -302,9 +301,9 @@ export default function ETA() {
 
             <div className="overflow-y-auto flex-1 p-4 space-y-2">
               {loadingManage ? (
-                <div className="py-8 text-center text-gray-400 text-sm">กำลังโหลด...</div>
+                <div className="py-8 text-center text-gray-400 text-sm">{t('common.loading')}</div>
               ) : allVehicles.length === 0 ? (
-                <div className="py-8 text-center text-gray-400 text-sm">ยังไม่มีข้อมูลรถ — รีเฟรชหน้า ETA ก่อน</div>
+                <div className="py-8 text-center text-gray-400 text-sm">{t('eta.noManageVehicles')}</div>
               ) : (
                 allVehicles.map(v => (
                   <div key={v.VehicleID}
@@ -324,11 +323,11 @@ export default function ETA() {
                         <span className="w-4 h-4 border-2 border-gray-300 border-t-red-500 rounded-full animate-spin" />
                       ) : v.IsTransport ? (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-emerald-100 text-emerald-700">
-                          <Check size={11} />รถขนส่ง
+                          <Check size={11} />{t('eta.transportTag')}
                         </span>
                       ) : (
                         <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-semibold bg-gray-100 text-gray-500">
-                          ไม่แสดง
+                          {t('eta.hiddenTag')}
                         </span>
                       )}
                     </div>
@@ -338,7 +337,7 @@ export default function ETA() {
             </div>
 
             <div className="px-5 py-3 border-t border-gray-100 text-xs text-gray-400">
-              {allVehicles.filter(v => v.IsTransport).length} จาก {allVehicles.length} คัน ที่เป็นรถขนส่ง
+              {allVehicles.filter(v => v.IsTransport).length} {t('eta.footerCount')} {allVehicles.length} {t('eta.footerSuffix')}
             </div>
           </div>
         </div>

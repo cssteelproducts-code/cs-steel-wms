@@ -3,11 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { Lock, Eye, EyeOff, Save, ShieldCheck } from 'lucide-react';
-
-const FIELD_KEY = { current: 'currentPassword', new: 'newPassword', confirm: 'confirmPassword' };
+import { useLang } from '../context/LanguageContext';
 
 function PassInput({ field, label, form, setForm, show, setShow }) {
-  const key = FIELD_KEY[field];
+  const KEY = { current: 'currentPassword', new: 'newPassword', confirm: 'confirmPassword' };
+  const key = KEY[field];
   return (
     <div>
       <label className="label">{label}</label>
@@ -31,6 +31,7 @@ function PassInput({ field, label, form, setForm, show, setShow }) {
 }
 
 export default function Profile() {
+  const { t } = useLang();
   const { user } = useAuth();
   const [form, setForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '' });
   const [show, setShow] = useState({ current: false, new: false, confirm: false });
@@ -39,13 +40,11 @@ export default function Profile() {
   const handleChange = async (e) => {
     e.preventDefault();
     if (!form.currentPassword || !form.newPassword || !form.confirmPassword) {
-      toast.error('กรุณากรอกข้อมูลให้ครบ'); return;
+      toast.error(t('common.noData')); return;
     }
-    if (form.newPassword.length < 6) {
-      toast.error('รหัสผ่านใหม่ต้องมีอย่างน้อย 6 ตัวอักษร'); return;
-    }
+    if (form.newPassword.length < 6) { toast.error(t('common.noData')); return; }
     if (form.newPassword !== form.confirmPassword) {
-      toast.error('รหัสผ่านใหม่ไม่ตรงกัน'); return;
+      toast.error(t('profile.passwordMismatch')); return;
     }
     setSaving(true);
     try {
@@ -53,10 +52,10 @@ export default function Profile() {
         currentPassword: form.currentPassword,
         newPassword: form.newPassword
       });
-      toast.success('เปลี่ยนรหัสผ่านสำเร็จ');
+      toast.success(t('common.save'));
       setForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
     } catch (err) {
-      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด');
+      toast.error(err.response?.data?.message || t('common.noData'));
     } finally {
       setSaving(false);
     }
@@ -64,8 +63,6 @@ export default function Profile() {
 
   return (
     <div className="space-y-6">
-
-      {/* User info card */}
       <div className="card">
         <div className="flex items-center gap-4">
           <div className="w-16 h-16 bg-red-600 rounded-2xl flex items-center justify-center shadow-lg flex-shrink-0">
@@ -86,29 +83,27 @@ export default function Profile() {
         </div>
       </div>
 
-      {/* Change password */}
       <div className="card">
         <div className="flex items-center gap-2 mb-5">
           <ShieldCheck size={18} className="text-red-500" />
-          <h3 className="card-header mb-0">เปลี่ยนรหัสผ่าน</h3>
+          <h3 className="card-header mb-0">{t('profile.changePassword')}</h3>
         </div>
         <form onSubmit={handleChange} className="space-y-4">
-          <PassInput field="current" label="รหัสผ่านปัจจุบัน" form={form} setForm={setForm} show={show} setShow={setShow} />
+          <PassInput field="current" label={t('profile.currentPassword')} form={form} setForm={setForm} show={show} setShow={setShow} />
           <div className="border-t border-slate-100 pt-4">
-            <PassInput field="new" label="รหัสผ่านใหม่" form={form} setForm={setForm} show={show} setShow={setShow} />
+            <PassInput field="new" label={t('profile.newPassword')} form={form} setForm={setForm} show={show} setShow={setShow} />
           </div>
-          <PassInput field="confirm" label="ยืนยันรหัสผ่านใหม่" form={form} setForm={setForm} show={show} setShow={setShow} />
+          <PassInput field="confirm" label={t('profile.confirmPassword')} form={form} setForm={setForm} show={show} setShow={setShow} />
           {form.confirmPassword && form.newPassword !== form.confirmPassword && (
-            <p className="text-xs text-red-500">รหัสผ่านไม่ตรงกัน</p>
+            <p className="text-xs text-red-500">{t('profile.passwordMismatch')}</p>
           )}
           <button type="submit" disabled={saving} className="btn-primary w-full py-3">
             {saving
               ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              : <><Save size={15} />บันทึกรหัสผ่านใหม่</>}
+              : <><Save size={15} />{t('profile.savePassword')}</>}
           </button>
         </form>
       </div>
-
     </div>
   );
 }

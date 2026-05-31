@@ -1,12 +1,16 @@
+import { useLang } from '../context/LanguageContext';
+
 const CONFIG = {
-  'ด่วนมาก': { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#dc2626' },
-  'เร่งด่วน': { bg: '#fff7ed', border: '#fed7aa', text: '#ea580c', dot: '#f97316' },
-  'ปกติ':    { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', dot: '#22c55e' },
+  'ด่วนมาก': { bg: '#fef2f2', border: '#fecaca', text: '#dc2626', dot: '#dc2626', key: 'priority.veryUrgent' },
+  'เร่งด่วน': { bg: '#fff7ed', border: '#fed7aa', text: '#ea580c', dot: '#f97316', key: 'priority.urgent' },
+  'ปกติ':    { bg: '#f0fdf4', border: '#bbf7d0', text: '#16a34a', dot: '#22c55e', key: 'priority.normal' },
 };
 
 export default function PriorityBadge({ priority }) {
+  const { t } = useLang();
   if (!priority) return null;
   const c = CONFIG[priority] || CONFIG['ปกติ'];
+  const label = c.key ? t(c.key) : priority;
   return (
     <span style={{
       display: 'inline-flex', alignItems: 'center', gap: 4,
@@ -15,7 +19,7 @@ export default function PriorityBadge({ priority }) {
       background: c.bg, border: `1px solid ${c.border}`, color: c.text,
     }}>
       <span style={{ width: 6, height: 6, borderRadius: '50%', background: c.dot, flexShrink: 0 }} />
-      {priority}
+      {label}
     </span>
   );
 }

@@ -19,14 +19,14 @@ const pageTitles = {
   '/alerts':            { title: 'page.alerts' },
   '/stock':             { title: 'page.stock' },
   '/delivery':          { title: 'page.delivery' },
-  '/transfer':          { title: 'ระบบย้ายสินค้าภายใน', subtitle: 'ควบคุมการขนย้ายสินค้าจากฝ่ายผลิตไปยังคลังสินค้า' },
-  '/transfer/driver':   { title: 'ระบบย้ายสินค้าภายใน', subtitle: 'ควบคุมการขนย้ายสินค้าจากฝ่ายผลิตไปยังคลังสินค้า' },
-  '/records':           { title: 'บันทึกการขึ้นสินค้า' },
-  '/forecast':          { title: 'วิเคราะห์และวางแผนล่วงหน้า' },
-  '/shift-planning':    { title: 'วางแผนกะพนักงาน' },
-  '/freight-calc':      { title: '🚛 คำนวณค่าขนส่ง', subtitle: 'คำนวณต้นทุนค่าขนส่งต่อเที่ยว รวมขาไปและขากลับ' },
-  '/location-check':    { title: 'ตรวจสอบ Location', subtitle: 'สแกนรหัส Location และตรวจสอบประเภทสินค้า (TypeSKU)' },
-  '/stock-count':       { title: 'นับสต็อก', subtitle: 'จัดการรอบตรวจนับและบันทึกยอดสต็อก' },
+  '/transfer':          { title: 'page.transfer', subtitle: 'page.transferSubtitle' },
+  '/transfer/driver':   { title: 'page.transferDriver', subtitle: 'page.transferSubtitle' },
+  '/records':           { title: 'page.records' },
+  '/forecast':          { title: 'page.forecast' },
+  '/shift-planning':    { title: 'page.shiftPlanning' },
+  '/freight-calc':      { title: 'page.freightCalc', subtitle: 'page.freightCalcSubtitle' },
+  '/location-check':    { title: 'page.locationCheck', subtitle: 'page.locationCheckSubtitle' },
+  '/stock-count':       { title: 'page.stockCount', subtitle: 'page.stockCountSubtitle' },
 };
 
 export default function MainLayout() {
@@ -34,8 +34,8 @@ export default function MainLayout() {
   const location = useLocation();
   const { t } = useLang();
   const pageInfo = pageTitles[location.pathname];
-  const title = pageInfo ? (pageInfo.title.startsWith('page.') ? t(pageInfo.title) : pageInfo.title) : 'CS.Smart';
-  const subtitle = pageInfo?.subtitle || null;
+  const title = pageInfo ? t(pageInfo.title) : 'CS.Smart';
+  const subtitle = pageInfo?.subtitle ? t(pageInfo.subtitle) : null;
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>

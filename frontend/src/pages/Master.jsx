@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, ShoppingBag, Grid3X3, LayoutGrid, Car, AlertTriangle, Wrench, CheckCircle2, Calendar, Printer } from 'lucide-react';
+import { useLang } from '../context/LanguageContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import DraggableMap from '../components/DraggableMap';
@@ -9,14 +10,14 @@ import { useReactToPrint } from 'react-to-print';
 const SKU_TYPES = ['ขายดี','ขายน้อยขายต่อเนื่อง','ขายน้อยขายไม่ต่อเนื่อง','สต็อค','NewItem','สินค้าโป๊ว','ไม่ควบคุมสต็อค','เหล็กอื่น (เกรด B)','เหล็กเกรด C','อื่นๆ'];
 
 const tabs = [
-  { key: 'warehouses',        label: 'คลังสินค้า',        icon: Warehouse   },
-  { key: 'customers',         label: 'ลูกค้า',             icon: Users       },
-  { key: 'vehicleTypes',      label: 'ประเภทรถ',           icon: Truck       },
-  { key: 'internalVehicles',  label: 'รถขนส่งภายใน',      icon: Car         },
-  { key: 'loadingStations',   label: 'สถานีขึ้นสินค้า',   icon: Package     },
-  { key: 'products',          label: 'สินค้า',             icon: ShoppingBag },
-  { key: 'locationTypes',     label: 'ประเภท Location',    icon: Grid3X3     },
-  { key: 'locations',         label: 'Location',           icon: LayoutGrid  },
+  { key: 'warehouses',        labelKey: 'master.warehousesTab',       icon: Warehouse   },
+  { key: 'customers',         labelKey: 'master.customersTab',        icon: Users       },
+  { key: 'vehicleTypes',      labelKey: 'master.vehicleTypesTab',     icon: Truck       },
+  { key: 'internalVehicles',  labelKey: 'master.internalVehiclesTab', icon: Car         },
+  { key: 'loadingStations',   labelKey: 'master.stationsTab',         icon: Package     },
+  { key: 'products',          labelKey: 'master.productsTab',         icon: ShoppingBag },
+  { key: 'locationTypes',     labelKey: 'master.locationTypesTab',    icon: Grid3X3     },
+  { key: 'locations',         labelKey: 'master.locationsTab',        icon: LayoutGrid  },
 ];
 
 const daysUntil = (dateStr) => {
@@ -26,29 +27,33 @@ const daysUntil = (dateStr) => {
   return Math.round((d - today) / 86400000);
 };
 
-const ExpiryBadge = ({ date, label }) => {
+const ExpiryBadge = ({ date, labelKey }) => {
+  const { t } = useLang();
   const days = daysUntil(date);
   if (days === null || days > 90) return null;
-  let cls, icon, txt;
-  if (days < 0)        { cls = 'bg-gray-200 text-gray-500';                 txt = `${label} หมด`; }
-  else if (days === 0) { cls = 'bg-red-600 text-white ring-1 ring-red-400'; txt = `${label} วันนี้!`; }
-  else if (days <= 30) { cls = 'bg-red-500 text-white';                     txt = `${label} ${days} วัน`; }
-  else if (days <= 60) { cls = 'bg-orange-500 text-white';                  txt = `${label} ${days} วัน`; }
-  else                 { cls = 'bg-amber-400 text-white';                    txt = `${label} ${days} วัน`; }
+  const label = t(labelKey);
+  let cls, txt;
+  if (days < 0)        { cls = 'bg-gray-200 text-gray-500';                 txt = t('master.expiryExpired').replace('{label}', label); }
+  else if (days === 0) { cls = 'bg-red-600 text-white ring-1 ring-red-400'; txt = t('master.expiryToday').replace('{label}', label); }
+  else if (days <= 30) { cls = 'bg-red-500 text-white';                     txt = t('master.expiryDays').replace('{label}', label).replace('{n}', days); }
+  else if (days <= 60) { cls = 'bg-orange-500 text-white';                  txt = t('master.expiryDays').replace('{label}', label).replace('{n}', days); }
+  else                 { cls = 'bg-amber-400 text-white';                    txt = t('master.expiryDays').replace('{label}', label).replace('{n}', days); }
   return <span className={`inline-flex items-center px-1.5 py-0.5 rounded-lg text-[9px] font-bold whitespace-nowrap ${cls}`}>{txt}</span>;
 };
 
 const VehicleStatusBadge = ({ status }) => {
+  const { t } = useLang();
   if (status === 'รอซ่อม') return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-700"><Wrench size={13}/>รอซ่อม</span>
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-amber-100 text-amber-700"><Wrench size={13}/>{t('transfer.statusMaint')}</span>
   );
   if (status === 'อุบัติเหตุ') return (
-    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700"><AlertTriangle size={13}/>อุบัติเหตุ</span>
+    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-red-100 text-red-700"><AlertTriangle size={13}/>{t('transfer.statusAccident')}</span>
   );
-  return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-700"><CheckCircle2 size={13}/>พร้อมใช้</span>;
+  return <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-bold bg-emerald-100 text-emerald-700"><CheckCircle2 size={13}/>{t('transfer.statusReady')}</span>;
 };
 
 export default function Master() {
+  const { t, lang } = useLang();
   const [tab, setTab] = useState('warehouses');
   const [data, setData] = useState({});
   const [modal, setModal] = useState(null);
@@ -92,7 +97,7 @@ export default function Master() {
       const res = await api.post('/master/customers/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
       if (res.data.success) { toast.success(res.data.message); fetchData('customers'); }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'ไม่สามารถเชื่อมต่อเซิร์ฟเวอร์ได้');
+      toast.error(err.response?.data?.message || t('master.errConnect'));
     } finally {
       setImporting(false);
     }
@@ -107,7 +112,7 @@ export default function Master() {
       a.download = 'customer_template.xlsx';
       a.click();
       URL.revokeObjectURL(url);
-    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
+    } catch { toast.error(t('master.errTemplate')); }
   };
 
   const searchLocation = async (q) => {
@@ -142,15 +147,15 @@ export default function Master() {
   };
 
   const useCurrentLocation = () => {
-    if (!navigator.geolocation) { toast.error('Browser ไม่รองรับ Geolocation'); return; }
+    if (!navigator.geolocation) { toast.error(t('master.errGeo')); return; }
     navigator.geolocation.getCurrentPosition(
       pos => {
         const lat = pos.coords.latitude.toFixed(6);
         const lng = pos.coords.longitude.toFixed(6);
         setForm(p => ({ ...p, GpsLat: lat, GpsLng: lng }));
-        toast.success('ดึงตำแหน่งปัจจุบันสำเร็จ');
+        toast.success(t('master.geoSuccess'));
       },
-      () => toast.error('ไม่สามารถดึงตำแหน่งได้ กรุณาอนุญาต Location')
+      () => toast.error(t('master.errGeoFail'))
     );
   };
 
@@ -200,7 +205,7 @@ export default function Master() {
       const res = await api.post('/master/products/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 120000 });
       if (res.data.success) { toast.success(res.data.message); fetchData('products'); }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('master.errImport'));
     } finally { setImporting(false); }
   };
 
@@ -215,7 +220,7 @@ export default function Master() {
       const res = await api.post('/master/internal-vehicles/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
       if (res.data.success) { toast.success(res.data.message); fetchData('internalVehicles'); }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('master.errImport'));
     } finally { setImporting(false); }
   };
 
@@ -225,7 +230,7 @@ export default function Master() {
       const url = URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a'); a.href = url; a.download = 'internal_vehicles_template.xlsx'; a.click();
       URL.revokeObjectURL(url);
-    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
+    } catch { toast.error(t('master.errTemplate')); }
   };
 
   const handleLocationsImport = async (e) => {
@@ -239,7 +244,7 @@ export default function Master() {
       const res = await api.post('/master/locations/import', formData, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
       if (res.data.success) { toast.success(res.data.message); fetchData('locations'); }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('master.errImport'));
     } finally { setImporting(false); }
   };
 
@@ -249,7 +254,7 @@ export default function Master() {
       const url = URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a'); a.href = url; a.download = 'location_template.xlsx'; a.click();
       URL.revokeObjectURL(url);
-    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
+    } catch { toast.error(t('master.errTemplate')); }
   };
 
   const handleDownloadProductTemplate = async () => {
@@ -258,7 +263,7 @@ export default function Master() {
       const url = URL.createObjectURL(new Blob([res.data]));
       const a = document.createElement('a'); a.href = url; a.download = 'product_template.xlsx'; a.click();
       URL.revokeObjectURL(url);
-    } catch { toast.error('ดาวน์โหลด template ไม่สำเร็จ'); }
+    } catch { toast.error(t('master.errTemplate')); }
   };
 
   const openCreate = () => {
@@ -321,18 +326,17 @@ export default function Master() {
         if (tab === 'warehouses') fetchWarehouses();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('master.errSave'));
     } finally {
       setSaving(false);
     }
   };
 
   const handleDelete = async (item) => {
-    const labels = { warehouses: 'คลังสินค้า', customers: 'ลูกค้า', vehicleTypes: 'ประเภทรถ', internalVehicles: 'รถ', loadingStations: 'สถานีขึ้นสินค้า', products: 'สินค้า', locationTypes: 'ประเภท Location', locations: 'Location' };
     const idFields = { warehouses: 'WarehouseID', customers: 'CustomerID', vehicleTypes: 'TypeID', internalVehicles: 'VehicleID', loadingStations: 'StationID', products: 'ProductID', locationTypes: 'TypeID', locations: 'LocationID' };
     const endpoints = { warehouses: '/master/warehouses', customers: '/master/customers', vehicleTypes: '/master/vehicle-types', internalVehicles: '/master/internal-vehicles', loadingStations: '/master/loading-stations', products: '/master/products', locationTypes: '/master/location-types', locations: '/master/locations' };
     const name = item.TypeName || item.WarehouseName || item.CustomerName || item.StationName || item.ProductName || item.LocationName || item.LicensePlate || '';
-    if (!window.confirm(`ยืนยันลบ${labels[tab]} "${name}" ?`)) return;
+    if (!window.confirm(t('master.deleteConfirm').replace('{name}', name))) return;
     try {
       const res = await api.delete(`${endpoints[tab]}/${item[idFields[tab]]}`);
       if (res.data.success) {
@@ -341,7 +345,7 @@ export default function Master() {
         if (tab === 'warehouses') fetchWarehouses();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('master.errDelete'));
     }
   };
 
@@ -355,15 +359,15 @@ export default function Master() {
   };
 
   const handleBulkDelete = async () => {
-    if (!window.confirm(`ยืนยันลบ ${selected.size} รายการที่เลือก?`)) return;
+    if (!window.confirm(t('master.bulkDeleteConfirm').replace('{n}', selected.size))) return;
     const endpoint = endpointMap[tab];
     let failed = 0;
     for (const id of selected) {
       try { await api.delete(`${endpoint}/${id}`); }
       catch { failed++; }
     }
-    if (failed) toast.error(`ลบไม่สำเร็จ ${failed} รายการ`);
-    else toast.success(`ลบสำเร็จ ${selected.size} รายการ`);
+    if (failed) toast.error(t('master.bulkDeleteFailed').replace('{n}', failed));
+    else toast.success(t('master.bulkDeleteSuccess').replace('{n}', selected.size));
     setSelected(new Set());
     fetchData(tab);
     if (tab === 'warehouses') fetchWarehouses();
@@ -421,14 +425,14 @@ export default function Master() {
 
   const renderTable = () => {
     const items = data[tab] || [];
-    if (!items.length) return <p className="text-center text-slate-400 py-8">ยังไม่มีข้อมูล</p>;
+    if (!items.length) return <p className="text-center text-slate-400 py-8">{t('common.noData')}</p>;
     const idf = idField[tab];
     const allChecked = items.length > 0 && selected.size === items.length;
 
     const selectAllRow = (
       <div className="flex items-center gap-3 px-4 py-2 border-b border-gray-100 bg-gray-50/60 rounded-t-xl">
         <Checkbox id="all" checked={allChecked} onChange={toggleSelectAll} />
-        <span className="text-xs text-gray-400">เลือกทั้งหมด ({items.length} รายการ)</span>
+        <span className="text-xs text-gray-400">{t('master.selectAllItems').replace('{n}', items.length)}</span>
       </div>
     );
 
@@ -451,15 +455,15 @@ export default function Master() {
                     </div>
                     {needsRepair && (
                       <div className="mt-1 text-xs text-amber-700 bg-amber-50 rounded-lg px-2 py-1 flex flex-wrap gap-2">
-                        {i.Symptoms && <span>อาการ: {i.Symptoms}</span>}
-                        {i.RepairEntryDate && <span>เข้าซ่อม: {new Date(i.RepairEntryDate).toLocaleDateString('th-TH')}</span>}
-                        {i.EstimatedCompletionDate && <span>คาดเสร็จ: {new Date(i.EstimatedCompletionDate).toLocaleDateString('th-TH')}</span>}
+                        {i.Symptoms && <span>{t('master.symptoms')} {i.Symptoms}</span>}
+                        {i.RepairEntryDate && <span>{t('master.repairEntry')} {new Date(i.RepairEntryDate).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US')}</span>}
+                        {i.EstimatedCompletionDate && <span>{t('master.estCompletion')} {new Date(i.EstimatedCompletionDate).toLocaleDateString(lang === 'th' ? 'th-TH' : 'en-US')}</span>}
                       </div>
                     )}
                     <div className="flex flex-wrap gap-1.5 mt-1.5">
-                      <ExpiryBadge date={i.InsuranceExpiry} label="ประกันภัย คงเหลือ" />
-                      <ExpiryBadge date={i.ActExpiry} label="พ.ร.บ. คงเหลือ" />
-                      <ExpiryBadge date={i.TaxExpiry} label="ภาษีรถ คงเหลือ" />
+                      <ExpiryBadge date={i.InsuranceExpiry} labelKey="master.expiryInsurance" />
+                      <ExpiryBadge date={i.ActExpiry} labelKey="master.expiryAct" />
+                      <ExpiryBadge date={i.TaxExpiry} labelKey="master.expiryTax" />
                     </div>
                   </div>
                   <div className="flex-shrink-0"><VehicleStatusBadge status={i.VehicleStatus} /></div>
@@ -493,7 +497,7 @@ export default function Master() {
                         <MapPin size={10} className="inline mr-1 text-gray-300" />
                         {i.Location.length > 60 ? i.Location.slice(0, 60) + '…' : i.Location}
                       </p>
-                    ) : <p className="text-xs text-gray-300 mt-0.5">ยังไม่ระบุที่ตั้ง</p>}
+                    ) : <p className="text-xs text-gray-300 mt-0.5">{t('master.noLocation')}</p>}
                   </div>
                   <div className="hide-mobile flex-shrink-0 flex items-center gap-2">
                     {i.GpsLat && i.GpsLng ? (
@@ -502,12 +506,12 @@ export default function Master() {
                         onClick={e => e.stopPropagation()}>
                         <MapPin size={10} />{parseFloat(i.GpsLat).toFixed(4)}, {parseFloat(i.GpsLng).toFixed(4)}
                       </a>
-                    ) : <span className="text-xs text-gray-300">ไม่มี GPS</span>}
+                    ) : <span className="text-xs text-gray-300">{t('master.noGps')}</span>}
                     {i.RadiusKm != null && (
-                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium" style={{ background: '#fef3c7', color: '#d97706' }}>⊙ {i.RadiusKm} กม.</span>
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-xs font-medium" style={{ background: '#fef3c7', color: '#d97706' }}>⊙ {t('master.radiusKmLabel').replace('{n}', i.RadiusKm)}</span>
                     )}
                   </div>
-                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? t('master.activeLabel') : t('master.inactiveLabel')}</span>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.WarehouseCode, line1: i.WarehouseCode, line2: i.WarehouseName, line3: null, title: 'พิมพ์บาร์โค้ด คลังสินค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
@@ -534,7 +538,7 @@ export default function Master() {
                     {i.Address && <p className="text-xs text-gray-400 truncate mt-0.5">{i.Address}</p>}
                   </div>
                   {i.Phone && <span className="hide-mobile flex-shrink-0 text-xs text-gray-500 font-medium">{i.Phone}</span>}
-                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? t('master.activeLabel') : t('master.inactiveLabel')}</span>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.CustomerCode, line1: i.CustomerCode, line2: i.CustomerName, line3: i.Phone || null, title: 'พิมพ์บาร์โค้ด ลูกค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
@@ -565,10 +569,10 @@ export default function Master() {
                     {i.Description && <p className="text-xs text-gray-400 mt-0.5">{i.Description}</p>}
                   </div>
                   <div className="hide-mobile flex items-center gap-2 flex-shrink-0">
-                    <span className="text-xs text-gray-400">เปิดรับ</span>
+                    <span className="text-xs text-gray-400">{t('master.openHour')}</span>
                     <span className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-emerald-50 text-emerald-700">{sh}:{sm}</span>
                     <span className="text-gray-300">→</span>
-                    <span className="text-xs text-gray-400">ปิด</span>
+                    <span className="text-xs text-gray-400">{t('master.closeHour')}</span>
                     <span className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-amber-50 text-amber-700">{ch}:{cm}</span>
                   </div>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -595,8 +599,8 @@ export default function Master() {
                     <p className="text-sm font-bold text-gray-900">{i.StationName}</p>
                     {i.WarehouseName && <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1"><Warehouse size={10} />{i.WarehouseName}</p>}
                   </div>
-                  {i.SortOrder > 0 && <span className="hide-mobile flex-shrink-0 text-xs text-gray-400">ลำดับ {i.SortOrder}</span>}
-                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+                  {i.SortOrder > 0 && <span className="hide-mobile flex-shrink-0 text-xs text-gray-400">{t('master.sortOrderLabel')} {i.SortOrder}</span>}
+                  <span className={`flex-shrink-0 inline-block px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? t('master.activeLabel') : t('master.inactiveLabel')}</span>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                     <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.StationCode, line1: i.StationCode, line2: i.StationName, line3: i.WarehouseName || null, title: 'พิมพ์บาร์โค้ด สถานีขึ้นสินค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
@@ -615,15 +619,15 @@ export default function Master() {
             <div key={i.TypeID} className={`flex items-center gap-3 px-4 py-3 border-b border-gray-50 transition-all group ${selected.has(i.TypeID) ? 'bg-red-50' : 'hover:bg-gray-50'}`}>
               <Checkbox id={i.TypeID} checked={selected.has(i.TypeID)} onChange={() => toggleSelect(i.TypeID)} />
               <span className="flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-bold font-mono" style={{ background: '#eff6ff', color: '#2563eb' }}>{i.TypeCode}</span>
-              <div className="flex-1"><p className="text-sm font-semibold text-gray-900">{i.TypeName}</p><p className="text-xs text-gray-400">ลำดับ {i.SortOrder}</p></div>
-              <span className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
+              <div className="flex-1"><p className="text-sm font-semibold text-gray-900">{i.TypeName}</p><p className="text-xs text-gray-400">{t('master.sortOrderLabel')} {i.SortOrder}</p></div>
+              <span className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? t('master.activeLabel') : t('master.inactiveLabel')}</span>
               <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                 <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                 <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
               </div>
             </div>
           ))}
-          {!items.length && <p className="text-center text-slate-400 py-8 text-sm">ยังไม่มีข้อมูล</p>}
+          {!items.length && <p className="text-center text-slate-400 py-8 text-sm">{t('common.noData')}</p>}
         </div>
       );
       case 'locations': return (
@@ -640,7 +644,7 @@ export default function Master() {
                   {i.WarehouseName && <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1"><Warehouse size={10} />{i.WarehouseName}</p>}
                 </div>
                 <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${ltColor}`}>
-                  {i.LocationTypeName || 'ไม่ระบุประเภท'}
+                  {i.LocationTypeName || t('master.noTypeLabel')}
                 </span>
                 <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.LocationCode, line1: i.LocationCode, line2: i.LocationName !== i.LocationCode ? i.LocationName : null, line3: i.WarehouseName || null, badge: i.LocationTypeName || null, badgeClass: 'bg-purple-100 text-purple-700', title: 'พิมพ์บาร์โค้ด Location' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
@@ -650,7 +654,7 @@ export default function Master() {
               </div>
             );
           })}
-          {!items.length && <p className="text-center text-slate-400 py-8 text-sm">ยังไม่มีข้อมูล</p>}
+          {!items.length && <p className="text-center text-slate-400 py-8 text-sm">{t('common.noData')}</p>}
         </div>
       );
       case 'products': {
@@ -672,7 +676,7 @@ export default function Master() {
                 <option value="">ทุก TypeSKU</option>
                 {SKU_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <span className="text-xs text-gray-400 self-center">{filtered.length} รายการ</span>
+              <span className="text-xs text-gray-400 self-center">{filtered.length} {t('unit.items')}</span>
             </div>
             <div className="rounded-xl overflow-hidden border border-gray-100">
               <div className="space-y-0">
@@ -687,7 +691,7 @@ export default function Master() {
                         {i.CategoryName && <span>{i.CategoryName}</span>}
                         {i.SizeCode && <span className="font-mono">{i.SizeCode}</span>}
                         {i.Thickness > 0 && <span>{i.Thickness}mm</span>}
-                        {i.UnitNetWeight > 0 && <span>{i.UnitNetWeight} กก./ชิ้น</span>}
+                        {i.UnitNetWeight > 0 && <span>{i.UnitNetWeight} {t('unit.kg')}/pc</span>}
                       </p>
                     </div>
                     {i.SKUType && <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${skuColor[i.SKUType] || 'bg-slate-100 text-slate-500'}`}>{i.SKUType}</span>}
@@ -698,7 +702,7 @@ export default function Master() {
                     </div>
                   </div>
                 ))}
-                {!filtered.length && <p className="text-center text-slate-400 py-8 text-sm">ไม่พบสินค้า</p>}
+                {!filtered.length && <p className="text-center text-slate-400 py-8 text-sm">{t('common.noData')}</p>}
               </div>
             </div>
           </div>
@@ -1084,10 +1088,10 @@ export default function Master() {
   return (
     <div className="space-y-6">
 <div className="flex flex-wrap gap-2">
-        {tabs.map(t => (
-          <button key={t.key} onClick={() => setTab(t.key)}
-            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${tab === t.key ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-            <t.icon size={14} />{t.label}
+        {tabs.map(tabItem => (
+          <button key={tabItem.key} onClick={() => setTab(tabItem.key)}
+            className={`px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-1.5 transition-all ${tab === tabItem.key ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+            <tabItem.icon size={14} />{t(tabItem.labelKey)}
           </button>
         ))}
       </div>

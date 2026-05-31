@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { ScanLine, MapPin, CheckCircle2, XCircle, RotateCcw, History, Package, Trash2 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import api from '../services/api';
+import { useLang } from '../context/LanguageContext';
 
 const INPUT_STYLE = {
   width: '100%',
@@ -36,6 +37,7 @@ function fmtMonth(ym) {
 }
 
 export default function LocationCheck() {
+  const { t } = useLang();
   const [selectedMonth, setSelectedMonth] = useState(currentMonth());
   const [locationCode, setLocationCode] = useState('');
   const [locationInfo, setLocationInfo] = useState(null);
@@ -43,7 +45,6 @@ export default function LocationCheck() {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
   const [todayLog, setTodayLog] = useState([]);
-
   const [filters, setFilters] = useState({ category: '', size: '', thickness: '' });
   const [productResults, setProductResults] = useState([]);
   const [productSearching, setProductSearching] = useState(false);
@@ -65,12 +66,10 @@ export default function LocationCheck() {
     setProductResults([]);
   }, [selectedMonth]);
 
-  // debounced product search — triggers when any filter changes
   useEffect(() => {
     const { category, size, thickness } = filters;
     const hasInput = [category, size, thickness].some(v => v.trim().length >= 1);
     if (!hasInput) { setProductResults([]); return; }
-
     const timer = setTimeout(async () => {
       setProductSearching(true);
       try {
@@ -112,7 +111,7 @@ export default function LocationCheck() {
         setTimeout(() => locationInputRef.current?.focus(), 50);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'ไม่พบ Location นี้ในระบบ');
+      toast.error(err.response?.data?.message || t('common.noData'));
       setLocationCode('');
       setTimeout(() => locationInputRef.current?.focus(), 50);
     }
@@ -145,7 +144,7 @@ export default function LocationCheck() {
         toast.error(res.data.message);
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาดในการบันทึก');
+      toast.error(err.response?.data?.message || t('common.noData'));
     }
     setSaving(false);
   };
@@ -155,7 +154,7 @@ export default function LocationCheck() {
       await api.delete(`/location-check/item/${itemId}`);
       setTodayLog(prev => prev.filter(i => i.ItemID !== itemId));
     } catch (err) {
-      toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('common.noData'));
     }
   };
 
@@ -188,7 +187,7 @@ export default function LocationCheck() {
       <div className="rounded-2xl px-5 py-4 flex items-center gap-3"
         style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}>
         <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600, whiteSpace: 'nowrap' }}>
-          รอบตรวจนับเดือน
+          {t('locCheck.monthLabel')}
         </div>
         <div style={{ flex: 1 }}>
           <input
@@ -196,15 +195,9 @@ export default function LocationCheck() {
             value={selectedMonth}
             onChange={e => e.target.value && setSelectedMonth(e.target.value)}
             style={{
-              background: '#0f172a',
-              border: '2px solid rgba(255,255,255,0.1)',
-              borderRadius: 10,
-              color: '#f1f5f9',
-              padding: '7px 12px',
-              fontSize: '0.9rem',
-              outline: 'none',
-              width: '100%',
-              colorScheme: 'dark'
+              background: '#0f172a', border: '2px solid rgba(255,255,255,0.1)',
+              borderRadius: 10, color: '#f1f5f9', padding: '7px 12px',
+              fontSize: '0.9rem', outline: 'none', width: '100%', colorScheme: 'dark'
             }}
           />
         </div>
@@ -217,7 +210,7 @@ export default function LocationCheck() {
       <div className="rounded-2xl p-5" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}>
         <div className="flex items-center gap-2 mb-4">
           <ScanLine size={18} style={{ color: '#dc2626' }} />
-          <span className="font-semibold text-base" style={{ color: '#f1f5f9' }}>สแกน / พิมพ์รหัส Location</span>
+          <span className="font-semibold text-base" style={{ color: '#f1f5f9' }}>{t('locCheck.scanLabel')}</span>
         </div>
         <div className="flex gap-2">
           <input
@@ -226,7 +219,7 @@ export default function LocationCheck() {
             value={locationCode}
             onChange={e => setLocationCode(e.target.value.toUpperCase())}
             onKeyDown={e => e.key === 'Enter' && handleSearch()}
-            placeholder="เช่น 02-01-02"
+            placeholder={t('locCheck.scanPlaceholder')}
             autoComplete="off"
             className="flex-1 font-mono rounded-xl px-4 py-3"
             style={{ ...INPUT_STYLE, fontSize: '1.1rem', letterSpacing: '0.05em' }}
@@ -241,7 +234,7 @@ export default function LocationCheck() {
               cursor: locationCode.trim() ? 'pointer' : 'not-allowed',
               fontSize: '0.9rem', minWidth: 72
             }}>
-            {searching ? '...' : 'ค้นหา'}
+            {searching ? '...' : t('locCheck.searchBtn')}
           </button>
         </div>
       </div>
@@ -249,8 +242,6 @@ export default function LocationCheck() {
       {/* Location info + product filters */}
       {locationInfo && !result && (
         <div className="rounded-2xl p-5 space-y-4" style={{ background: '#1e293b', border: '1px solid rgba(255,255,255,0.08)' }}>
-
-          {/* Location header */}
           <div className="flex items-start gap-3 pb-4" style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
             <div className="p-2 rounded-lg flex-shrink-0" style={{ background: 'rgba(220,38,38,0.15)' }}>
               <MapPin size={18} style={{ color: '#dc2626' }} />
@@ -262,75 +253,63 @@ export default function LocationCheck() {
               )}
               {locationInfo.LocationTypeName && (
                 <div className="text-sm" style={{ color: '#94a3b8' }}>
-                  ประเภท: <span style={{ color: '#e2e8f0' }}>{locationInfo.LocationTypeName}</span>
+                  {t('locCheck.typeLabel')} <span style={{ color: '#e2e8f0' }}>{locationInfo.LocationTypeName}</span>
                 </div>
               )}
               {locationInfo.AllowedSKUType ? (
                 <div className="mt-1.5 inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-medium"
                   style={{ background: 'rgba(59,130,246,0.15)', color: '#93c5fd', border: '1px solid rgba(59,130,246,0.3)' }}>
-                  ควรเป็น: {locationInfo.AllowedSKUType}
+                  {t('locCheck.expectedSKU')} {locationInfo.AllowedSKUType}
                 </div>
               ) : (
-                <div className="mt-1.5 text-xs" style={{ color: '#64748b' }}>ยังไม่กำหนด Expected TypeSKU</div>
+                <div className="mt-1.5 text-xs" style={{ color: '#64748b' }}>{t('locCheck.noExpectedSKU')}</div>
               )}
             </div>
           </div>
 
-          {/* 3-field product search — mirrors what's on the product tag */}
           <div>
-            <p className="text-sm font-medium mb-3" style={{ color: '#94a3b8' }}>
-              ระบุสินค้าจากป้าย
-            </p>
-
-            {/* Row 1: category full width */}
+            <p className="text-sm font-medium mb-3" style={{ color: '#94a3b8' }}>{t('locCheck.productLabel')}</p>
             <div className="mb-2">
-              <label style={LABEL_STYLE}>ชื่อหมวด</label>
+              <label style={LABEL_STYLE}>{t('locCheck.categoryLabel')}</label>
               <input
                 ref={categoryInputRef}
                 type="text"
                 value={filters.category}
                 onChange={e => setFilter('category', e.target.value)}
-                placeholder="เช่น แป๊บแบน, ท่อกลม, เหล็กฉาก..."
+                placeholder={t('locCheck.categoryPH')}
                 autoComplete="off"
                 style={INPUT_STYLE}
               />
             </div>
-
-            {/* Row 2: size + thickness side by side */}
             <div className="flex gap-2">
               <div style={{ flex: '1 1 0' }}>
-                <label style={LABEL_STYLE}>ขนาด</label>
+                <label style={LABEL_STYLE}>{t('locCheck.sizeLabel')}</label>
                 <input
                   type="text"
                   value={filters.size}
                   onChange={e => setFilter('size', e.target.value)}
-                  placeholder="เช่น 100x50"
+                  placeholder={t('locCheck.sizePH')}
                   autoComplete="off"
                   style={INPUT_STYLE}
                 />
               </div>
               <div style={{ flex: '1 1 0' }}>
-                <label style={LABEL_STYLE}>ความหนา (มม.)</label>
+                <label style={LABEL_STYLE}>{t('locCheck.thicknessLabel')}</label>
                 <input
                   type="text"
                   inputMode="decimal"
                   value={filters.thickness}
                   onChange={e => setFilter('thickness', e.target.value)}
-                  placeholder="เช่น 1.15"
+                  placeholder={t('locCheck.thicknessPH')}
                   autoComplete="off"
                   style={INPUT_STYLE}
                 />
               </div>
             </div>
+            <p className="text-xs mt-2" style={{ color: '#475569' }}>{t('locCheck.filterHint')}</p>
 
-            {/* Hint line */}
-            <p className="text-xs mt-2" style={{ color: '#475569' }}>
-              พิมพ์อย่างน้อย 1 ช่อง ระบบจะกรองรายการสินค้าให้
-            </p>
-
-            {/* Results */}
             {productSearching && (
-              <div className="mt-3 text-center text-sm py-3" style={{ color: '#64748b' }}>กำลังค้นหา...</div>
+              <div className="mt-3 text-center text-sm py-3" style={{ color: '#64748b' }}>{t('locCheck.searching')}</div>
             )}
 
             {!productSearching && productResults.length > 0 && (
@@ -346,13 +325,9 @@ export default function LocationCheck() {
                         width: '100%',
                         background: isExpected ? 'rgba(16,185,129,0.12)' : 'rgba(255,255,255,0.05)',
                         border: isExpected ? '1.5px solid rgba(16,185,129,0.5)' : '1.5px solid rgba(255,255,255,0.08)',
-                        borderRadius: 12,
-                        padding: '10px 14px',
+                        borderRadius: 12, padding: '10px 14px',
                         cursor: saving ? 'wait' : 'pointer',
-                        textAlign: 'left',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 10
+                        textAlign: 'left', display: 'flex', alignItems: 'center', gap: 10
                       }}
                     >
                       <Package size={15} style={{ color: isExpected ? '#6ee7b7' : '#64748b', flexShrink: 0 }} />
@@ -361,24 +336,14 @@ export default function LocationCheck() {
                           {p.ProductName}
                         </div>
                         <div className="flex gap-2 mt-0.5 flex-wrap">
-                          {p.CategoryName && (
-                            <span className="text-xs" style={{ color: '#64748b' }}>{p.CategoryName}</span>
-                          )}
-                          {p.SizeCode && (
-                            <span className="text-xs font-mono" style={{ color: '#64748b' }}>{p.SizeCode}</span>
-                          )}
-                          {p.Thickness != null && (
-                            <span className="text-xs font-mono" style={{ color: '#64748b' }}>{p.Thickness} มม.</span>
-                          )}
+                          {p.CategoryName && <span className="text-xs" style={{ color: '#64748b' }}>{p.CategoryName}</span>}
+                          {p.SizeCode && <span className="text-xs font-mono" style={{ color: '#64748b' }}>{p.SizeCode}</span>}
+                          {p.Thickness != null && <span className="text-xs font-mono" style={{ color: '#64748b' }}>{p.Thickness} mm</span>}
                         </div>
                       </div>
                       {p.SKUType && (
                         <div className="flex-shrink-0 text-xs font-semibold px-2 py-0.5 rounded-full"
-                          style={{
-                            background: `${skuColor(p.SKUType)}22`,
-                            color: skuColor(p.SKUType),
-                            border: `1px solid ${skuColor(p.SKUType)}44`
-                          }}>
+                          style={{ background: `${skuColor(p.SKUType)}22`, color: skuColor(p.SKUType), border: `1px solid ${skuColor(p.SKUType)}44` }}>
                           {p.SKUType}{isExpected ? ' ✓' : ''}
                         </div>
                       )}
@@ -390,15 +355,13 @@ export default function LocationCheck() {
 
             {!productSearching && productResults.length === 0 &&
               Object.values(filters).some(v => v.trim().length >= 1) && (
-              <div className="mt-3 text-center py-4 text-sm" style={{ color: '#475569' }}>
-                ไม่พบสินค้าที่ตรงกัน — ลองแก้คำค้นหา
-              </div>
+              <div className="mt-3 text-center py-4 text-sm" style={{ color: '#475569' }}>{t('common.noData')}</div>
             )}
           </div>
 
           <button onClick={handleReset} className="flex items-center gap-1.5 text-sm mx-auto"
             style={{ color: '#475569', background: 'none', border: 'none', cursor: 'pointer' }}>
-            <RotateCcw size={13} /> ยกเลิก / สแกนใหม่
+            <RotateCcw size={13} /> {t('common.cancel')}
           </button>
         </div>
       )}
@@ -411,23 +374,19 @@ export default function LocationCheck() {
             border: `2px solid ${result.isMatch ? '#10b981' : '#dc2626'}`
           }}>
           <div className="flex justify-center mb-3">
-            {result.isMatch
-              ? <CheckCircle2 size={60} style={{ color: '#10b981' }} />
-              : <XCircle size={60} style={{ color: '#dc2626' }} />}
+            {result.isMatch ? <CheckCircle2 size={60} style={{ color: '#10b981' }} /> : <XCircle size={60} style={{ color: '#dc2626' }} />}
           </div>
-          <div className="text-2xl font-bold mb-1"
-            style={{ color: result.isMatch ? '#6ee7b7' : '#fca5a5' }}>
-            {result.isMatch ? 'ตรงตามประเภท ✓' : 'ไม่ตรงตามประเภท ✗'}
+          <div className="text-2xl font-bold mb-1" style={{ color: result.isMatch ? '#6ee7b7' : '#fca5a5' }}>
+            {result.isMatch ? `${t('locCheck.matchCount').replace('{n}', '')} ✓` : `${t('locCheck.mismatchCount').replace('{n}', '')} ✗`}
           </div>
           <div className="text-sm mt-1" style={{ color: '#94a3b8' }}>
             {result.locationCode} &bull; {result.actualSKUType}
           </div>
           {!result.isMatch && result.expectedSKUType && (
             <div className="text-sm mt-1" style={{ color: '#94a3b8' }}>
-              ควรเป็น: <span style={{ color: '#fbbf24' }}>{result.expectedSKUType}</span>
+              {t('locCheck.expectedSKU')} <span style={{ color: '#fbbf24' }}>{result.expectedSKUType}</span>
             </div>
           )}
-          <p className="text-xs mt-4" style={{ color: '#475569' }}>กำลังล้างข้อมูลเพื่อสแกน Location ต่อไป...</p>
         </div>
       )}
 
@@ -439,12 +398,12 @@ export default function LocationCheck() {
             <div className="flex items-center gap-2">
               <History size={15} style={{ color: '#64748b' }} />
               <span className="text-sm font-semibold" style={{ color: '#94a3b8' }}>
-                รายการรอบ {fmtMonth(selectedMonth)} ({todayLog.length} location)
+                {t('locCheck.todayLog')} {fmtMonth(selectedMonth)} ({todayLog.length})
               </span>
             </div>
             <div className="flex gap-3 text-xs font-semibold">
-              <span style={{ color: '#6ee7b7' }}>✓ {matchCount}</span>
-              <span style={{ color: '#fca5a5' }}>✗ {mismatchCount}</span>
+              <span style={{ color: '#6ee7b7' }}>✓ {t('locCheck.matchCount').replace('{n}', matchCount)}</span>
+              <span style={{ color: '#fca5a5' }}>✗ {t('locCheck.mismatchCount').replace('{n}', mismatchCount)}</span>
             </div>
           </div>
           <div>
@@ -452,21 +411,17 @@ export default function LocationCheck() {
               <div key={item.ItemID} className="px-4 py-3 flex items-center gap-3"
                 style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
                 <div className="flex-shrink-0">
-                  {item.IsMatch
-                    ? <CheckCircle2 size={18} style={{ color: '#10b981' }} />
-                    : <XCircle size={18} style={{ color: '#dc2626' }} />}
+                  {item.IsMatch ? <CheckCircle2 size={18} style={{ color: '#10b981' }} /> : <XCircle size={18} style={{ color: '#dc2626' }} />}
                 </div>
                 <div className="flex-1 min-w-0">
-                  <div className="font-mono text-sm font-medium" style={{ color: '#e2e8f0' }}>
-                    {item.LocationCode}
-                  </div>
+                  <div className="font-mono text-sm font-medium" style={{ color: '#e2e8f0' }}>{item.LocationCode}</div>
                   {item.ProductFoundName && (
                     <div className="text-xs truncate" style={{ color: '#94a3b8' }}>{item.ProductFoundName}</div>
                   )}
                   <div className="text-xs truncate" style={{ color: '#64748b' }}>
                     {item.ActualSKUType || '-'}
                     {!item.IsMatch && item.ExpectedSKUType && (
-                      <span style={{ color: '#f59e0b' }}> (ควรเป็น: {item.ExpectedSKUType})</span>
+                      <span style={{ color: '#f59e0b' }}> ({t('locCheck.expectedSKU')} {item.ExpectedSKUType})</span>
                     )}
                   </div>
                 </div>
@@ -477,7 +432,7 @@ export default function LocationCheck() {
                     style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, borderRadius: 6, color: '#475569', lineHeight: 0 }}
                     onMouseEnter={e => e.currentTarget.style.color = '#ef4444'}
                     onMouseLeave={e => e.currentTarget.style.color = '#475569'}
-                    title="ลบรายการนี้"
+                    title={t('common.delete')}
                   >
                     <Trash2 size={14} />
                   </button>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLang } from '../context/LanguageContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import {
@@ -61,14 +62,17 @@ function SearchSelect({ value, onChange, options, placeholder, className = '' })
 const PAGE_SIZE = 100;
 const FIELD_PAGE_SIZE = 50;
 
-const STATUS_LABEL = {
-  DRAFT:     { label: 'ร่าง',         cls: 'bg-slate-100 text-slate-600' },
-  OPEN:      { label: 'เปิดรอบ',      cls: 'bg-blue-100 text-blue-700' },
-  COMPLETED: { label: 'เสร็จสิ้น',    cls: 'bg-emerald-100 text-emerald-700' },
+const STATUS_CLS = {
+  DRAFT:     'bg-slate-100 text-slate-600',
+  OPEN:      'bg-blue-100 text-blue-700',
+  COMPLETED: 'bg-emerald-100 text-emerald-700',
 };
 const StatusBadge = ({ status }) => {
-  const s = STATUS_LABEL[status] || { label: status, cls: 'bg-slate-100 text-slate-500' };
-  return <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${s.cls}`}>{s.label}</span>;
+  const { t } = useLang();
+  const STATUS_KEY = { DRAFT: 'stockCount.statusDraft', OPEN: 'stockCount.statusOpen', COMPLETED: 'stockCount.statusCompleted' };
+  const label = STATUS_KEY[status] ? t(STATUS_KEY[status]) : status;
+  const cls = STATUS_CLS[status] || 'bg-slate-100 text-slate-500';
+  return <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${cls}`}>{label}</span>;
 };
 const DiffBadge = ({ sys, counted }) => {
   if (counted == null || counted === 0 && sys > 0) return <span className="text-slate-300 text-xs">รอนับ</span>;
@@ -222,6 +226,7 @@ const FieldCard = memo(function FieldCard({ item, submitting, onSubmit, isActive
 
 export default function StockCount() {
   const { hasPermission } = useAuth();
+  const { t } = useLang();
   const canOffice = hasPermission('STOCKCOUNT_OFFICE');
   const canField  = hasPermission('STOCKCOUNT_FIELD');
   const defaultTab = canOffice ? 'office' : 'field';
@@ -607,13 +612,13 @@ export default function StockCount() {
         {canOffice && (
           <button onClick={() => setTab('office')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'office' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-            จัดการรอบ
+            {t('stockCount.officeTab')}
           </button>
         )}
         {canField && (
           <button onClick={() => setTab('field')}
             className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${tab === 'field' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-            ตรวจนับ
+            {t('stockCount.fieldTab')}
           </button>
         )}
         <button onClick={() => { tab === 'office' ? fetchSessions() : fetchFieldSessions(); }}
@@ -630,13 +635,13 @@ export default function StockCount() {
               <div className="flex items-center justify-between mb-4">
                 <h3 className="card-header mb-0">รายการรอบตรวจนับ</h3>
                 <button onClick={() => setCreateModal(true)} className="btn-primary text-sm">
-                  <Plus size={14} />สร้างรอบใหม่
+                  <Plus size={14} />{t('stockCount.createSession')}
                 </button>
               </div>
-              {loading ? <LoadingSpinner text="กำลังโหลด..." /> : (
+              {loading ? <LoadingSpinner text={t('common.loading')} /> : (
                 <div className="space-y-2">
                   {sessions.length === 0 && (
-                    <div className="text-center py-12 text-slate-400 text-sm">ยังไม่มีรอบตรวจนับ</div>
+                    <div className="text-center py-12 text-slate-400 text-sm">{t('stockCount.noSessions')}</div>
                   )}
                   {sessions.map(s => (
                     <div key={s.SessionID}
@@ -695,7 +700,7 @@ export default function StockCount() {
                         <button onClick={() => importRef.current?.click()} disabled={importing}
                           className="btn-secondary text-sm flex items-center gap-1.5">
                           {importing ? <span className="w-3.5 h-3.5 border-2 border-gray-400 border-t-gray-700 rounded-full animate-spin" /> : <Upload size={14} />}
-                          Import
+                          {importing ? t('stockCount.importing') : t('stockCount.importExcel')}
                         </button>
                         <button onClick={() => handleStatusChange('OPEN')} disabled={saving || !items.length}
                           className="btn-primary text-sm">
@@ -829,7 +834,7 @@ export default function StockCount() {
               )}
 
               {(importing || detailLoading) ? (
-                <LoadingSpinner text={importing ? 'กำลังนำเข้าข้อมูล...' : 'กำลังโหลด...'} />
+                <LoadingSpinner text={importing ? t('stockCount.importing') : t('common.loading')} />
               ) : (
                 <div className="card overflow-x-auto">
                   {displayItems.length > PAGE_SIZE && (
@@ -873,7 +878,7 @@ export default function StockCount() {
                     <tbody>
                       {displayItems.length === 0 && (
                         <tr><td colSpan={9} className="text-center py-8 text-slate-400 text-sm">
-                          {showSelected ? 'ยังไม่ได้เลือกรายการ' : 'ไม่พบรายการ'}
+                          {showSelected ? t('stockCount.noItems') : t('common.noData')}
                         </td></tr>
                       )}
                       {pageItems.map(item => (
@@ -914,7 +919,7 @@ export default function StockCount() {
       {tab === 'field' && (
         <div className="space-y-4">
           <div className="card">
-            <label className="label">เลือกรอบตรวจนับ</label>
+            <label className="label">{t('stockCount.selectSession')}</label>
             <select value={fieldSessionId} onChange={e => setFieldSessionId(e.target.value)} className="input-field">
               <option value="">-- เลือกรอบ --</option>
               {fieldSessions.map(s => (
@@ -924,7 +929,7 @@ export default function StockCount() {
               ))}
             </select>
             {fieldSessions.length === 0 && (
-              <p className="text-xs text-slate-400 mt-2">ไม่มีรอบที่เปิดอยู่ขณะนี้</p>
+              <p className="text-xs text-slate-400 mt-2">{t('stockCount.noSessions')}</p>
             )}
           </div>
 
@@ -944,7 +949,7 @@ export default function StockCount() {
                       setScanInput('');
                     }
                   }}
-                  placeholder="สแกนหรือพิมพ์รหัส แล้วกด Enter..."
+                  placeholder={t('stockCount.scanInput')}
                   className="input-field text-sm font-mono"
                 />
                 {(filterFieldWH || filterFieldLoc) && (
@@ -959,10 +964,10 @@ export default function StockCount() {
 
               <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex gap-2 flex-wrap items-center">
                 {[
-                  { v: 'all', l: 'ทั้งหมด' },
-                  { v: 'recount', l: 'ตรวจนับซ้ำ' },
-                  { v: 'pending', l: 'ยังไม่นับ' },
-                  { v: 'done', l: 'นับแล้ว' },
+                  { v: 'all', l: t('stockCount.filterAll') },
+                  { v: 'recount', l: t('stockCount.filterRecount') },
+                  { v: 'pending', l: t('stockCount.filterPending') },
+                  { v: 'done', l: t('stockCount.filterCounted') },
                 ].map(({ v, l }) => (
                   <button key={v} onClick={() => setFieldFilter(v)}
                     className={`px-3 h-8 rounded-xl text-xs font-bold transition-all flex-shrink-0 ${fieldFilter === v ? 'bg-red-600 text-white' : 'bg-slate-50 border border-slate-200 text-slate-600'}`}>
@@ -985,7 +990,7 @@ export default function StockCount() {
                 <div className="relative flex-1 min-w-[140px]">
                   <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input value={fieldSearch} onChange={e => setFieldSearch(e.target.value)}
-                    placeholder="ค้นหา..." className="input-field pl-8 text-sm h-8" />
+                    placeholder={t('stockCount.searchItem')} className="input-field pl-8 text-sm h-8" />
                 </div>
                 <button onClick={() => fetchFieldData(fieldSessionId)}
                   className="p-1.5 rounded-lg border border-slate-200 text-slate-400 hover:text-blue-500 transition-colors flex-shrink-0">
@@ -993,10 +998,10 @@ export default function StockCount() {
                 </button>
               </div>
 
-              {fieldLoading ? <LoadingSpinner text="กำลังโหลด..." /> : (
+              {fieldLoading ? <LoadingSpinner text={t('common.loading')} /> : (
                 <div className="space-y-2">
                   {filteredFieldItems.length === 0 && (
-                    <div className="text-center py-10 text-slate-400 text-sm">ไม่พบรายการ</div>
+                    <div className="text-center py-10 text-slate-400 text-sm">{t('stockCount.noFieldItems')}</div>
                   )}
                   {filteredFieldItems.length > FIELD_PAGE_SIZE && (
                     <div className="flex items-center justify-between px-1">
@@ -1044,27 +1049,27 @@ export default function StockCount() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-900">สร้างรอบตรวจนับใหม่</h3>
+              <h3 className="text-lg font-bold text-slate-900">{t('stockCount.createSession')}</h3>
               <button onClick={() => setCreateModal(false)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="label">วันที่สำหรับตรวจนับ *</label>
+                <label className="label">{t('stockCount.countDate')}</label>
                 <input type="date" value={createForm.countDate}
                   onChange={e => setCreateForm(p => ({ ...p, countDate: e.target.value }))}
                   className="input-field" />
               </div>
               <div>
-                <label className="label">หมายเหตุ</label>
+                <label className="label">{t('stockCount.notes')}</label>
                 <input value={createForm.notes} onChange={e => setCreateForm(p => ({ ...p, notes: e.target.value }))}
                   className="input-field" placeholder="..." />
               </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={handleCreate} disabled={saving} className="btn-primary flex-1">
-                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Plus size={14} />สร้าง</>}
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Plus size={14} />{t('stockCount.createSession')}</>}
               </button>
-              <button onClick={() => setCreateModal(false)} className="btn-secondary px-6">ยกเลิก</button>
+              <button onClick={() => setCreateModal(false)} className="btn-secondary px-6">{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -1104,7 +1109,7 @@ export default function StockCount() {
                 </span>
               </div>
             </div>
-            <button onClick={() => setEntriesModal(null)} className="btn-secondary w-full mt-4">ปิด</button>
+            <button onClick={() => setEntriesModal(null)} className="btn-secondary w-full mt-4">{t('common.close')}</button>
           </div>
         </div>
       )}

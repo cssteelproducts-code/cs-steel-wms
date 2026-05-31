@@ -4,31 +4,33 @@ import {
   ArrowRight, CheckCircle2, Circle, RefreshCw,
   ChevronRight, Truck, Star
 } from 'lucide-react';
-
-const PRIORITY_CONFIG = {
-  URGENT: { label: 'ด่วนมาก', color: '#ef4444', bg: '#fef2f2' },
-  HIGH:   { label: 'เร่งด่วน', color: '#f59e0b', bg: '#fffbeb' },
-};
 import toast from 'react-hot-toast';
 import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
+import { useLang } from '../context/LanguageContext';
 
-const STEP_META = {
-  PENDING:      { label: 'รอเริ่ม',           btn: 'เข้าสถานีต้นทาง',           color: '#6b7280', endpoint: 'source-entry' },
-  SOURCE_ENTRY: { label: 'อยู่สถานีต้นทาง',   btn: 'ออกสถานีต้นทาง (บันทึกน้ำหนัก)', color: '#f59e0b', endpoint: 'source-exit', needsWeight: true },
-  SOURCE_EXIT:  { label: 'กำลังขนส่ง',        btn: 'เข้าสถานีปลายทาง',          color: '#3b82f6', endpoint: 'dest-entry' },
-  DEST_ENTRY:   { label: 'อยู่สถานีปลายทาง',  btn: 'ออกสถานีปลายทาง (เสร็จ)',   color: '#8b5cf6', endpoint: 'dest-exit' },
-  COMPLETE:     { label: 'เสร็จสิ้น',          btn: null,                          color: '#10b981', endpoint: null },
+const PRIORITY_CONFIG = {
+  URGENT: { labelKey: 'priority.veryUrgent', color: '#ef4444', bg: '#fef2f2' },
+  HIGH:   { labelKey: 'priority.urgent',     color: '#f59e0b', bg: '#fffbeb' },
 };
 
-const TIMELINE = [
-  { label: 'เข้าสถานีต้นทาง',   field: 'SourceEntryTime' },
-  { label: 'ออกสถานีต้นทาง',    field: 'SourceExitTime', extraFields: ['BundleCount', 'TotalWeightKg'] },
-  { label: 'เข้าสถานีปลายทาง',  field: 'DestEntryTime' },
-  { label: 'ออกสถานีปลายทาง',   field: 'DestExitTime' },
+const STEP_META = {
+  PENDING:      { labelKey: 'driver.waitAssign',   btnKey: 'driver.source',     color: '#6b7280', endpoint: 'source-entry' },
+  SOURCE_ENTRY: { labelKey: 'transfer.typeSource',  btnKey: 'driver.dest',       color: '#f59e0b', endpoint: 'source-exit', needsWeight: true },
+  SOURCE_EXIT:  { labelKey: 'transfer.typeDest',    btnKey: 'driver.dest',       color: '#3b82f6', endpoint: 'dest-entry' },
+  DEST_ENTRY:   { labelKey: 'status.complete',      btnKey: 'driver.saveAndExit',color: '#8b5cf6', endpoint: 'dest-exit' },
+  COMPLETE:     { labelKey: 'status.complete',      btnKey: null,                color: '#10b981', endpoint: null },
+};
+
+const TIMELINE_KEYS = [
+  { labelKey: 'driver.source', field: 'SourceEntryTime' },
+  { labelKey: 'driver.source', field: 'SourceExitTime', extraFields: ['BundleCount', 'TotalWeightKg'] },
+  { labelKey: 'driver.dest',   field: 'DestEntryTime' },
+  { labelKey: 'driver.dest',   field: 'DestExitTime' },
 ];
 
 export default function TransferDriver() {
+  const { t } = useLang();
   const [loading, setLoading] = useState(true);
   const [activeTrips, setActiveTrips] = useState([]);
   const [selectedTripId, setSelectedTripId] = useState(null);
@@ -42,12 +44,12 @@ export default function TransferDriver() {
       const trips = tripsRes.data.success ? tripsRes.data.data : [];
       setActiveTrips(trips);
       if (trips.length > 0) {
-        setSelectedTripId(prev => prev && trips.find(t => t.TripID === prev) ? prev : trips[0].TripID);
+        setSelectedTripId(prev => prev && trips.find(tr => tr.TripID === prev) ? prev : trips[0].TripID);
       } else {
         setSelectedTripId(null);
       }
     } catch {
-      toast.error('โหลดข้อมูลไม่สำเร็จ');
+      toast.error(t('common.noData'));
     } finally {
       setLoading(false);
     }
@@ -59,18 +61,13 @@ export default function TransferDriver() {
     const meta = STEP_META[trip.Status];
     if (!meta?.endpoint) return;
     if (meta.needsWeight) { setShowWeight(true); return; }
-
     setActionLoading(true);
     try {
       await api.put(`/transfer/trips/${trip.TripID}/${meta.endpoint}`);
-      if (trip.Status === 'DEST_ENTRY') {
-        toast.success('บันทึกเสร็จสิ้น — รอบนี้เสร็จแล้ว!');
-      } else {
-        toast.success('บันทึกเวลาสำเร็จ');
-      }
+      toast.success(trip.Status === 'DEST_ENTRY' ? t('driver.roundDone') : t('common.save'));
       await load();
     } catch {
-      toast.error('เกิดข้อผิดพลาด กรุณาลองใหม่');
+      toast.error(t('common.noData'));
     } finally {
       setActionLoading(false);
     }
@@ -78,8 +75,7 @@ export default function TransferDriver() {
 
   const submitWeight = async (tripId) => {
     if (!weightForm.bundleCount || !weightForm.totalWeightKg) {
-      toast.error('กรุณากรอกจำนวนมัดและน้ำหนักรวม');
-      return;
+      toast.error(t('driver.bundleCount')); return;
     }
     setActionLoading(true);
     try {
@@ -88,35 +84,32 @@ export default function TransferDriver() {
         totalWeightKg: parseFloat(weightForm.totalWeightKg),
         notes: weightForm.notes || null,
       });
-      toast.success('บันทึกน้ำหนักสำเร็จ');
+      toast.success(t('common.save'));
       setShowWeight(false);
       setWeightForm({ bundleCount: '', totalWeightKg: '', notes: '' });
       await load();
     } catch {
-      toast.error('เกิดข้อผิดพลาด');
+      toast.error(t('common.noData'));
     } finally {
       setActionLoading(false);
     }
   };
 
-  const trip = activeTrips.find(t => t.TripID === selectedTripId);
+  const trip = activeTrips.find(tr => tr.TripID === selectedTripId);
   const meta = trip ? STEP_META[trip.Status] : null;
 
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-16">
-        <LoadingSpinner text="กำลังโหลด..." />
-      </div>
-    );
-  }
+  if (loading) return (
+    <div className="flex justify-center items-center py-16">
+      <LoadingSpinner text={t('common.loading')} />
+    </div>
+  );
 
   return (
     <div className="max-w-md mx-auto space-y-4 pb-10">
-      {/* Header */}
       <div className="flex items-center justify-between pt-1">
         <div>
-          <h2 className="text-xl font-black" style={{ color: '#111827' }}>งานของฉัน</h2>
-          <p className="text-sm font-medium" style={{ color: '#9ca3af' }}>บันทึกเวลาเข้า-ออกสถานี</p>
+          <h2 className="text-xl font-black" style={{ color: '#111827' }}>{t('driver.myJobs')}</h2>
+          <p className="text-sm font-medium" style={{ color: '#9ca3af' }}>{t('driver.logStation')}</p>
         </div>
         <button onClick={load}
           className="p-2.5 rounded-2xl transition-colors"
@@ -125,66 +118,61 @@ export default function TransferDriver() {
         </button>
       </div>
 
-      {/* ── Active trip ── */}
       {trip ? (
         <>
-          {/* Multiple trip selector */}
           {activeTrips.length > 1 && (
             <div className="flex gap-2 overflow-x-auto pb-1">
               {[...activeTrips].sort((a, b) => {
                 const rank = { URGENT: 0, HIGH: 1, NORMAL: 2 };
                 return (rank[a.Priority] ?? 2) - (rank[b.Priority] ?? 2);
-              }).map(t => {
-                const pc = PRIORITY_CONFIG[t.Priority];
+              }).map(tr => {
+                const pc = PRIORITY_CONFIG[tr.Priority];
                 return (
-                  <button key={t.TripID}
-                    onClick={() => { setSelectedTripId(t.TripID); setShowWeight(false); }}
+                  <button key={tr.TripID}
+                    onClick={() => { setSelectedTripId(tr.TripID); setShowWeight(false); }}
                     className="flex-shrink-0 flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
-                    style={selectedTripId === t.TripID
+                    style={selectedTripId === tr.TripID
                       ? { background: '#dc2626', color: '#fff' }
                       : pc
                         ? { background: pc.bg, color: pc.color, border: `1.5px solid ${pc.color}40` }
                         : { background: '#f3f4f6', color: '#6b7280' }}>
                     {pc && <Star size={10} fill="currentColor" />}
-                    {t.JobCode} รอบ {t.TripNo}
+                    {tr.JobCode} {t('driver.roundNo')} {tr.TripNo}
                   </button>
                 );
               })}
             </div>
           )}
 
-          {/* Trip card */}
           <div className="rounded-3xl overflow-hidden"
             style={{ background: '#ffffff', border: '1.5px solid #f3f4f6', boxShadow: '0 4px 20px rgba(0,0,0,0.07)' }}>
-            {/* Status bar */}
             <div className="px-5 py-3 flex items-center justify-between"
               style={{ background: `${meta?.color}12`, borderBottom: '1px solid #f3f4f6' }}>
               <div className="flex items-center gap-2">
                 <div className="w-2 h-2 rounded-full animate-pulse" style={{ background: meta?.color }} />
-                <span className="text-sm font-bold" style={{ color: meta?.color }}>{meta?.label}</span>
+                <span className="text-sm font-bold" style={{ color: meta?.color }}>{meta?.labelKey ? t(meta.labelKey) : ''}</span>
               </div>
-              <span className="text-xs font-semibold" style={{ color: '#9ca3af' }}>รอบ {trip.TripNo}</span>
+              <span className="text-xs font-semibold" style={{ color: '#9ca3af' }}>{t('driver.roundNo')} {trip.TripNo}</span>
             </div>
 
             <div className="p-5 space-y-4">
-              {/* Job code + vehicle */}
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#9ca3af' }}>งานหมายเลข</div>
+                  <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#9ca3af' }}>{t('driver.jobNo')}</div>
                   <div className="flex items-center gap-2">
                     <div className="text-lg font-black" style={{ color: '#111827' }}>{trip.JobCode}</div>
                     {PRIORITY_CONFIG[trip.Priority] && (
                       <span className="flex items-center gap-1 px-2 py-0.5 rounded-lg text-xs font-black"
                         style={{ background: PRIORITY_CONFIG[trip.Priority].bg, color: PRIORITY_CONFIG[trip.Priority].color }}>
                         <Star size={10} fill="currentColor" />
-                        {PRIORITY_CONFIG[trip.Priority].label}
+                        {t(PRIORITY_CONFIG[trip.Priority].labelKey)}
                       </span>
                     )}
                   </div>
                 </div>
                 {trip.VehiclePlate && (
                   <div className="text-right">
-                    <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#9ca3af' }}>รถ</div>
+                    <div className="text-xs font-bold uppercase tracking-widest mb-0.5" style={{ color: '#9ca3af' }}>{t('driver.vehicle')}</div>
                     <div className="px-2 py-1 rounded-xl text-sm font-black" style={{ background: '#eff6ff', color: '#3b82f6' }}>
                       {trip.VehicleCode ? `[${trip.VehicleCode}] ` : ''}{trip.VehiclePlate}
                     </div>
@@ -192,28 +180,25 @@ export default function TransferDriver() {
                 )}
               </div>
 
-              {/* Route */}
               <div className="flex items-center gap-2">
                 <div className="flex-1 p-3 rounded-2xl text-center" style={{ background: '#fef2f2' }}>
-                  <div className="text-xs font-bold mb-0.5" style={{ color: '#9ca3af' }}>ต้นทาง</div>
+                  <div className="text-xs font-bold mb-0.5" style={{ color: '#9ca3af' }}>{t('driver.source')}</div>
                   <div className="text-sm font-black" style={{ color: '#dc2626' }}>{trip.SourceStationName}</div>
                 </div>
                 <ArrowRight size={18} className="flex-shrink-0 text-gray-200" />
                 <div className="flex-1 p-3 rounded-2xl text-center" style={{ background: '#eff6ff' }}>
-                  <div className="text-xs font-bold mb-0.5" style={{ color: '#9ca3af' }}>ปลายทาง</div>
+                  <div className="text-xs font-bold mb-0.5" style={{ color: '#9ca3af' }}>{t('driver.dest')}</div>
                   <div className="text-sm font-black" style={{ color: '#3b82f6' }}>{trip.DestStationName}</div>
                 </div>
               </div>
 
-              {/* Product */}
               <div className="p-3 rounded-2xl" style={{ background: '#f9fafb' }}>
-                <div className="text-xs font-bold mb-1" style={{ color: '#9ca3af' }}>สินค้าที่ขนย้าย</div>
+                <div className="text-xs font-bold mb-1" style={{ color: '#9ca3af' }}>{t('driver.product')}</div>
                 <div className="text-sm font-semibold" style={{ color: '#374151' }}>{trip.ProductDesc}</div>
               </div>
 
-              {/* Timeline */}
               <div className="space-y-3">
-                {TIMELINE.map(({ label, field, extraFields }, i) => {
+                {TIMELINE_KEYS.map(({ labelKey, field, extraFields }, i) => {
                   const time = trip[field];
                   return (
                     <div key={i} className="flex items-start gap-3">
@@ -222,15 +207,15 @@ export default function TransferDriver() {
                         : <Circle size={18} style={{ color: '#e5e7eb', flexShrink: 0, marginTop: 1 }} />}
                       <div className="flex-1">
                         <span className="text-sm font-semibold" style={{ color: time ? '#111827' : '#d1d5db' }}>
-                          {label}
+                          {t(labelKey)}
                         </span>
                         {extraFields && trip.BundleCount && (
                           <div className="flex gap-3 mt-0.5">
                             <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: '#f3f4f6', color: '#6b7280' }}>
-                              {trip.BundleCount} มัด
+                              {trip.BundleCount} {t('transfer.bundles')}
                             </span>
                             <span className="text-xs font-bold px-2 py-0.5 rounded-lg" style={{ background: '#f3f4f6', color: '#6b7280' }}>
-                              {trip.TotalWeightKg} กก.
+                              {trip.TotalWeightKg} {t('unit.kg')}
                             </span>
                           </div>
                         )}
@@ -245,65 +230,50 @@ export default function TransferDriver() {
                 })}
               </div>
 
-              {/* Action button */}
               {meta?.btn && trip.Status !== 'COMPLETE' && !showWeight && (
                 <button onClick={() => advanceTrip(trip)} disabled={actionLoading}
                   className="w-full h-16 rounded-2xl text-base font-black text-white transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
-                  style={{
-                    background: `linear-gradient(135deg,${meta.color},${meta.color}cc)`,
-                    boxShadow: `0 6px 20px ${meta.color}40`
-                  }}>
-                  {actionLoading
-                    ? <RefreshCw size={20} className="animate-spin" />
-                    : <ChevronRight size={22} />}
-                  {meta.btn}
+                  style={{ background: `linear-gradient(135deg,${meta.color},${meta.color}cc)`, boxShadow: `0 6px 20px ${meta.color}40` }}>
+                  {actionLoading ? <RefreshCw size={20} className="animate-spin" /> : <ChevronRight size={22} />}
+                  {meta.btnKey ? t(meta.btnKey) : ''}
                 </button>
               )}
 
-              {/* Weight input form */}
               {showWeight && (
                 <div className="space-y-3 p-4 rounded-2xl" style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6' }}>
-                  <p className="text-sm font-bold" style={{ color: '#111827' }}>บันทึกน้ำหนักสินค้าที่ขนออก</p>
+                  <p className="text-sm font-bold" style={{ color: '#111827' }}>{t('driver.recordWeight')}</p>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>จำนวนมัด *</label>
-                      <input
-                        type="number" inputMode="numeric"
-                        value={weightForm.bundleCount}
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('driver.bundleCount')}</label>
+                      <input type="number" inputMode="numeric" value={weightForm.bundleCount}
                         onChange={e => setWeightForm(f => ({ ...f, bundleCount: e.target.value }))}
                         className="w-full h-12 px-3 rounded-xl text-xl font-black outline-none text-center"
-                        style={{ border: '1.5px solid #e5e7eb', color: '#111827' }}
-                        placeholder="0" />
+                        style={{ border: '1.5px solid #e5e7eb', color: '#111827' }} placeholder="0" />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>น้ำหนักรวม กก. *</label>
-                      <input
-                        type="number" inputMode="decimal"
-                        value={weightForm.totalWeightKg}
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('driver.totalWeight')}</label>
+                      <input type="number" inputMode="decimal" value={weightForm.totalWeightKg}
                         onChange={e => setWeightForm(f => ({ ...f, totalWeightKg: e.target.value }))}
                         className="w-full h-12 px-3 rounded-xl text-xl font-black outline-none text-center"
-                        style={{ border: '1.5px solid #e5e7eb', color: '#111827' }}
-                        placeholder="0.0" />
+                        style={{ border: '1.5px solid #e5e7eb', color: '#111827' }} placeholder="0.0" />
                     </div>
                   </div>
-                  <input
-                    type="text"
-                    value={weightForm.notes}
+                  <input type="text" value={weightForm.notes}
                     onChange={e => setWeightForm(f => ({ ...f, notes: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm outline-none"
                     style={{ border: '1.5px solid #e5e7eb', color: '#374151' }}
-                    placeholder="หมายเหตุ (ถ้ามี)" />
+                    placeholder={t('weighIn.notesPlaceholder')} />
                   <div className="flex gap-2">
                     <button onClick={() => setShowWeight(false)}
                       className="flex-1 h-11 rounded-xl text-sm font-bold transition-colors"
                       style={{ background: '#f3f4f6', color: '#6b7280' }}>
-                      ยกเลิก
+                      {t('common.cancel')}
                     </button>
                     <button onClick={() => submitWeight(trip.TripID)} disabled={actionLoading}
                       className="flex-1 h-11 rounded-xl text-sm font-black text-white disabled:opacity-60 flex items-center justify-center gap-2"
                       style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
                       {actionLoading ? <RefreshCw size={14} className="animate-spin" /> : null}
-                      บันทึกและออก
+                      {t('driver.saveAndExit')}
                     </button>
                   </div>
                 </div>
@@ -312,18 +282,17 @@ export default function TransferDriver() {
               {trip.Status === 'COMPLETE' && (
                 <div className="flex items-center justify-center gap-2 py-4">
                   <CheckCircle2 size={20} className="text-emerald-500" />
-                  <span className="font-bold text-sm" style={{ color: '#10b981' }}>รอบนี้เสร็จสิ้นแล้ว</span>
+                  <span className="font-bold text-sm" style={{ color: '#10b981' }}>{t('driver.roundDone')}</span>
                 </div>
               )}
             </div>
           </div>
         </>
       ) : (
-        /* No active trip */
         <div className="text-center py-16 rounded-3xl" style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6' }}>
           <Truck size={40} className="mx-auto mb-3 text-gray-200" />
-          <p className="font-bold text-sm" style={{ color: '#9ca3af' }}>ยังไม่มีงานที่ถูกมอบหมาย</p>
-          <p className="text-xs mt-1" style={{ color: '#d1d5db' }}>รอสำนักงานมอบหมายงานให้</p>
+          <p className="font-bold text-sm" style={{ color: '#9ca3af' }}>{t('driver.noTrips')}</p>
+          <p className="text-xs mt-1" style={{ color: '#d1d5db' }}>{t('driver.waitAssign')}</p>
         </div>
       )}
     </div>

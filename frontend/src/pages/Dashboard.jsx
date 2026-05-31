@@ -5,15 +5,16 @@ import {
 } from 'recharts';
 import {
   TruckIcon, CheckCircle, Clock, Scale, Activity,
-  Calendar, Package, Search, ChevronDown, ChevronUp, X, RefreshCw, BarChart2, Timer
+  Calendar, Package, ChevronDown, ChevronUp, X, RefreshCw, BarChart2
 } from 'lucide-react';
 import api from '../services/api';
 import StatusBadge from '../components/StatusBadge';
 import LoadingSpinner from '../components/LoadingSpinner';
-import { formatDateTime, formatDuration, formatWeight, getStatusConfig } from '../utils/helpers';
+import { formatDateTime, formatDuration, formatWeight } from '../utils/helpers';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 import 'dayjs/locale/th';
+import { useLang } from '../context/LanguageContext';
 dayjs.locale('th');
 
 const colorBg = { 'text-blue-500': 'bg-blue-50', 'text-emerald-500': 'bg-emerald-50', 'text-amber-500': 'bg-amber-50', 'text-cyan-500': 'bg-cyan-50', 'text-red-500': 'bg-red-50', 'text-violet-500': 'bg-violet-50' };
@@ -33,7 +34,6 @@ const StatCard = ({ title, value, sub, icon: Icon, color, onClick }) => (
   </div>
 );
 
-
 const DELIVERY_TYPES = [
   { key: 'CSS',      label: 'CSS.',  color: 'text-red-600',   bar: 'bg-red-400' },
   { key: 'Customer', label: 'Cust.', color: 'text-blue-600',  bar: 'bg-blue-400' },
@@ -41,6 +41,7 @@ const DELIVERY_TYPES = [
 ];
 
 const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKey }) => {
+  const { t } = useLang();
   const [flipped, setFlipped] = useState(false);
   const total = (deliveryStats || []).reduce((s, r) => s + (r[periodKey] || 0), 0);
   const face = {
@@ -48,90 +49,84 @@ const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKe
     boxShadow: '0 1px 3px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04)',
     borderRadius: '1rem', padding: '1rem',
     backfaceVisibility: 'hidden', WebkitBackfaceVisibility: 'hidden',
-    position: 'absolute', inset: 0, overflow: 'hidden',
-    boxSizing: 'border-box'
+    position: 'absolute', inset: 0, overflow: 'hidden', boxSizing: 'border-box'
   };
   return (
     <div style={{ perspective: '1000px', minHeight: 150, cursor: 'pointer', overflow: 'hidden', borderRadius: '1rem' }} onClick={() => setFlipped(f => !f)}>
       <div style={{
         position: 'relative', minHeight: 150,
-        transformStyle: 'preserve-3d',
-        transition: 'transform 0.4s ease',
+        transformStyle: 'preserve-3d', transition: 'transform 0.4s ease',
         transform: flipped ? 'rotateY(180deg)' : 'rotateY(0)'
       }}>
-        {/* Front */}
         <div style={face}>
           <div className="flex flex-col h-full">
             <div className="flex items-start justify-between flex-1">
               <div>
                 <p className="text-slate-500 text-xs">{title}</p>
                 <p className={`text-2xl font-bold mt-0.5 ${color}`}>{value ?? 0}</p>
-                <p className="text-slate-400 text-xs mt-0.5">คัน</p>
+                <p className="text-slate-400 text-xs mt-0.5">{t('unit.vehicles')}</p>
               </div>
               <div className={`p-2.5 rounded-xl ${colorBg[color] || 'bg-slate-100'}`}>
                 <Icon size={20} className={color} />
               </div>
             </div>
-            <p className="text-slate-400 text-xs text-right mt-1">กดดูประเภทขนส่ง →</p>
+            <p className="text-slate-400 text-xs text-right mt-1">{t('dash.detailBtn')} →</p>
           </div>
         </div>
-        {/* Back */}
         <div style={{ ...face, transform: 'rotateY(180deg)' }}>
           <div className="mb-2">
             <p className="text-xs font-semibold text-slate-600 leading-tight">{title}</p>
-            <p className="text-xs font-normal text-slate-400">ประเภทขนส่ง</p>
+            <p className="text-xs font-normal text-slate-400">{t('dash.deliveryType')}</p>
           </div>
           <div className="space-y-2">
-            {DELIVERY_TYPES.map(t => {
-              const row = (deliveryStats || []).find(r => r.DeliveryType === t.key);
+            {DELIVERY_TYPES.map(dt => {
+              const row = (deliveryStats || []).find(r => r.DeliveryType === dt.key);
               const count = row?.[periodKey] || 0;
               const pct = total > 0 ? Math.round((count / total) * 100) : 0;
               return (
-                <div key={t.key}>
+                <div key={dt.key}>
                   <div className="flex items-center justify-between mb-0.5">
-                    <span className={`text-xs font-semibold ${t.color}`}>{t.label}</span>
-                    <span className={`text-xs font-bold ${t.color}`}>{count}
+                    <span className={`text-xs font-semibold ${dt.color}`}>{dt.label}</span>
+                    <span className={`text-xs font-bold ${dt.color}`}>{count}
                       <span className="text-slate-400 font-normal ml-1">/{pct}%</span>
                     </span>
                   </div>
                   <div className="w-full h-1.5 rounded-full bg-slate-100">
-                    <div className={`h-1.5 rounded-full transition-all ${t.bar}`} style={{ width: `${pct}%` }} />
+                    <div className={`h-1.5 rounded-full transition-all ${dt.bar}`} style={{ width: `${pct}%` }} />
                   </div>
                 </div>
               );
             })}
           </div>
-          <p className="text-slate-400 text-xs text-right mt-2">← กดกลับ</p>
+          <p className="text-slate-400 text-xs text-right mt-2">←</p>
         </div>
       </div>
     </div>
   );
 };
 
-const SectionHeader = ({ title, sectionKey, collapsed, onToggle, icon: Icon, iconColor, extra }) => (
-  <div className="flex items-center justify-between mb-3">
-    <h3 className="card-header mb-0 flex items-center gap-2">
-      {Icon && <Icon size={16} className={iconColor || 'text-slate-400'} />}
-      {title}
-    </h3>
-    <div className="flex items-center gap-2">
-      {extra}
-      <button onClick={() => onToggle(sectionKey)}
-        className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
-        title={collapsed ? 'ขยาย' : 'ย่อ'}>
-        {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
-      </button>
+const SectionHeader = ({ title, sectionKey, collapsed, onToggle, icon: Icon, iconColor, extra }) => {
+  const { t } = useLang();
+  return (
+    <div className="flex items-center justify-between mb-3">
+      <h3 className="card-header mb-0 flex items-center gap-2">
+        {Icon && <Icon size={16} className={iconColor || 'text-slate-400'} />}
+        {title}
+      </h3>
+      <div className="flex items-center gap-2">
+        {extra}
+        <button onClick={() => onToggle(sectionKey)}
+          className="p-1 rounded-lg hover:bg-slate-100 transition-colors text-slate-400"
+          title={collapsed ? t('dash.expand') : t('dash.collapse')}>
+          {collapsed ? <ChevronDown size={16} /> : <ChevronUp size={16} />}
+        </button>
+      </div>
     </div>
-  </div>
-);
-
-const TypeTag = ({ name, count, color = 'bg-slate-100 text-slate-600' }) => (
-  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${color}`}>
-    {name} ×{count}
-  </span>
-);
+  );
+};
 
 export default function Dashboard() {
+  const { t } = useLang();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -146,16 +141,13 @@ export default function Dashboard() {
     return next;
   });
 
-  // Station popup state
-  const [stationPopup, setStationPopup] = useState(null); // { stationName, vehicles, loading }
+  const [stationPopup, setStationPopup] = useState(null);
 
   const openStationPopup = async (stationName) => {
     setStationPopup({ stationName, vehicles: [], loading: true });
     try {
       const res = await api.get(`/dashboard/station-vehicles?stationName=${encodeURIComponent(stationName)}`);
-      if (res.data.success) {
-        setStationPopup({ stationName, vehicles: res.data.data, loading: false });
-      }
+      if (res.data.success) setStationPopup({ stationName, vehicles: res.data.data, loading: false });
     } catch {
       setStationPopup(prev => prev ? { ...prev, loading: false } : null);
     }
@@ -166,7 +158,7 @@ export default function Dashboard() {
       const res = await api.get('/dashboard/summary');
       if (res.data.success) { setData(res.data.data); setLastUpdate(new Date()); }
     } catch {
-      toast.error('ไม่สามารถโหลด Dashboard ได้');
+      toast.error(t('common.noData'));
     } finally {
       setLoading(false);
     }
@@ -180,7 +172,7 @@ export default function Dashboard() {
 
   if (loading) return (
     <div className="flex items-center justify-center h-64">
-      <LoadingSpinner size="lg" text="กำลังโหลด Dashboard..." />
+      <LoadingSpinner size="lg" text={t('common.loading')} />
     </div>
   );
 
@@ -189,13 +181,17 @@ export default function Dashboard() {
   const counts = data?.tripCounts || {};
   const wh = data?.weightHistory || {};
   const ot = data?.onTimeStats || {};
-  const fmtKg = (v) => v ? `${parseFloat(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} กก.` : '-';
+  const fmtKg = (v) => v ? `${parseFloat(v).toLocaleString('th-TH', { maximumFractionDigits: 0 })} ${t('unit.kg')}` : '-';
+  const fmtMin = (m) => {
+    if (!m && m !== 0) return '-';
+    if (m < 60) return `${Math.round(m)} ${t('unit.minutes')}`;
+    return `${Math.floor(m / 60)} ${t('unit.hours')} ${Math.round(m % 60)} ${t('unit.minutes')}`;
+  };
 
   return (
     <>
     <div className="space-y-5 animate-fade-in">
 
-      {/* Header */}
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
           <h2 className="page-title flex items-center gap-2">
@@ -203,7 +199,7 @@ export default function Dashboard() {
             Dashboard
           </h2>
           <p className="text-slate-500 text-xs mt-0.5">
-            {lastUpdate ? `อัพเดตล่าสุด: ${lastUpdate.toLocaleTimeString('th-TH')}` : 'กำลังโหลด...'}
+            {lastUpdate ? `${t('monitor.lastUpdate')} ${lastUpdate.toLocaleTimeString()}` : t('common.loading')}
           </p>
         </div>
         <button onClick={fetchData} className="p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white flex-shrink-0">
@@ -211,50 +207,29 @@ export default function Dashboard() {
         </button>
       </div>
 
-      {/* Stat cards: today / month / year — flip to show delivery type breakdown */}
       <div className="grid grid-cols-3 gap-4">
-        <FlipStatCard title="วันนี้" value={counts.TodayTotal ?? 0} icon={Calendar} color="text-blue-500" deliveryStats={data?.deliveryTypeStats} periodKey="TodayCount" />
-        <FlipStatCard title="เดือนนี้" value={counts.MonthTotal ?? 0} icon={TruckIcon} color="text-emerald-500" deliveryStats={data?.deliveryTypeStats} periodKey="MonthCount" />
-        <FlipStatCard title="ปีนี้" value={counts.YearTotal ?? 0} icon={Package} color="text-violet-500" deliveryStats={data?.deliveryTypeStats} periodKey="YearCount" />
+        <FlipStatCard title={t('common.today')} value={counts.TodayTotal ?? 0} icon={Calendar} color="text-blue-500" deliveryStats={data?.deliveryTypeStats} periodKey="TodayCount" />
+        <FlipStatCard title={t('common.month')} value={counts.MonthTotal ?? 0} icon={TruckIcon} color="text-emerald-500" deliveryStats={data?.deliveryTypeStats} periodKey="MonthCount" />
+        <FlipStatCard title={t('common.year')} value={counts.YearTotal ?? 0} icon={Package} color="text-violet-500" deliveryStats={data?.deliveryTypeStats} periodKey="YearCount" />
       </div>
 
-      {/* 4 stat cards — row 2 */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <StatCard title={t('dash.totalVehicles')} value={todayStats.TotalTrips || 0} sub={t('dash.trips')} icon={TruckIcon} color="text-blue-500" />
+        <StatCard title={t('dash.completed')} value={todayStats.Completed || 0} sub={`${t('dash.avgTime')} ${formatDuration(data?.avgProcessingMinutes, t)}`} icon={CheckCircle} color="text-emerald-500" />
+        <StatCard title={t('dash.inProgress')} value={todayStats.InProgress || 0} sub={t('dash.vehiclesInYard')} icon={Clock} color="text-amber-500" onClick={() => navigate('/monitor')} />
         <StatCard
-          title="รถทั้งหมดวันนี้"
-          value={todayStats.TotalTrips || 0}
-          sub="เที่ยวรถ"
-          icon={TruckIcon}
-          color="text-blue-500"
-        />
-        <StatCard
-          title="เสร็จสิ้นแล้ว"
-          value={todayStats.Completed || 0}
-          sub={`เฉลี่ย ${formatDuration(data?.avgProcessingMinutes)}`}
-          icon={CheckCircle}
-          color="text-emerald-500"
-        />
-        <StatCard
-          title="กำลังดำเนินการ"
-          value={todayStats.InProgress || 0}
-          sub="รถในคลัง"
-          icon={Clock}
-          color="text-amber-500"
-          onClick={() => navigate('/monitor')}
-        />
-        <StatCard
-          title="น้ำหนักรวม"
+          title={t('dash.totalWeight')}
           value={weight.TotalNetWeight ? `${parseFloat(weight.TotalNetWeight).toLocaleString('th-TH', { maximumFractionDigits: 0 })}` : '0'}
-          sub="กิโลกรัม (สุทธิ)"
+          sub={t('dash.totalWeightUnit')}
           icon={Scale}
           color="text-cyan-500"
         />
       </div>
 
-      {/* ปริมาณรถสะสมที่สถานี — row 3 */}
+      {/* Station load */}
       <div className="card">
-        <SectionHeader title="ปริมาณรถสะสมที่สถานี" sectionKey="station" collapsed={collapsed.station} onToggle={toggleSection}
-          extra={<span className="text-xs text-slate-500">{data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length || 0} สถานี</span>} />
+        <SectionHeader title={t('dash.stationLoad')} sectionKey="station" collapsed={collapsed.station} onToggle={toggleSection}
+          extra={<span className="text-xs text-slate-500">{data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length || 0} {t('unit.station')}</span>} />
         {!collapsed.station && (
           data?.stationLoad?.filter(s => s.ActiveTrucks > 0).length ? (
             <div className="space-y-2">
@@ -265,43 +240,35 @@ export default function Dashboard() {
                 return (
                   <div key={st.StationName}
                     className={st.ActiveTrucks > 0 ? 'cursor-pointer hover:bg-slate-50 rounded-lg px-1 -mx-1 transition-colors' : ''}
-                    onClick={() => st.ActiveTrucks > 0 && openStationPopup(st.StationName)}
-                  >
+                    onClick={() => st.ActiveTrucks > 0 && openStationPopup(st.StationName)}>
                     <div className="flex items-center justify-between mb-0.5">
                       <span className="text-sm text-slate-700">{st.StationName}</span>
                       <span className={`text-sm font-semibold ${textColor}`}>
-                        {st.ActiveTrucks > 0 ? `${st.ActiveTrucks} คัน` : '✓ ว่าง'}
+                        {st.ActiveTrucks > 0 ? `${st.ActiveTrucks} ${t('unit.vehicles')}` : t('dash.free')}
                       </span>
                     </div>
                     <div className="w-full h-2 rounded-full bg-slate-100">
-                      <div
-                        className={`h-2 rounded-full transition-all ${barColor}`}
-                        style={{ width: `${st.ActiveTrucks > 0 ? Math.max(pct, 8) : 100}%` }}
-                      />
+                      <div className={`h-2 rounded-full transition-all ${barColor}`}
+                        style={{ width: `${st.ActiveTrucks > 0 ? Math.max(pct, 8) : 100}%` }} />
                     </div>
                   </div>
                 );
               })}
             </div>
           ) : (
-            <p className="text-sm text-slate-400">ยังไม่มีรถที่ถูก assign สถานีจากเมนู Pick</p>
+            <p className="text-sm text-slate-400">{t('dash.noStationAssigned')}</p>
           )
         )}
       </div>
 
-      {/* เวลาเฉลี่ยขึ้นสินค้าต่อสถานี */}
+      {/* Station avg time */}
       {data?.stationAvgTime?.length > 0 && (() => {
         const maxAvg = Math.max(...data.stationAvgTime.map(s => s.AvgMinutes || 0), 1);
-        const fmtMin = (m) => {
-          if (!m && m !== 0) return '-';
-          if (m < 60) return `${Math.round(m)} นาที`;
-          return `${Math.floor(m / 60)} ชม. ${Math.round(m % 60)} นาที`;
-        };
         return (
           <div className="card">
-            <SectionHeader title="เวลาเฉลี่ยขึ้นสินค้าต่อสถานี" sectionKey="stationAvg" collapsed={collapsed.stationAvg} onToggle={toggleSection}
+            <SectionHeader title={t('forecast.avgByStation')} sectionKey="stationAvg" collapsed={collapsed.stationAvg} onToggle={toggleSection}
               icon={Clock}
-              extra={<span className="text-xs text-slate-400">30 วันล่าสุด</span>} />
+              extra={<span className="text-xs text-slate-400">30 {t('common.date')}</span>} />
             {!collapsed.stationAvg && (
               <div className="space-y-3">
                 {data.stationAvgTime.map(s => {
@@ -312,7 +279,9 @@ export default function Dashboard() {
                       <div className="flex items-center justify-between mb-1">
                         <div className="flex items-center gap-2 min-w-0">
                           <span className="text-sm font-semibold text-slate-700 truncate">{s.StationName}</span>
-                          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">{s.TodayTrips > 0 ? `วันนี้ ${s.TodayTrips} เที่ยว` : `30 วัน ${s.TotalTrips} เที่ยว`}</span>
+                          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">
+                            {s.TodayTrips > 0 ? `${t('common.today')} ${s.TodayTrips} ${t('unit.trips')}` : `30 ${t('common.date')} ${s.TotalTrips} ${t('unit.trips')}`}
+                          </span>
                         </div>
                         <span className="text-sm font-bold text-slate-800 ml-2 whitespace-nowrap">{fmtMin(s.AvgMinutes)}</span>
                       </div>
@@ -320,8 +289,8 @@ export default function Dashboard() {
                         <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${Math.max(pct, 4)}%` }} />
                       </div>
                       <div className="flex justify-between mt-0.5">
-                        <span className="text-xs text-slate-400">ต่ำสุด {fmtMin(s.MinMinutes)}</span>
-                        <span className="text-xs text-slate-400">สูงสุด {fmtMin(s.MaxMinutes)}</span>
+                        <span className="text-xs text-slate-400">{fmtMin(s.MinMinutes)}</span>
+                        <span className="text-xs text-slate-400">{fmtMin(s.MaxMinutes)}</span>
                       </div>
                     </div>
                   );
@@ -332,51 +301,48 @@ export default function Dashboard() {
         );
       })()}
 
-      {/* น้ำหนักสินค้าที่ขึ้น */}
+      {/* Weight history */}
       <div className="card">
-        <SectionHeader title="น้ำหนักสินค้าที่ขึ้น" sectionKey="weight" collapsed={collapsed.weight} onToggle={toggleSection} />
+        <SectionHeader title={t('dash.weight')} sectionKey="weight" collapsed={collapsed.weight} onToggle={toggleSection} />
         {!collapsed.weight && (
           <div className="grid grid-cols-2 gap-4">
             <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <p className="text-xs text-slate-500 mb-1">เมื่อวาน</p>
+              <p className="text-xs text-slate-500 mb-1">{t('dash.yesterday')}</p>
               {wh.YesterdayWeight ? (
                 <p className="text-base font-bold text-blue-600">{fmtKg(wh.YesterdayWeight)}</p>
               ) : (
-                <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
+                <p className="text-sm text-slate-400">{t('dash.noWeightData')}</p>
               )}
             </div>
             <div className="rounded-xl p-3" style={{ background: '#f8fafc', border: '1px solid #e2e8f0' }}>
-              <p className="text-xs text-slate-500 mb-1">เมื่อวันก่อน</p>
+              <p className="text-xs text-slate-500 mb-1">{t('dash.dayBefore')}</p>
               {wh.DayBeforeWeight ? (
                 <p className="text-base font-bold text-slate-600">{fmtKg(wh.DayBeforeWeight)}</p>
               ) : (
-                <p className="text-sm text-slate-400">ยังไม่มีข้อมูล</p>
+                <p className="text-sm text-slate-400">{t('dash.noWeightData')}</p>
               )}
             </div>
           </div>
         )}
       </div>
 
-      {/* ในเวลา / นอกเวลา + ประเภทรถ */}
+      {/* On time / overtime */}
       <div className="card">
-        <SectionHeader title="ในเวลา / นอกเวลา" sectionKey="ontime" collapsed={collapsed.ontime} onToggle={toggleSection} />
+        <SectionHeader title={t('dash.ontime')} sectionKey="ontime" collapsed={collapsed.ontime} onToggle={toggleSection} />
         {!collapsed.ontime && (() => {
-          const todayMap  = Object.fromEntries((data?.vehicleTypesToday  || []).map(v => [v.TypeName, v.Count]));
-          const monthMap  = Object.fromEntries((data?.vtBreakdownMonth   || []).map(v => [v.TypeName, v.Count]));
-          const yearMap   = Object.fromEntries((data?.vtBreakdownYear    || []).map(v => [v.TypeName, v.Count]));
-          const allTypes  = [...new Set([...Object.keys(todayMap), ...Object.keys(monthMap), ...Object.keys(yearMap)])].sort();
+          const todayMap = Object.fromEntries((data?.vehicleTypesToday || []).map(v => [v.TypeName, v.Count]));
+          const monthMap = Object.fromEntries((data?.vtBreakdownMonth || []).map(v => [v.TypeName, v.Count]));
+          const yearMap  = Object.fromEntries((data?.vtBreakdownYear  || []).map(v => [v.TypeName, v.Count]));
+          const allTypes = [...new Set([...Object.keys(todayMap), ...Object.keys(monthMap), ...Object.keys(yearMap)])].sort();
+          const otCards = [
+            { label: t('common.today'),  inTime: ot.TodayOnTime,  overtime: ot.TodayOvertime,  types: data?.overtimeByTypeToday  || [] },
+            { label: t('common.month'),  inTime: ot.MonthOnTime,  overtime: ot.MonthOvertime,  types: data?.overtimeByTypeMonth || [] },
+            { label: t('common.year'),   inTime: ot.YearOnTime,   overtime: ot.YearOvertime,   types: data?.overtimeByTypeYear  || [] },
+          ];
+          const maxTypes = Math.max(0, ...otCards.map(c => c.types.length));
+          const cardMinH = Math.max(100, maxTypes > 0 ? maxTypes * 28 + 52 : 100);
           return (
             <div className="space-y-3">
-              {/* ในเวลา/นอกเวลา row — flip to see overtime vehicle breakdown */}
-              {(() => {
-                  const otCards = [
-                    { label: 'วันนี้',   inTime: ot.TodayOnTime,  overtime: ot.TodayOvertime,  types: data?.overtimeByTypeToday  || [] },
-                    { label: 'เดือนนี้', inTime: ot.MonthOnTime,  overtime: ot.MonthOvertime,  types: data?.overtimeByTypeMonth || [] },
-                    { label: 'ปีนี้',    inTime: ot.YearOnTime,   overtime: ot.YearOvertime,   types: data?.overtimeByTypeYear  || [] },
-                  ];
-                  const maxTypes = Math.max(0, ...otCards.map(c => c.types.length));
-                  const cardMinH = Math.max(100, maxTypes > 0 ? maxTypes * 28 + 52 : 100);
-                  return (
               <div className="grid grid-cols-3 gap-3">
                 {otCards.map(({ label, inTime, overtime, types }) => {
                   const isFlipped = !!overtimeFlipped[label];
@@ -391,61 +357,55 @@ export default function Dashboard() {
                       onClick={() => setOvertimeFlipped(f => ({ ...f, [label]: !f[label] }))}>
                       <div style={{
                         position: 'relative', minHeight: cardMinH,
-                        transformStyle: 'preserve-3d',
-                        transition: 'transform 0.4s ease',
+                        transformStyle: 'preserve-3d', transition: 'transform 0.4s ease',
                         transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0)'
                       }}>
-                        {/* Front */}
                         <div style={{ ...face, background: '#f8fafc', border: '1px solid #e2e8f0' }}>
                           <p className="text-xs font-semibold text-slate-400 mb-2 text-center">{label}</p>
                           <div className="flex justify-center gap-4">
                             <div className="text-center">
                               <p className="text-lg font-bold text-emerald-600">{inTime ?? 0}</p>
-                              <p className="text-xs text-slate-400">ในเวลา</p>
+                              <p className="text-xs text-slate-400">{t('dash.ontimeLabel')}</p>
                             </div>
                             <div className="text-center">
                               <p className="text-lg font-bold text-amber-500">{overtime ?? 0}</p>
-                              <p className="text-xs text-slate-400">นอกเวลา</p>
+                              <p className="text-xs text-slate-400">{t('dash.overtimeLabel')}</p>
                             </div>
                           </div>
                           {(overtime ?? 0) > 0 && (
-                            <p className="text-xs text-slate-300 text-right mt-1.5">กดดูรถ →</p>
+                            <p className="text-xs text-slate-300 text-right mt-1.5">{t('dash.detailBtn')} →</p>
                           )}
                         </div>
-                        {/* Back — overtime vehicle type breakdown */}
                         <div style={{ ...face, transform: 'rotateY(180deg)', background: '#fffbeb', border: '1px solid #fde68a' }}>
-                          <p className="text-xs font-semibold text-amber-700 mb-2">{label} — นอกเวลา</p>
+                          <p className="text-xs font-semibold text-amber-700 mb-2">{label} — {t('dash.overtimeLabel')}</p>
                           {types.length > 0 ? (
                             <div className="space-y-1.5">
                               {types.map(item => (
                                 <div key={item.TypeName} className="flex justify-between items-center">
                                   <span className="text-xs text-slate-600 truncate mr-1">{item.TypeName}</span>
-                                  <span className="text-xs font-bold text-amber-600 flex-shrink-0">{item.Count} คัน</span>
+                                  <span className="text-xs font-bold text-amber-600 flex-shrink-0">{item.Count} {t('unit.vehicles')}</span>
                                 </div>
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-slate-400 text-center mt-2">ไม่มีรถนอกเวลา ✓</p>
+                            <p className="text-xs text-slate-400 text-center mt-2">{t('dash.noInProgress')} ✓</p>
                           )}
-                          <p className="text-xs text-slate-400 text-right mt-1.5">← กลับ</p>
+                          <p className="text-xs text-slate-400 text-right mt-1.5">←</p>
                         </div>
                       </div>
                     </div>
                   );
                 })}
               </div>
-                  );
-                })()}
-              {/* ประเภทรถ table */}
               {allTypes.length > 0 && (
                 <div className="rounded-xl overflow-hidden border border-slate-100">
                   <table className="w-full text-sm">
                     <thead>
                       <tr className="bg-slate-50">
-                        <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500">ประเภทรถ</th>
-                        <th className="text-center px-3 py-2 text-xs font-semibold text-blue-600">วันนี้</th>
-                        <th className="text-center px-3 py-2 text-xs font-semibold text-emerald-600">เดือนนี้</th>
-                        <th className="text-center px-3 py-2 text-xs font-semibold text-violet-600">ปีนี้</th>
+                        <th className="text-left px-3 py-2 text-xs font-semibold text-slate-500">{t('common.vehicleType')}</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-blue-600">{t('common.today')}</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-emerald-600">{t('common.month')}</th>
+                        <th className="text-center px-3 py-2 text-xs font-semibold text-violet-600">{t('common.year')}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -466,9 +426,9 @@ export default function Dashboard() {
         })()}
       </div>
 
-      {/* Weekly bar chart */}
+      {/* Chart */}
       <div className="card">
-        <SectionHeader title="ปริมาณรถย้อนหลัง 15 วัน" sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection}
+        <SectionHeader title={t('dash.chart')} sectionKey="chart" collapsed={collapsed.chart} onToggle={toggleSection}
           icon={BarChart2} iconColor="text-blue-500" />
         {!collapsed.chart && (
           <ResponsiveContainer width="100%" height={220}>
@@ -480,9 +440,9 @@ export default function Dashboard() {
               <Tooltip
                 contentStyle={{ background: '#fff', border: '1px solid #e2e8f0', borderRadius: '8px', boxShadow: '0 4px 12px rgba(0,0,0,0.08)' }}
                 labelFormatter={v => v ? dayjs(v).format('DD MMM YYYY') : ''}
-                formatter={(value) => [value, 'รถทั้งหมด']}
+                formatter={(value) => [value, t('dash.totalVehicles')]}
               />
-              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} name="รถทั้งหมด" />
+              <Bar dataKey="TotalTrips" fill="#3b82f6" radius={[4, 4, 0, 0]} name={t('dash.totalVehicles')} />
             </BarChart>
           </ResponsiveContainer>
         )}
@@ -490,17 +450,17 @@ export default function Dashboard() {
 
       {/* Recent activity */}
       <div className="card">
-        <SectionHeader title="กิจกรรมล่าสุดวันนี้" sectionKey="activity" collapsed={collapsed.activity} onToggle={toggleSection}
+        <SectionHeader title={t('dash.recentActivity')} sectionKey="activity" collapsed={collapsed.activity} onToggle={toggleSection}
           icon={Activity} iconColor="text-slate-400" />
         {!collapsed.activity && <div className="overflow-x-auto">
           <table className="w-full">
             <thead>
               <tr className="border-b border-slate-200">
-                <th className="table-header text-left px-4 py-2">ทะเบียน</th>
-                <th className="table-header text-left px-4 py-2 hide-mobile">ลูกค้า</th>
-                <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
-                <th className="table-header text-left px-4 py-2">สถานะ</th>
-                <th className="table-header text-left px-4 py-2 hide-mobile">เวลาเข้า</th>
+                <th className="table-header text-left px-4 py-2">{t('common.licensePlate')}</th>
+                <th className="table-header text-left px-4 py-2 hide-mobile">{t('common.customer')}</th>
+                <th className="table-header text-left px-4 py-2 hide-mobile">{t('common.warehouse')}</th>
+                <th className="table-header text-left px-4 py-2">{t('common.status')}</th>
+                <th className="table-header text-left px-4 py-2 hide-mobile">{t('weighIn.entryTime')}</th>
               </tr>
             </thead>
             <tbody>
@@ -520,9 +480,7 @@ export default function Dashboard() {
               ))}
               {!data?.recentActivity?.length && (
                 <tr>
-                  <td colSpan={5} className="text-center py-8 text-slate-400">
-                    ยังไม่มีข้อมูลวันนี้
-                  </td>
+                  <td colSpan={5} className="text-center py-8 text-slate-400">{t('dash.noActivity')}</td>
                 </tr>
               )}
             </tbody>
@@ -532,7 +490,7 @@ export default function Dashboard() {
 
     </div>
 
-    {/* Station vehicles popup */}
+    {/* Station popup */}
     {stationPopup && (
       <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: 'rgba(0,0,0,0.4)' }}>
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
@@ -540,7 +498,7 @@ export default function Dashboard() {
             <div>
               <h3 className="text-base font-semibold text-slate-800">{stationPopup.stationName}</h3>
               <p className="text-xs text-slate-500 mt-0.5">
-                {stationPopup.loading ? 'กำลังโหลด...' : `${stationPopup.vehicles.length} คัน`}
+                {stationPopup.loading ? t('common.loading') : `${stationPopup.vehicles.length} ${t('unit.vehicles')}`}
               </p>
             </div>
             <button onClick={() => setStationPopup(null)}
@@ -551,17 +509,17 @@ export default function Dashboard() {
           <div className="overflow-y-auto flex-1 p-4">
             {stationPopup.loading ? (
               <div className="flex justify-center py-8">
-                <LoadingSpinner size="md" text="กำลังโหลด..." />
+                <LoadingSpinner size="md" text={t('common.loading')} />
               </div>
             ) : stationPopup.vehicles.length === 0 ? (
-              <p className="text-center text-slate-400 py-8">ไม่มีรถที่มอบหมายสถานีนี้</p>
+              <p className="text-center text-slate-400 py-8">{t('dash.noVehiclesNow')}</p>
             ) : (
               <table className="w-full text-sm">
                 <thead>
                   <tr className="border-b border-slate-200">
-                    <th className="table-header text-left py-2 px-2">ทะเบียน</th>
-                    <th className="table-header text-left py-2 px-2">ลูกค้า</th>
-                    <th className="table-header text-left py-2 px-2">ชั่งเข้า</th>
+                    <th className="table-header text-left py-2 px-2">{t('common.licensePlate')}</th>
+                    <th className="table-header text-left py-2 px-2">{t('common.customer')}</th>
+                    <th className="table-header text-left py-2 px-2">{t('weighIn.entryTime')}</th>
                   </tr>
                 </thead>
                 <tbody>

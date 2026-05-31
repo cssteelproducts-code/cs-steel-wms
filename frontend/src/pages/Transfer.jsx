@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useLang } from '../context/LanguageContext';
 import api from '../services/api';
 import {
   ArrowRight, Package, CheckCircle2, Plus,
@@ -34,6 +35,7 @@ const TRANSFER_SUB_CODES = ['TRANSFER_JOBS', 'TRANSFER_STATIONS', 'TRANSFER_VEHI
 
 export default function Transfer() {
   const { permissions, user } = useAuth();
+  const { t } = useLang();
   const [activeTab, setActiveTab] = useState('jobs');
   const [jobs, setJobs] = useState([]);
   const [stations, setStations] = useState([]);
@@ -407,7 +409,7 @@ export default function Transfer() {
         <button onClick={() => setShowCreateJob(true)}
           className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
           style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.30)' }}>
-          <Plus size={15} /> สร้างงาน
+          <Plus size={15} /> {t('transfer.createJob')}
         </button>
         <button onClick={loadJobs} className="p-2.5 rounded-2xl transition-colors"
           style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6', color: '#6b7280' }}>
@@ -424,10 +426,10 @@ export default function Transfer() {
           return !!(permissions[code]?.canView === 1 || permissions[code]?.canView === true);
         };
         const visibleTabs = [
-          { key: 'jobs', label: 'งาน', icon: Layers, code: 'TRANSFER_JOBS' },
-          { key: 'stations', label: 'สถานี', icon: Building2, code: 'TRANSFER_STATIONS' },
-          { key: 'vehicles', label: 'รถ', icon: Truck, code: 'TRANSFER_VEHICLES' },
-          { key: 'report', label: 'รายงาน', icon: BarChart2, code: 'TRANSFER_REPORTS' },
+          { key: 'jobs', label: t('transfer.tabJobs'), icon: Layers, code: 'TRANSFER_JOBS' },
+          { key: 'stations', label: t('transfer.tabStations'), icon: Building2, code: 'TRANSFER_STATIONS' },
+          { key: 'vehicles', label: t('transfer.tabVehicles'), icon: Truck, code: 'TRANSFER_VEHICLES' },
+          { key: 'report', label: t('transfer.tabReport'), icon: BarChart2, code: 'TRANSFER_REPORTS' },
         ].filter(t => tabVisible(t.code));
         return (
           <div className="flex gap-1 p-1 rounded-2xl" style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6' }}>
@@ -450,12 +452,12 @@ export default function Transfer() {
           {/* Status filter chips */}
           <div className="flex flex-wrap gap-2">
             {[
-              { v: '', l: 'ทั้งหมด' },
-              { v: 'PENDING', l: 'รอมอบหมาย' },
-              { v: 'ASSIGNED', l: 'มอบหมาย' },
-              { v: 'IN_PROGRESS', l: 'กำลังดำเนินการ' },
-              { v: 'COMPLETE', l: 'เสร็จสิ้น' },
-              { v: 'CANCELLED', l: 'ยกเลิก' },
+              { v: '', l: t('transfer.allStatus') },
+              { v: 'PENDING', l: JOB_STATUS.PENDING.label },
+              { v: 'ASSIGNED', l: JOB_STATUS.ASSIGNED.label },
+              { v: 'IN_PROGRESS', l: JOB_STATUS.IN_PROGRESS.label },
+              { v: 'COMPLETE', l: JOB_STATUS.COMPLETE.label },
+              { v: 'CANCELLED', l: JOB_STATUS.CANCELLED.label },
             ].map(({ v, l }) => (
               <button key={v} onClick={() => setStatusFilter(v)}
                 className="px-3 h-8 rounded-xl text-xs font-bold transition-all"
@@ -472,7 +474,7 @@ export default function Transfer() {
           ) : jobs.length === 0 ? (
             <div className="text-center py-16 rounded-3xl" style={{ background: '#f9fafb', border: '1.5px solid #f3f4f6' }}>
               <Package size={36} className="mx-auto mb-3 text-gray-300" />
-              <p className="font-semibold text-sm" style={{ color: '#9ca3af' }}>ยังไม่มีงาน</p>
+              <p className="font-semibold text-sm" style={{ color: '#9ca3af' }}>{t('transfer.noJobs')}</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -562,27 +564,27 @@ export default function Transfer() {
                             ? { background: '#eff6ff', border: '1.5px solid #bfdbfe', color: '#3b82f6' }
                             : { background: '#f5f3ff', border: '1.5px solid #ddd6fe', color: '#7c3aed' }}>
                           {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
-                          การมอบหมาย
+                          {t('transfer.assign')}
                         </button>
                         {(job.Status === 'PENDING' || job.Status === 'ASSIGNED') && (
                           <button onClick={() => openEditJob(job)}
                             className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
                             style={{ background: '#fff7ed', color: '#f59e0b', border: '1.5px solid #fde68a' }}>
-                            <Edit2 size={13} /> แก้ไข
+                            <Edit2 size={13} /> {t('transfer.editJob')}
                           </button>
                         )}
                         {job.Status === 'IN_PROGRESS' && (
                           <button onClick={() => updateJobStatus(job.JobID, 'COMPLETE')}
                             className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
                             style={{ background: '#f0fdf4', color: '#10b981', border: '1.5px solid #bbf7d0' }}>
-                            <CheckCircle2 size={13} /> ปิดงาน
+                            <CheckCircle2 size={13} /> {t('transfer.closeJob')}
                           </button>
                         )}
                         {job.Status !== 'COMPLETE' && (
                           <button onClick={() => deleteJob(job.JobID, job.JobCode, job.Status)}
                             className="flex items-center gap-1 px-3 h-8 rounded-xl text-xs font-bold transition-all"
                             style={{ background: '#fef2f2', color: '#ef4444', border: '1.5px solid #fecaca' }}>
-                            <Trash2 size={13} /> {['PENDING', 'CANCELLED'].includes(job.Status) ? 'ลบ' : 'ยกเลิก'}
+                            <Trash2 size={13} /> {['PENDING', 'CANCELLED'].includes(job.Status) ? t('transfer.deleteJob') : t('transfer.cancelJob')}
                           </button>
                         )}
                       </div>
@@ -599,13 +601,13 @@ export default function Transfer() {
                             <button onClick={() => openAssignModal(job.JobID)}
                               className="flex items-center gap-1.5 px-3 h-8 rounded-xl text-xs font-bold text-white"
                               style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)', boxShadow: '0 3px 10px rgba(124,58,237,0.3)' }}>
-                              <UserCheck size={13} /> มอบหมาย
+                              <UserCheck size={13} /> {t('transfer.assignBtn')}
                             </button>
                           )}
                         </div>
                         {jobDetail.trips.length === 0 ? (
                           <p className="text-sm text-center py-4" style={{ color: '#9ca3af' }}>
-                            ยังไม่มีการมอบหมาย — กดมอบหมายเพื่อส่งรถ
+                            {t('transfer.noAssigned')}
                           </p>
                         ) : (
                           <div className="space-y-2">
@@ -642,7 +644,7 @@ export default function Transfer() {
                                       <button onClick={() => openEditTripModal(trip)}
                                         className="flex items-center gap-1 px-2 h-6 rounded-lg text-xs font-bold"
                                         style={{ background: '#fff7ed', color: '#f59e0b', border: '1px solid #fde68a' }}>
-                                        <Edit2 size={11} /> แก้ไข
+                                        <Edit2 size={11} /> {t('transfer.editJob')}
                                       </button>
                                     )}
                                     <div className="text-right text-xs space-y-0.5" style={{ color: '#9ca3af' }}>
@@ -674,14 +676,14 @@ export default function Transfer() {
             <button onClick={() => { setEditStation(null); setStationForm({ stationCode: '', stationName: '', stationType: 'BOTH', sortOrder: 0 }); setShowStationModal(true); }}
               className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
               style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.3)' }}>
-              <Plus size={15} /> เพิ่มสถานี
+              <Plus size={15} /> {t('transfer.addStation')}
             </button>
           </div>
           <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #f3f4f6' }}>
             <table className="w-full">
               <thead>
                 <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                  {['รหัส', 'ชื่อสถานี', 'ประเภท', 'ลำดับ', ''].map((h, i) => (
+                  {[t('transfer.colCode'), t('transfer.colName'), t('transfer.colType'), t('transfer.colOrder'), ''].map((h, i) => (
                     <th key={i} className={`px-5 py-3 text-xs font-bold uppercase tracking-wider ${i === 4 ? 'text-right' : 'text-left'}`}
                       style={{ color: '#9ca3af' }}>{h}</th>
                   ))}
@@ -694,7 +696,7 @@ export default function Transfer() {
                     <td className="px-5 py-3 text-sm font-semibold" style={{ color: '#111827' }}>{s.StationName}</td>
                     <td className="px-5 py-3">
                       <span className="px-2 py-0.5 rounded-lg text-xs font-bold" style={{ background: '#f3f4f6', color: '#6b7280' }}>
-                        {s.StationType === 'SOURCE' ? 'ต้นทาง' : s.StationType === 'DEST' ? 'ปลายทาง' : 'ทั้งคู่'}
+                        {s.StationType === 'SOURCE' ? t('transfer.typeSource') : s.StationType === 'DEST' ? t('transfer.typeDest') : t('transfer.typeBoth')}
                       </span>
                     </td>
                     <td className="px-5 py-3 text-sm" style={{ color: '#9ca3af' }}>{s.SortOrder}</td>
@@ -719,7 +721,7 @@ export default function Transfer() {
                 {stations.length === 0 && (
                   <tr>
                     <td colSpan={5} className="text-center py-10 text-sm" style={{ color: '#9ca3af' }}>
-                      ยังไม่มีสถานี — กดเพิ่มสถานีด้านบน
+                      {t('transfer.noStations')}
                     </td>
                   </tr>
                 )}
@@ -732,9 +734,9 @@ export default function Transfer() {
       {/* ── VEHICLES TAB ── */}
       {activeTab === 'vehicles' && (() => {
         const VSTATUS = {
-          READY:       { label: 'พร้อมใช้',  icon: CheckCircle,    bg: '#f0fdf4', color: '#16a34a' },
-          MAINTENANCE: { label: 'รอซ่อม',    icon: Wrench,         bg: '#fffbeb', color: '#d97706' },
-          ACCIDENT:    { label: 'อุบัติเหตุ', icon: AlertTriangle,  bg: '#fef2f2', color: '#dc2626' },
+          READY:       { label: t('transfer.statusReady'),    icon: CheckCircle,    bg: '#f0fdf4', color: '#16a34a' },
+          MAINTENANCE: { label: t('transfer.statusMaint'),    icon: Wrench,         bg: '#fffbeb', color: '#d97706' },
+          ACCIDENT:    { label: t('transfer.statusAccident'), icon: AlertTriangle,  bg: '#fef2f2', color: '#dc2626' },
         };
         const ready = vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').length;
         const notReady = vehicles.length - ready;
@@ -756,14 +758,14 @@ export default function Transfer() {
               <button onClick={() => { setEditVehicle(null); setVehicleForm({ vehicleCode: '', vehiclePlate: '', vehicleName: '', vehicleType: '', vehicleStatus: 'READY', statusNote: '', repairStartDate: '', repairExpectedDate: '' }); setShowVehicleModal(true); }}
                 className="flex items-center gap-2 px-4 h-10 rounded-2xl text-sm font-bold text-white"
                 style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)', boxShadow: '0 4px 12px rgba(220,38,38,0.3)' }}>
-                <Plus size={15} /> เพิ่มรถ
+                <Plus size={15} /> {t('transfer.addVehicle')}
               </button>
             </div>
             <div className="rounded-3xl overflow-hidden" style={{ border: '1.5px solid #f3f4f6' }}>
               <table className="w-full">
                 <thead>
                   <tr style={{ background: '#f9fafb', borderBottom: '1px solid #f3f4f6' }}>
-                    {['รหัส', 'ทะเบียนรถ', 'ประเภท', 'สถานะ', 'หมายเหตุ', ''].map((h, i) => (
+                    {[t('transfer.colCode'), t('transfer.colPlate'), t('transfer.colVehType'), t('transfer.colStatus'), t('transfer.colNote'), ''].map((h, i) => (
                       <th key={i} className={`px-4 py-3 text-xs font-bold uppercase tracking-wider ${i === 5 ? 'text-right' : 'text-left'}`}
                         style={{ color: '#9ca3af' }}>{h}</th>
                     ))}
@@ -814,7 +816,7 @@ export default function Transfer() {
                   {vehicles.length === 0 && (
                     <tr>
                       <td colSpan={6} className="text-center py-10 text-sm" style={{ color: '#9ca3af' }}>
-                        ยังไม่มีรถขนย้าย — กดเพิ่มรถด้านบน
+                        {t('transfer.noVehicles')}
                       </td>
                     </tr>
                   )}
@@ -829,7 +831,7 @@ export default function Transfer() {
       {activeTab === 'report' && (
         <div className="space-y-5">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-bold" style={{ color: '#6b7280' }}>ข้อมูล ณ วันนี้</p>
+            <p className="text-sm font-bold" style={{ color: '#6b7280' }}>{t('transfer.reportToday')}</p>
             <button onClick={loadDashboard} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl"
               style={{ background: '#f3f4f6', color: '#6b7280' }}>
               <RefreshCw size={12} className={dashLoading ? 'animate-spin' : ''} />
@@ -894,7 +896,7 @@ export default function Transfer() {
                   <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #fde68a' }}>
                     <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#fffbeb' }}>
                       <AlertTriangle size={14} style={{ color: '#d97706' }} />
-                      <span className="text-sm font-bold" style={{ color: '#92400e' }}>งานที่รอนานสุด</span>
+                      <span className="text-sm font-bold" style={{ color: '#92400e' }}>{t('transfer.pendingLongTitle')}</span>
                     </div>
                     <table className="w-full text-xs">
                       <thead><tr style={{ background: '#fef3c7' }}>
@@ -904,7 +906,7 @@ export default function Transfer() {
                       </tr></thead>
                       <tbody>
                         {(dashData.pendingLong || []).length === 0
-                          ? <tr><td colSpan={3} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>ไม่มีงานค้าง ✓</td></tr>
+                          ? <tr><td colSpan={3} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>{t('transfer.noJobsPending')}</td></tr>
                           : (dashData.pendingLong || []).map(j => (
                             <tr key={j.JobCode} style={{ borderTop: '1px solid #fde68a' }}>
                               <td className="px-3 py-2 font-mono font-bold" style={{ color: '#d97706' }}>{j.JobCode}</td>
@@ -923,7 +925,7 @@ export default function Transfer() {
                   <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #e0e7ff' }}>
                     <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#eef2ff' }}>
                       <Truck size={14} style={{ color: '#4f46e5' }} />
-                      <span className="text-sm font-bold" style={{ color: '#3730a3' }}>รถที่ใช้บ่อย</span>
+                      <span className="text-sm font-bold" style={{ color: '#3730a3' }}>{t('transfer.vehicleRankTitle')}</span>
                     </div>
                     <table className="w-full text-xs">
                       <thead><tr style={{ background: '#e0e7ff' }}>
@@ -933,7 +935,7 @@ export default function Transfer() {
                       </tr></thead>
                       <tbody>
                         {(dashData.vehicleRank || []).length === 0
-                          ? <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>ยังไม่มีข้อมูล</td></tr>
+                          ? <tr><td colSpan={4} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>{t('transfer.noVehicleRank')}</td></tr>
                           : (dashData.vehicleRank || []).map((v, i) => (
                             <tr key={v.LicensePlate} style={{ borderTop: '1px solid #e0e7ff', background: i === 0 ? '#f5f3ff' : '' }}>
                               <td className="px-3 py-2 font-mono font-bold" style={{ color: '#4f46e5' }}>{v.LicensePlate}</td>
@@ -951,7 +953,7 @@ export default function Transfer() {
                   <div className="rounded-2xl overflow-hidden sm:col-span-2" style={{ border: '1.5px solid #d1fae5' }}>
                     <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#ecfdf5' }}>
                       <ArrowRight size={14} style={{ color: '#059669' }} />
-                      <span className="text-sm font-bold" style={{ color: '#065f46' }}>เส้นทางที่ใช้บ่อย</span>
+                      <span className="text-sm font-bold" style={{ color: '#065f46' }}>{t('transfer.routeRankTitle')}</span>
                     </div>
                     <table className="w-full text-xs">
                       <thead><tr style={{ background: '#d1fae5' }}>
@@ -961,7 +963,7 @@ export default function Transfer() {
                       </tr></thead>
                       <tbody>
                         {(dashData.routeRank || []).length === 0
-                          ? <tr><td colSpan={5} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>ยังไม่มีข้อมูล</td></tr>
+                          ? <tr><td colSpan={5} className="px-3 py-4 text-center" style={{ color: '#9ca3af' }}>{t('transfer.noRouteRank')}</td></tr>
                           : (dashData.routeRank || []).map((r, i) => (
                             <tr key={`${r.Source}-${r.Dest}-${i}`} style={{ borderTop: '1px solid #d1fae5', background: i === 0 ? '#f0fdf4' : '' }}>
                               <td className="px-3 py-2 font-semibold" style={{ color: '#374151' }}>{r.Source}</td>
@@ -990,7 +992,7 @@ export default function Transfer() {
           <div className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <h3 className="text-lg font-black" style={{ color: '#111827' }}>{editingJob ? `แก้ไขงาน ${editingJob.JobCode}` : 'สร้างงานใหม่'}</h3>
+              <h3 className="text-lg font-black" style={{ color: '#111827' }}>{editingJob ? `${t('transfer.editJob')} ${editingJob.JobCode}` : t('transfer.jobFormTitle')}</h3>
               <button onClick={() => { setShowCreateJob(false); setEditingJob(null); }} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
                 <X size={18} />
               </button>
@@ -998,7 +1000,7 @@ export default function Transfer() {
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>สถานีต้นทาง *</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.sourceStation')}</label>
                   <select value={jobForm.sourceStationId}
                     onChange={e => setJobForm(f => ({ ...f, sourceStationId: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
@@ -1007,7 +1009,7 @@ export default function Transfer() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>สถานีปลายทาง *</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.destStation')}</label>
                   <select value={jobForm.destStationId}
                     onChange={e => setJobForm(f => ({ ...f, destStationId: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
@@ -1017,14 +1019,14 @@ export default function Transfer() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รายละเอียดสินค้า *</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.productDesc')}</label>
                 <div className="relative">
                   <input type="text" value={prodQuery}
                     onChange={e => handleProdInput(e.target.value)}
                     onBlur={() => setTimeout(() => setShowProdDrop(false), 150)}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
                     style={inputStyle}
-                    placeholder="ค้นหารหัส / ชื่อสินค้า..." />
+                    placeholder={t('transfer.productSearch')} />
                   {showProdDrop && (
                     <div className="absolute top-full left-0 right-0 mt-1 bg-white rounded-xl shadow-xl z-20 max-h-48 overflow-y-auto"
                       style={{ border: '1.5px solid #e5e7eb' }}>
@@ -1043,14 +1045,14 @@ export default function Transfer() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>จำนวนมัด</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.bundles')}</label>
                   <input type="number" value={jobForm.plannedBundles}
                     onChange={e => setJobForm(f => ({ ...f, plannedBundles: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
                     placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>น้ำหนักรวม กก.</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.weight')}</label>
                   <input type="number" value={jobForm.plannedWeightKg}
                     onChange={e => setJobForm(f => ({ ...f, plannedWeightKg: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
@@ -1058,9 +1060,9 @@ export default function Transfer() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ความสำคัญ</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.priority')}</label>
                 <div className="flex gap-2">
-                  {[{ v: 'NORMAL', l: 'ปกติ' }, { v: 'HIGH', l: 'เร่งด่วน' }, { v: 'URGENT', l: 'ด่วนมาก' }].map(({ v, l }) => (
+                  {[{ v: 'NORMAL', l: PRIORITY_LABEL.NORMAL }, { v: 'HIGH', l: PRIORITY_LABEL.HIGH }, { v: 'URGENT', l: PRIORITY_LABEL.URGENT }].map(({ v, l }) => (
                     <button key={v} onClick={() => setJobForm(f => ({ ...f, priority: v }))}
                       className="flex-1 h-9 rounded-xl text-xs font-bold transition-all"
                       style={jobForm.priority === v
@@ -1072,7 +1074,7 @@ export default function Transfer() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>หมายเหตุ</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('common.note')}</label>
                 <input type="text" value={jobForm.notes}
                   onChange={e => setJobForm(f => ({ ...f, notes: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
@@ -1083,14 +1085,14 @@ export default function Transfer() {
               <button onClick={() => { setShowCreateJob(false); setEditingJob(null); }}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold"
                 style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
-                ยกเลิก
+                {t('common.cancel')}
               </button>
               <button onClick={createJob} disabled={savingJob}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: editingJob ? 'linear-gradient(135deg,#f59e0b,#d97706)' : 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
                 {savingJob
-                  ? <><RefreshCw size={14} className="animate-spin" /> กำลังบันทึก...</>
-                  : editingJob ? <><Edit2 size={14} /> บันทึกการแก้ไข</> : 'สร้างงาน'}
+                  ? <><RefreshCw size={14} className="animate-spin" /> {t('common.saving')}</>
+                  : editingJob ? <><Edit2 size={14} /> {t('transfer.saveEdit')}</> : t('transfer.createJob')}
               </button>
             </div>
           </div>
@@ -1106,7 +1108,7 @@ export default function Transfer() {
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
               <h3 className="text-lg font-black" style={{ color: '#111827' }}>
-                {editVehicle ? 'แก้ไขข้อมูลรถ' : 'เพิ่มรถใหม่'}
+                {editVehicle ? t('transfer.vehEditTitle') : t('transfer.vehFormTitle')}
               </h3>
               <button onClick={() => setShowVehicleModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
                 <X size={18} />
@@ -1115,14 +1117,14 @@ export default function Transfer() {
             <div className="p-6 space-y-4 max-h-[70vh] overflow-y-auto">
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รหัสรถ</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.vehCode')}</label>
                   <input type="text" value={vehicleForm.vehicleCode}
                     onChange={e => setVehicleForm(f => ({ ...f, vehicleCode: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
                     style={inputStyle} placeholder="เช่น FG03" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ทะเบียนรถ *</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.vehPlate')}</label>
                   <input type="text" value={vehicleForm.vehiclePlate}
                     onChange={e => setVehicleForm(f => ({ ...f, vehiclePlate: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
@@ -1131,7 +1133,7 @@ export default function Transfer() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ชื่อ/หมายเลข</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.vehName')}</label>
                   <input type="text" value={vehicleForm.vehicleName}
                     onChange={e => setVehicleForm(f => ({ ...f, vehicleName: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
@@ -1151,12 +1153,12 @@ export default function Transfer() {
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>สถานะรถ</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.vehStatus')}</label>
                 <div className="grid grid-cols-3 gap-2">
                   {[
-                    { v: 'READY',       l: 'พร้อมใช้',  Icon: CheckCircle,   bg: '#f0fdf4', color: '#16a34a', active: '#16a34a' },
-                    { v: 'MAINTENANCE', l: 'รอซ่อม',    Icon: Wrench,        bg: '#fffbeb', color: '#d97706', active: '#d97706' },
-                    { v: 'ACCIDENT',    l: 'อุบัติเหตุ', Icon: AlertTriangle, bg: '#fef2f2', color: '#dc2626', active: '#dc2626' },
+                    { v: 'READY',       l: t('transfer.statusReady'),    Icon: CheckCircle,   bg: '#f0fdf4', color: '#16a34a', active: '#16a34a' },
+                    { v: 'MAINTENANCE', l: t('transfer.statusMaint'),    Icon: Wrench,        bg: '#fffbeb', color: '#d97706', active: '#d97706' },
+                    { v: 'ACCIDENT',    l: t('transfer.statusAccident'), Icon: AlertTriangle, bg: '#fef2f2', color: '#dc2626', active: '#dc2626' },
                   ].map(({ v, l, Icon, bg, color, active }) => (
                     <button key={v} type="button" onClick={() => setVehicleForm(f => ({ ...f, vehicleStatus: v }))}
                       className="flex flex-col items-center justify-center gap-1 h-16 rounded-2xl text-xs font-bold transition-all"
@@ -1199,12 +1201,12 @@ export default function Transfer() {
               <button onClick={() => setShowVehicleModal(false)}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold"
                 style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
-                ยกเลิก
+                {t('common.cancel')}
               </button>
               <button onClick={saveVehicle} disabled={savingVehicle}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
-                {savingVehicle ? <><RefreshCw size={14} className="animate-spin" /> กำลังบันทึก...</> : 'บันทึก'}
+                {savingVehicle ? <><RefreshCw size={14} className="animate-spin" /> {t('common.saving')}</> : t('common.save')}
               </button>
             </div>
           </div>
@@ -1219,7 +1221,7 @@ export default function Transfer() {
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <h3 className="text-lg font-black" style={{ color: '#111827' }}>มอบหมายงาน</h3>
+              <h3 className="text-lg font-black" style={{ color: '#111827' }}>{t('transfer.assignFormTitle')}</h3>
               <button onClick={() => setShowAssignModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
                 <X size={18} />
               </button>
@@ -1270,12 +1272,12 @@ export default function Transfer() {
               <button onClick={() => setShowAssignModal(false)}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold"
                 style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
-                ยกเลิก
+                {t('common.cancel')}
               </button>
               <button onClick={submitAssign} disabled={savingAssign}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#7c3aed,#6d28d9)' }}>
-                {savingAssign ? <><RefreshCw size={14} className="animate-spin" /> กำลังมอบหมาย...</> : <><UserCheck size={15} /> มอบหมาย</>}
+                {savingAssign ? <><RefreshCw size={14} className="animate-spin" /> {t('common.saving')}</> : <><UserCheck size={15} /> {t('transfer.assignBtn')}</>}
               </button>
             </div>
           </div>
@@ -1290,14 +1292,14 @@ export default function Transfer() {
           <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
-              <h3 className="text-lg font-black" style={{ color: '#111827' }}>แก้ไขการมอบหมาย</h3>
+              <h3 className="text-lg font-black" style={{ color: '#111827' }}>{t('transfer.assignFormTitle')}</h3>
               <button onClick={() => setShowEditTripModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
                 <X size={18} />
               </button>
             </div>
             <div className="p-6 space-y-4">
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>พนักงานขับรถ *</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.operatorLabel')}</label>
                 <select value={editTripForm.operatorId} onChange={e => setEditTripForm(f => ({ ...f, operatorId: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
                   <option value="">-- เลือกพนักงาน --</option>
@@ -1307,7 +1309,7 @@ export default function Transfer() {
                 </select>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รถขนย้าย *</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.vehicleLabel')}</label>
                 <select value={editTripForm.vehicleId} onChange={e => setEditTripForm(f => ({ ...f, vehicleId: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
                   <option value="">-- เลือกรถ --</option>
@@ -1324,12 +1326,12 @@ export default function Transfer() {
               <button onClick={() => setShowEditTripModal(false)}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold"
                 style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
-                ยกเลิก
+                {t('common.cancel')}
               </button>
               <button onClick={submitEditTrip} disabled={savingEditTrip}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#f59e0b,#d97706)' }}>
-                {savingEditTrip ? <><RefreshCw size={14} className="animate-spin" /> กำลังบันทึก...</> : <><Edit2 size={15} /> บันทึกการแก้ไข</>}
+                {savingEditTrip ? <><RefreshCw size={14} className="animate-spin" /> {t('common.saving')}</> : <><Edit2 size={15} /> {t('transfer.saveEdit')}</>}
               </button>
             </div>
           </div>
@@ -1345,7 +1347,7 @@ export default function Transfer() {
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
               <h3 className="text-lg font-black" style={{ color: '#111827' }}>
-                {editStation ? 'แก้ไขสถานี' : 'เพิ่มสถานีใหม่'}
+                {editStation ? `${t('common.edit')} ${t('transfer.stationFormTitle')}` : `${t('common.add')} ${t('transfer.stationFormTitle')}`}
               </h3>
               <button onClick={() => setShowStationModal(false)} className="p-1.5 rounded-xl" style={{ color: '#9ca3af' }}>
                 <X size={18} />
@@ -1354,30 +1356,30 @@ export default function Transfer() {
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>รหัสสถานี *</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.stationCode')}</label>
                   <input type="text" value={stationForm.stationCode}
                     onChange={e => setStationForm(f => ({ ...f, stationCode: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
                     placeholder="เช่น ST01" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ลำดับ</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.sortOrder')}</label>
                   <input type="number" value={stationForm.sortOrder}
                     onChange={e => setStationForm(f => ({ ...f, sortOrder: parseInt(e.target.value) || 0 }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle} />
                 </div>
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ชื่อสถานี *</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.stationName')}</label>
                 <input type="text" value={stationForm.stationName}
                   onChange={e => setStationForm(f => ({ ...f, stationName: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
                   placeholder="ชื่อสถานี" />
               </div>
               <div>
-                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ประเภทสถานี</label>
+                <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.stationTypeLabel')}</label>
                 <div className="flex gap-2">
-                  {[{ v: 'SOURCE', l: 'ต้นทาง' }, { v: 'DEST', l: 'ปลายทาง' }, { v: 'BOTH', l: 'ทั้งคู่' }].map(({ v, l }) => (
+                  {[{ v: 'SOURCE', l: t('transfer.typeSource') }, { v: 'DEST', l: t('transfer.typeDest') }, { v: 'BOTH', l: t('transfer.typeBoth') }].map(({ v, l }) => (
                     <button key={v} onClick={() => setStationForm(f => ({ ...f, stationType: v }))}
                       className="flex-1 h-9 rounded-xl text-xs font-bold transition-all"
                       style={stationForm.stationType === v
@@ -1393,12 +1395,12 @@ export default function Transfer() {
               <button onClick={() => setShowStationModal(false)}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold"
                 style={{ background: '#f9fafb', color: '#6b7280', border: '1.5px solid #f3f4f6' }}>
-                ยกเลิก
+                {t('common.cancel')}
               </button>
               <button onClick={saveStation} disabled={savingStation}
                 className="flex-1 h-11 rounded-2xl text-sm font-bold text-white disabled:opacity-60 flex items-center justify-center gap-2"
                 style={{ background: 'linear-gradient(135deg,#dc2626,#b91c1c)' }}>
-                {savingStation ? <><RefreshCw size={14} className="animate-spin" /> กำลังบันทึก...</> : 'บันทึก'}
+                {savingStation ? <><RefreshCw size={14} className="animate-spin" /> {t('common.saving')}</> : t('common.save')}
               </button>
             </div>
           </div>

@@ -106,7 +106,7 @@ export default function WeighIn() {
       const res = await api.post('/weigh-in', { ...form, entryDate: todayStr });
       if (res.data.success) {
         const savedTime = form.entryTime;
-        toast.success(`${res.data.message} | เวลาเข้า: ${savedTime} น.`);
+        toast.success(`${res.data.message} | ${t('weighIn.savedTime').replace('{time}', savedTime)}`);
         setForm({ licensePlate: '', vehicleTypeId: '', warehouseId: '', customerId: '', deliveryType: '', priority: 'ปกติ', tareWeight: '', entryTime: timeNow(), notes: '' });
         setPlateCheck(null);
         setCustQuery('');

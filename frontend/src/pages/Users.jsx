@@ -4,47 +4,47 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import { formatDateTime } from '../utils/helpers';
 import LoadingSpinner from '../components/LoadingSpinner';
+import { useLang } from '../context/LanguageContext';
 
 const MENUS = [
-  { code: 'DASHBOARD', name: 'Dashboard' },
-  { code: 'TRIP_MONITOR', name: 'Monitor รถ' },
-  { code: 'FORECAST', name: 'วิเคราะห์และวางแผน' },
-  { divider: true, section: 'สถานี' },
-  { code: 'WEIGH_IN', name: 'สถานีชั่งเข้า' },
-  { code: 'DATA_STATION', name: 'สถานี Data' },
-  { code: 'LOADING_STATION', name: 'สถานีขึ้นสินค้า' },
-  { code: 'WEIGH_OUT', name: 'สถานีชั่งออก' },
-  { code: 'CHECKER', name: 'เช็คเกอร์' },
-  { code: 'RECORDS', name: 'บันทึกการขึ้นสินค้า' },
-  { divider: true, section: 'คลังสินค้าสำเร็จรูป' },
-  { code: 'STOCK', name: 'ตรวจสอบ Location' },
-  { code: 'STOCKCOUNT_OFFICE', name: 'นับสต็อก (จัดการรอบ)', children: [
-    { code: 'STOCKCOUNT_FIELD', name: 'ตรวจนับ (หน้างาน)' },
+  { code: 'DASHBOARD', nameKey: 'nav.dashboard' },
+  { code: 'TRIP_MONITOR', nameKey: 'nav.monitor' },
+  { code: 'FORECAST', nameKey: 'nav.forecast' },
+  { divider: true, sectionKey: 'section.station' },
+  { code: 'WEIGH_IN', nameKey: 'nav.weighIn' },
+  { code: 'DATA_STATION', nameKey: 'nav.dataStation' },
+  { code: 'LOADING_STATION', nameKey: 'nav.loadingStation' },
+  { code: 'WEIGH_OUT', nameKey: 'nav.weighOut' },
+  { code: 'CHECKER', nameKey: 'nav.checker' },
+  { code: 'RECORDS', nameKey: 'nav.records' },
+  { divider: true, sectionKey: 'section.warehouse' },
+  { code: 'STOCK', nameKey: 'nav.locationCheck' },
+  { code: 'STOCKCOUNT_OFFICE', nameKey: 'nav.stockCount', children: [
+    { code: 'STOCKCOUNT_FIELD', nameKey: 'stockCount.fieldTab' },
   ]},
-  { code: 'TRANSFER', name: 'ย้ายสินค้าภายใน', children: [
-    { code: 'TRANSFER_JOBS', name: 'งาน' },
-    { code: 'TRANSFER_STATIONS', name: 'สถานี' },
-    { code: 'TRANSFER_VEHICLES', name: 'รถ' },
-    { code: 'TRANSFER_REPORTS', name: 'รายงาน' },
+  { code: 'TRANSFER', nameKey: 'nav.transfer', children: [
+    { code: 'TRANSFER_JOBS', nameKey: 'transfer.tabJobs' },
+    { code: 'TRANSFER_STATIONS', nameKey: 'transfer.tabStations' },
+    { code: 'TRANSFER_VEHICLES', nameKey: 'transfer.tabVehicles' },
+    { code: 'TRANSFER_REPORTS', nameKey: 'transfer.tabReport' },
   ]},
-  { divider: true, section: 'จัดส่ง' },
-  { code: 'ETA', name: 'ETA / GPS' },
-  { code: 'DELIVERY_PLAN', name: 'แผนจัดส่ง' },
-  { divider: true, section: 'ระบบ' },
-  { code: 'ALERTS', name: 'การแจ้งเตือน' },
-  { code: 'USERS', name: 'จัดการผู้ใช้' },
-  { code: 'MASTER', name: 'ข้อมูลหลัก' },
-  { divider: true, section: 'เครื่องมือ' },
-  { code: 'SHIFT_PLANNING', name: 'วางแผนกะพนักงาน' },
-  { code: 'FREIGHT_CALC', name: 'คำนวณค่าขนส่ง' },
-  { code: 'REPORTS', name: 'รายงาน' },
+  { divider: true, sectionKey: 'section.logistics' },
+  { code: 'ETA', nameKey: 'nav.eta' },
+  { code: 'DELIVERY_PLAN', nameKey: 'nav.delivery' },
+  { divider: true, sectionKey: 'section.system' },
+  { code: 'ALERTS', nameKey: 'nav.alerts' },
+  { code: 'USERS', nameKey: 'nav.users' },
+  { code: 'MASTER', nameKey: 'nav.master' },
+  { divider: true, sectionKey: 'section.tools' },
+  { code: 'SHIFT_PLANNING', nameKey: 'nav.shiftPlanning' },
+  { code: 'FREIGHT_CALC', nameKey: 'nav.freightCalc' },
+  { code: 'REPORTS', nameKey: 'nav.records' },
 ];
 
-// Flatten only real menu items (no section dividers)
 const ALL_MENU_CODES = MENUS.filter(m => !m.divider).flatMap(m => [m, ...(m.children || [])]);
 
-
 export default function Users() {
+  const { t } = useLang();
   const [users, setUsers] = useState([]);
   const [roles, setRoles] = useState([]);
   const [warehouses, setWarehouses] = useState([]);
@@ -59,6 +59,8 @@ export default function Users() {
   const [pageLoading, setPageLoading] = useState(true);
   const [roleForm, setRoleForm] = useState({ roleName: '', description: '', sortOrder: 0 });
   const [roleFilter, setRoleFilter] = useState(null);
+  const [expandedMenus, setExpandedMenus] = useState(new Set());
+  const [editingRole, setEditingRole] = useState(null);
 
   useEffect(() => { fetchAll(); }, []);
 
@@ -113,26 +115,19 @@ export default function Users() {
       let res;
       if (modal === 'create') { res = await api.post('/users', form); }
       else { res = await api.put(`/users/${selectedUser.UserID}`, form); }
-      if (res.data.success) {
-        toast.success(res.data.message);
-        setModal(null);
-        fetchAll();
-      }
+      if (res.data.success) { toast.success(res.data.message); setModal(null); fetchAll(); }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('common.noData'));
     } finally { setSaving(false); }
   };
 
   const handleDeactivate = async (userId) => {
-    if (!confirm('ต้องการระงับการใช้งานผู้ใช้นี้?')) return;
+    if (!confirm(t('users.deactivateConfirm'))) return;
     try {
       const res = await api.delete(`/users/${userId}`);
       if (res.data.success) { toast.success(res.data.message); fetchAll(); }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+    } catch (err) { toast.error(err.response?.data?.message || t('common.noData')); }
   };
-
-  const [expandedMenus, setExpandedMenus] = useState(new Set());
-  const [editingRole, setEditingRole] = useState(null);
 
   const openEditRole = (role) => {
     setEditingRole(role);
@@ -141,7 +136,7 @@ export default function Users() {
   };
 
   const handleSaveRole = async () => {
-    if (!roleForm.roleName.trim()) return toast.error('กรุณาระบุชื่อบทบาท');
+    if (!roleForm.roleName.trim()) return toast.error(t('users.roleNameLabel'));
     setSaving(true);
     try {
       const res = editingRole
@@ -155,27 +150,27 @@ export default function Users() {
         fetchAll();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('common.noData'));
     } finally { setSaving(false); }
   };
 
   const handleDeleteRole = async (role) => {
-    if (!confirm(`ลบบทบาท "${role.RoleName}" ?`)) return;
+    if (!confirm(`${t('common.delete')} "${role.RoleName}" ?`)) return;
     try {
       const res = await api.delete(`/users/roles/${role.RoleID}`);
       if (res.data.success) { toast.success(res.data.message); fetchAll(); }
-    } catch (err) { toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ'); }
+    } catch (err) { toast.error(err.response?.data?.message || t('common.noData')); }
   };
 
   const handleSavePermissions = async () => {
     setSaving(true);
     try {
       const v = (m) => permissions[m.code] ? 1 : 0;
-      const permsArr = ALL_MENU_CODES.map(m => ({ menuCode: m.code, menuName: m.name, canView: v(m), canCreate: v(m), canEdit: v(m), canDelete: v(m) }));
+      const permsArr = ALL_MENU_CODES.map(m => ({ menuCode: m.code, menuName: t(m.nameKey), canView: v(m), canCreate: v(m), canEdit: v(m), canDelete: v(m) }));
       const res = await api.post('/users/permissions', { roleId: selectedRole.RoleID, permissions: permsArr });
       if (res.data.success) { toast.success(res.data.message); setModal(null); }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ');
+      toast.error(err.response?.data?.message || t('common.noData'));
     } finally { setSaving(false); }
   };
 
@@ -191,16 +186,13 @@ export default function Users() {
     const willEnable = !permissions[menuCode];
     setPermissions(prev => {
       const next = { ...prev, [menuCode]: willEnable ? 1 : 0 };
-      if (children.length) {
-        children.forEach(c => { next[c.code] = willEnable ? 1 : 0; });
-      }
+      if (children.length) children.forEach(c => { next[c.code] = willEnable ? 1 : 0; });
       return next;
     });
     if (children.length) {
       setExpandedMenus(prev => {
         const next = new Set(prev);
-        if (willEnable) next.add(menuCode);
-        else next.delete(menuCode);
+        if (willEnable) next.add(menuCode); else next.delete(menuCode);
         return next;
       });
     }
@@ -208,21 +200,20 @@ export default function Users() {
 
   if (pageLoading) return (
     <div className="flex items-center justify-center h-64">
-      <LoadingSpinner size="lg" text="กำลังโหลดข้อมูลผู้ใช้..." />
+      <LoadingSpinner size="lg" text={t('common.loading')} />
     </div>
   );
 
   return (
     <div className="space-y-6">
-      {/* Tabs */}
       <div className="flex gap-2 items-center">
         <button onClick={() => setTab('users')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'users' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <UsersIcon size={14} className="inline mr-1" />ผู้ใช้งาน ({users.length})
+          <UsersIcon size={14} className="inline mr-1" />{t('users.usersTab')} ({users.length})
         </button>
         <button onClick={() => setTab('roles')}
           className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'roles' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <Shield size={14} className="inline mr-1" />บทบาท / สิทธิ์
+          <Shield size={14} className="inline mr-1" />{t('users.rolesTab')}
         </button>
         <button onClick={fetchAll}
           className="ml-auto p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
@@ -233,38 +224,37 @@ export default function Users() {
       {tab === 'users' && (
         <div className="card">
           <div className="flex items-center justify-between mb-3">
-            <h3 className="card-header mb-0">ผู้ใช้งานทั้งหมด</h3>
+            <h3 className="card-header mb-0">{t('users.allUsers')}</h3>
             <button onClick={openCreate} className="btn-primary text-sm">
-              <Plus size={14} />เพิ่มผู้ใช้
+              <Plus size={14} />{t('users.addUser')}
             </button>
           </div>
-          {/* Role filter dropdown */}
           <div className="flex items-center gap-2 mb-4">
-            <label className="text-xs font-semibold whitespace-nowrap" style={{ color: '#64748b' }}>กรองบทบาท</label>
+            <label className="text-xs font-semibold whitespace-nowrap" style={{ color: '#64748b' }}>{t('common.role')}</label>
             <select value={roleFilter ?? ''}
               onChange={e => setRoleFilter(e.target.value ? parseInt(e.target.value) : null)}
               className="h-8 px-3 rounded-xl text-xs font-semibold outline-none"
               style={{ border: '1.5px solid #e2e8f0', background: '#fff', color: '#1e293b', minWidth: 200 }}>
-              <option value="">ทั้งหมด ({users.length})</option>
+              <option value="">{t('common.total')} ({users.length})</option>
               {[...roles].sort((a, b) => (a.SortOrder || 0) - (b.SortOrder || 0) || (a.RoleName || '').localeCompare(b.RoleName || '', 'th')).map(r => {
                 const count = users.filter(u => u.RoleID === r.RoleID).length;
                 return <option key={r.RoleID} value={r.RoleID}>{r.RoleName} ({count})</option>;
               })}
             </select>
             {roleFilter && (
-              <button onClick={() => setRoleFilter(null)} className="text-xs font-semibold" style={{ color: '#ef4444' }}>ล้าง</button>
+              <button onClick={() => setRoleFilter(null)} className="text-xs font-semibold" style={{ color: '#ef4444' }}>{t('common.clearForm')}</button>
             )}
           </div>
           <div className="overflow-x-auto">
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-200">
-                  <th className="table-header text-left px-4 py-2">ชื่อผู้ใช้</th>
-                  <th className="table-header text-left px-4 py-2">ชื่อ-นามสกุล</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">บทบาท ↑</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">คลัง</th>
-                  <th className="table-header text-center px-4 py-2">สถานะ</th>
-                  <th className="table-header text-left px-4 py-2 hide-mobile">เข้าสู่ระบบล่าสุด</th>
+                  <th className="table-header text-left px-4 py-2">{t('users.username')}</th>
+                  <th className="table-header text-left px-4 py-2">{t('users.fullName')}</th>
+                  <th className="table-header text-left px-4 py-2 hide-mobile">{t('users.roleLabel')}</th>
+                  <th className="table-header text-left px-4 py-2 hide-mobile">{t('common.warehouse')}</th>
+                  <th className="table-header text-center px-4 py-2">{t('common.status')}</th>
+                  <th className="table-header text-left px-4 py-2 hide-mobile">{t('users.lastLogin')}</th>
                   <th className="table-header px-4 py-2" />
                 </tr>
               </thead>
@@ -301,10 +291,12 @@ export default function Users() {
                     <td className="table-cell hide-mobile">{u.WarehouseName || '-'}</td>
                     <td className="table-cell text-center">
                       <span className={`px-2 py-0.5 rounded-full text-xs whitespace-nowrap ${u.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-red-100 text-red-500'}`}>
-                        {u.IsActive ? 'ใช้งาน' : 'ระงับ'}
+                        {u.IsActive ? t('users.activeStatus') : t('users.suspendedStatus')}
                       </span>
                     </td>
-                    <td className="table-cell hide-mobile text-slate-400 text-xs whitespace-nowrap">{formatDateTime(u.LastLogin) || 'ยังไม่เคย'}</td>
+                    <td className="table-cell hide-mobile text-slate-400 text-xs whitespace-nowrap">
+                      {formatDateTime(u.LastLogin) || t('users.neverLoggedIn')}
+                    </td>
                     <td className="px-3 py-3">
                       <div className="flex items-center gap-1">
                         <button onClick={() => openEdit(u)} className="p-1.5 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
@@ -330,7 +322,7 @@ export default function Users() {
         <div className="flex justify-end">
           <button onClick={() => { setRoleForm({ roleName: '', description: '' }); setEditingRole(null); setModal('role'); }}
             className="btn-primary text-sm">
-            <Plus size={14} />เพิ่มบทบาท
+            <Plus size={14} />{t('users.addRole')}
           </button>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -344,22 +336,20 @@ export default function Users() {
                 <div className="flex items-center gap-1">
                   <Shield size={16} className="text-red-400" />
                   <button onClick={() => openEditRole(role)}
-                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-600 transition-colors"
-                    title="แก้ไขบทบาท">
+                    className="p-1 rounded-lg hover:bg-slate-100 text-slate-300 hover:text-slate-600 transition-colors">
                     <Pencil size={14} />
                   </button>
                   <button onClick={() => handleDeleteRole(role)}
-                    className="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors"
-                    title="ลบบทบาท">
+                    className="p-1 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors">
                     <Trash2 size={14} />
                   </button>
                 </div>
               </div>
               <div className="text-xs text-slate-400 mb-3">
-                {users.filter(u => u.RoleID === role.RoleID).length} ผู้ใช้
+                {users.filter(u => u.RoleID === role.RoleID).length} {t('users.userCount')}
               </div>
               <button onClick={() => openPermissions(role)} className="btn-secondary w-full text-sm py-2">
-                <Shield size={13} />กำหนดสิทธิ์
+                <Shield size={13} />{t('users.setPermissions')}
               </button>
             </div>
           ))}
@@ -367,36 +357,31 @@ export default function Users() {
         </>
       )}
 
-      {/* Add Role Modal */}
+      {/* Role Modal */}
       {modal === 'role' && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-900">{editingRole ? 'แก้ไขบทบาท' : 'เพิ่มบทบาทใหม่'}</h3>
+              <h3 className="text-lg font-bold text-slate-900">{editingRole ? t('users.editRole') : t('users.newRole')}</h3>
               <button onClick={() => { setModal(null); setEditingRole(null); }} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
             </div>
             <div className="space-y-3">
               <div>
-                <label className="label">ชื่อบทบาท *</label>
+                <label className="label">{t('users.roleNameLabel')}</label>
                 <input value={roleForm.roleName} onChange={e => setRoleForm(p => ({ ...p, roleName: e.target.value }))}
-                  className="input-field" placeholder="เช่น Supervisor, Driver" />
+                  className="input-field" />
               </div>
               <div>
-                <label className="label">คำอธิบาย</label>
+                <label className="label">{t('users.descriptionLabel')}</label>
                 <input value={roleForm.description} onChange={e => setRoleForm(p => ({ ...p, description: e.target.value }))}
-                  className="input-field" placeholder="หน้าที่ความรับผิดชอบ..." />
-              </div>
-              <div>
-                <label className="label">ลำดับตำแหน่ง (น้อย = สูงกว่า)</label>
-                <input type="number" value={roleForm.sortOrder} onChange={e => setRoleForm(p => ({ ...p, sortOrder: parseInt(e.target.value) || 0 }))}
-                  className="input-field" placeholder="เช่น 1=Admin, 10=หัวหน้า, 50=พนักงาน" min="0" />
+                  className="input-field" />
               </div>
             </div>
             <div className="flex gap-3 mt-5">
               <button onClick={handleSaveRole} disabled={saving} className="btn-primary flex-1">
-                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึก</>}
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />{t('common.save')}</>}
               </button>
-              <button onClick={() => setModal(null)} className="btn-secondary px-6">ยกเลิก</button>
+              <button onClick={() => setModal(null)} className="btn-secondary px-6">{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -407,16 +392,16 @@ export default function Users() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900 mb-4">
-              {modal === 'create' ? 'เพิ่มผู้ใช้ใหม่' : 'แก้ไขผู้ใช้'}
+              {modal === 'create' ? t('users.newUser') : t('users.editUser')}
             </h3>
             <div className="space-y-3">
               <div>
-                <label className="label">Username *</label>
+                <label className="label">{t('users.username')}</label>
                 <input type="text" value={form.username} onChange={e => setForm(p => ({ ...p, username: e.target.value }))}
                   className="input-field" disabled={modal === 'edit'} />
               </div>
               <div>
-                <label className="label">{modal === 'edit' ? 'รหัสผ่านใหม่ (ว่างไว้=ไม่เปลี่ยน)' : 'รหัสผ่าน *'}</label>
+                <label className="label">{modal === 'edit' ? t('users.newPassword') : t('users.password')}</label>
                 <div className="relative">
                   <input type={showPw ? 'text' : 'password'} value={form.password} onChange={e => setForm(p => ({ ...p, password: e.target.value }))}
                     className="input-field pr-10" />
@@ -427,58 +412,44 @@ export default function Users() {
                 </div>
               </div>
               <div>
-                <label className="label">ชื่อ-นามสกุล *</label>
+                <label className="label">{t('users.fullName')}</label>
                 <input type="text" value={form.fullName} onChange={e => setForm(p => ({ ...p, fullName: e.target.value }))}
                   className="input-field" />
               </div>
               <div>
-                <label className="label">Email</label>
+                <label className="label">{t('users.email')}</label>
                 <input type="email" value={form.email} onChange={e => setForm(p => ({ ...p, email: e.target.value }))}
                   className="input-field" />
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="label">บทบาท *</label>
+                  <label className="label">{t('users.roleLabel')}</label>
                   <select value={form.roleId} onChange={e => setForm(p => ({ ...p, roleId: e.target.value }))} className="input-field">
-                    <option value="">-- เลือก --</option>
+                    <option value="">-- {t('common.select')} --</option>
                     {roles.map(r => <option key={r.RoleID} value={r.RoleID}>{r.RoleName}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="label">คลังสินค้า</label>
+                  <label className="label">{t('users.warehouseLabel')}</label>
                   <select value={form.warehouseId} onChange={e => setForm(p => ({ ...p, warehouseId: e.target.value }))} className="input-field">
-                    <option value="">-- ทุกคลัง --</option>
+                    <option value="">{t('users.allWarehouses')}</option>
                     {warehouses.map(w => <option key={w.WarehouseID} value={w.WarehouseID}>{w.WarehouseName}</option>)}
                   </select>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="label">เวลา Session (ชม.) — ว่างไว้ = 24 ชม.</label>
-                  <input type="number" min="1" max="720" value={form.sessionDurationHours}
-                    onChange={e => setForm(p => ({ ...p, sessionDurationHours: e.target.value }))}
-                    className="input-field" placeholder="เช่น 1, 8, 24" />
-                </div>
-                <div>
-                  <label className="label">เลเวล (ยิ่งมาก ยิ่งสูง)</label>
-                  <input type="number" min="0" value={form.userLevel ?? 0}
-                    onChange={e => setForm(p => ({ ...p, userLevel: e.target.value }))}
-                    className="input-field" placeholder="0" />
                 </div>
               </div>
               {modal === 'edit' && (
                 <div className="flex items-center gap-2">
                   <input type="checkbox" id="isActive" checked={form.isActive}
                     onChange={e => setForm(p => ({ ...p, isActive: e.target.checked ? 1 : 0 }))} />
-                  <label htmlFor="isActive" className="text-slate-600 text-sm cursor-pointer">เปิดใช้งาน</label>
+                  <label htmlFor="isActive" className="text-slate-600 text-sm cursor-pointer">{t('users.enabledLabel')}</label>
                 </div>
               )}
             </div>
             <div className="flex gap-3 mt-6">
               <button onClick={handleSaveUser} disabled={saving} className="btn-primary flex-1">
-                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึก</>}
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />{t('common.save')}</>}
               </button>
-              <button onClick={() => setModal(null)} className="btn-secondary px-6">ยกเลิก</button>
+              <button onClick={() => setModal(null)} className="btn-secondary px-6">{t('common.cancel')}</button>
             </div>
           </div>
         </div>
@@ -489,7 +460,7 @@ export default function Users() {
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-xl flex flex-col" style={{ maxHeight: '90vh' }}>
             <div className="px-6 pt-6 pb-3 flex-shrink-0">
-              <h3 className="text-lg font-bold text-slate-900 mb-1">กำหนดสิทธิ์: {selectedRole?.RoleName}</h3>
+              <h3 className="text-lg font-bold text-slate-900 mb-1">{t('users.permissionsTitle')} {selectedRole?.RoleName}</h3>
               <p className="text-slate-500 text-sm">{selectedRole?.Description}</p>
             </div>
 
@@ -497,8 +468,8 @@ export default function Users() {
               <table className="w-full">
                 <thead className="sticky top-0 bg-white">
                   <tr className="border-b border-slate-200">
-                    <th className="table-header text-left px-3 py-2">เมนู</th>
-                    <th className="table-header text-center px-3 py-2 w-20">เข้าถึง</th>
+                    <th className="table-header text-left px-3 py-2">{t('users.menu')}</th>
+                    <th className="table-header text-center px-3 py-2 w-20">{t('users.view')}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -507,7 +478,7 @@ export default function Users() {
                       return (
                         <tr key={`divider-${idx}`}>
                           <td colSpan={2} className="px-3 pt-4 pb-1">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{menu.section}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{t(menu.sectionKey)}</span>
                           </td>
                         </tr>
                       );
@@ -520,15 +491,13 @@ export default function Users() {
                               {menu.children?.length ? (
                                 <button onClick={() => toggleMenuExpand(menu.code)}
                                   className="text-slate-400 hover:text-red-400 transition-colors flex-shrink-0 p-0.5 rounded">
-                                  {expandedMenus.has(menu.code)
-                                    ? <ChevronDown size={13} />
-                                    : <ChevronRight size={13} />}
+                                  {expandedMenus.has(menu.code) ? <ChevronDown size={13} /> : <ChevronRight size={13} />}
                                 </button>
                               ) : <span className="w-[17px]" />}
                               <span
                                 className={`text-sm font-medium text-slate-800 leading-snug ${menu.children?.length ? 'cursor-pointer hover:text-red-500 transition-colors' : ''}`}
                                 onClick={() => menu.children?.length && toggleMenuExpand(menu.code)}>
-                                {menu.name}
+                                {t(menu.nameKey)}
                               </span>
                             </div>
                           </td>
@@ -544,7 +513,7 @@ export default function Users() {
                             <td className="pl-10 pr-3 py-1.5">
                               <div className="flex items-center gap-1.5 text-xs text-slate-500">
                                 <span className="text-slate-300">└</span>
-                                <span>{child.name}</span>
+                                <span>{t(child.nameKey)}</span>
                               </div>
                             </td>
                             <td className="px-3 py-1.5 text-center">
@@ -564,9 +533,9 @@ export default function Users() {
 
             <div className="flex gap-3 px-6 py-4 border-t border-slate-100 flex-shrink-0">
               <button onClick={handleSavePermissions} disabled={saving} className="btn-primary flex-1">
-                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึกสิทธิ์</>}
+                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />{t('users.savePermissions')}</>}
               </button>
-              <button onClick={() => setModal(null)} className="btn-secondary px-6">ปิด</button>
+              <button onClick={() => setModal(null)} className="btn-secondary px-6">{t('common.close')}</button>
             </div>
           </div>
         </div>
