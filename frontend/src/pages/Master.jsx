@@ -1,8 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, ShoppingBag, Grid3X3, LayoutGrid, Car, AlertTriangle, Wrench, CheckCircle2, Calendar } from 'lucide-react';
+import { Settings, Plus, Edit, Trash2, Upload, Download, Warehouse, Users, Truck, Package, Save, X, Search, MapPin, Navigation, ShoppingBag, Grid3X3, LayoutGrid, Car, AlertTriangle, Wrench, CheckCircle2, Calendar, Printer } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import DraggableMap from '../components/DraggableMap';
+import { QRCodeSVG } from 'qrcode.react';
+import { useReactToPrint } from 'react-to-print';
 
 const SKU_TYPES = ['ขายดี','ขายน้อยขายต่อเนื่อง','ขายน้อยขายไม่ต่อเนื่อง','สต็อค','NewItem','สินค้าโป๊ว','ไม่ควบคุมสต็อค','เหล็กอื่น (เกรด B)','เหล็กเกรด C','อื่นๆ'];
 
@@ -62,12 +64,22 @@ export default function Master() {
   const internalVehiclesImportRef = useRef(null);
   const [locationTypes, setLocationTypes] = useState([]);
   const [selected, setSelected] = useState(new Set());
+  const [printLocation, setPrintLocation] = useState(null);
+  const printLabelRef = useRef(null);
   // Location search state
   const [locQuery, setLocQuery] = useState('');
   const [locResults, setLocResults] = useState([]);
   const [locSearching, setLocSearching] = useState(false);
   const locTimer = useRef(null);
   const importRef = useRef(null);
+
+  const handlePrintLabel = useReactToPrint({
+    content: () => printLabelRef.current,
+    pageStyle: `
+      @page { size: 8cm 6cm; margin: 0.3cm; }
+      @media print { body { margin: 0; font-family: sans-serif; } }
+    `,
+  });
 
   const handleImport = async (e) => {
     const file = e.target.files[0];
@@ -626,6 +638,13 @@ export default function Master() {
                 <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${ltColor}`}>
                   {i.LocationTypeName || 'ไม่ระบุประเภท'}
                 </span>
+                <button
+                  onClick={(e) => { e.stopPropagation(); setPrintLocation(i); }}
+                  title="พิมพ์บาร์โค้ด"
+                  className="flex-shrink-0 p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors"
+                >
+                  <Printer size={14} />
+                </button>
                 <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                   <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
@@ -1127,6 +1146,51 @@ export default function Master() {
         )}
         <div className="overflow-x-auto">{renderTable()}</div>
       </div>
+
+      {printLocation && (
+        <div className="fixed inset-0 flex items-center justify-center z-[200] p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+          <div className="bg-white rounded-2xl shadow-2xl w-80 overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+              <span className="font-bold text-slate-800 flex items-center gap-2"><Printer size={15} />พิมพ์บาร์โค้ด Location</span>
+              <button onClick={() => setPrintLocation(null)} className="text-gray-400 hover:text-gray-700 p-1"><X size={16} /></button>
+            </div>
+            <div className="p-6 flex justify-center">
+              <div ref={printLabelRef} className="border border-gray-200 rounded-xl p-5 text-center" style={{ width: 220 }}>
+                <QRCodeSVG
+                  value={printLocation.LocationCode}
+                  size={170}
+                  level="M"
+                  includeMargin={false}
+                />
+                <div className="mt-3 font-black text-2xl font-mono tracking-wide text-slate-900">
+                  {printLocation.LocationCode}
+                </div>
+                {printLocation.LocationName && printLocation.LocationName !== printLocation.LocationCode && (
+                  <div className="text-sm text-gray-600 mt-1 leading-tight">{printLocation.LocationName}</div>
+                )}
+                {printLocation.WarehouseName && (
+                  <div className="text-xs text-gray-400 mt-1 flex items-center justify-center gap-1">
+                    <Warehouse size={10} />{printLocation.WarehouseName}
+                  </div>
+                )}
+                {printLocation.LocationTypeName && (
+                  <div className="mt-2">
+                    <span className="px-2 py-0.5 bg-purple-100 text-purple-700 rounded-full text-xs font-semibold">
+                      {printLocation.LocationTypeName}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className="flex gap-3 px-5 pb-5">
+              <button onClick={handlePrintLabel} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                <Printer size={14} />พิมพ์
+              </button>
+              <button onClick={() => setPrintLocation(null)} className="btn-secondary px-5">ปิด</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {modal && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
