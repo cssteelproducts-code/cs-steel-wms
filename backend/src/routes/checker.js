@@ -2,10 +2,9 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const cache = require('../utils/cache');
 
-let _chkCache = null;
-let _chkCacheExp = 0;
-const clearChkCache = () => { _chkCacheExp = 0; };
+const clearChkCache = () => cache.del('chk:pending');
 
 // POST /api/checker - Record checker verification
 router.post('/', authenticate, async (req, res) => {
@@ -76,34 +75,34 @@ router.post('/', authenticate, async (req, res) => {
 
 // GET /api/checker/pending
 router.get('/pending', authenticate, async (req, res) => {
-  if (_chkCache && Date.now() < _chkCacheExp) return res.json({ success: true, data: _chkCache });
   try {
-    const pool = getPool();
-    const result = await pool.request().query(`
-      SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
-             t.DeliveryType, t.Priority,
-             vt.TypeName AS VehicleType,
-             w.WarehouseName,
-             c.CustomerName,
-             ds.PickDocumentNo,
-             ls_target.StationName AS TargetStation,
-             wo.WeighDateTime AS WeighOutDateTime,
-             DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) AS MinutesInWarehouse
-      FROM WMS_Trips t          WITH (NOLOCK)
-      LEFT JOIN WMS_VehicleTypes vt    WITH (NOLOCK) ON vt.TypeID      = t.VehicleTypeID
-      LEFT JOIN WMS_Warehouses w       WITH (NOLOCK) ON w.WarehouseID  = t.WarehouseID
-      LEFT JOIN WMS_Customers c        WITH (NOLOCK) ON c.CustomerID   = t.CustomerID
-      LEFT JOIN WMS_DataStation ds     WITH (NOLOCK) ON ds.TripID      = t.TripID
-      LEFT JOIN WMS_LoadingStations ls_target WITH (NOLOCK) ON ls_target.StationID = ds.TargetStationID
-      LEFT JOIN WMS_WeighOut wo        WITH (NOLOCK) ON wo.TripID      = t.TripID
-      LEFT JOIN WMS_WeighIn wi         WITH (NOLOCK) ON wi.TripID      = t.TripID
-      WHERE t.Status = 'Checker'
-        AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
-      ORDER BY t.CreatedAt ASC
-    `);
-    _chkCache = result.recordset;
-    _chkCacheExp = Date.now() + 10000;
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('chk:pending', async () => {
+      const pool = getPool();
+      const result = await pool.request().query(`
+        SELECT t.TripID, t.LicensePlate, t.Status, t.CreatedAt,
+               t.DeliveryType, t.Priority,
+               vt.TypeName AS VehicleType,
+               w.WarehouseName,
+               c.CustomerName,
+               ds.PickDocumentNo,
+               ls_target.StationName AS TargetStation,
+               wo.WeighDateTime AS WeighOutDateTime,
+               DATEDIFF(MINUTE, wi.WeighDateTime, DATEADD(HOUR,7,GETUTCDATE())) AS MinutesInWarehouse
+        FROM WMS_Trips t WITH (NOLOCK)
+        LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON vt.TypeID      = t.VehicleTypeID
+        LEFT JOIN WMS_Warehouses w    WITH (NOLOCK) ON w.WarehouseID  = t.WarehouseID
+        LEFT JOIN WMS_Customers c     WITH (NOLOCK) ON c.CustomerID   = t.CustomerID
+        LEFT JOIN WMS_DataStation ds  WITH (NOLOCK) ON ds.TripID      = t.TripID
+        LEFT JOIN WMS_LoadingStations ls_target WITH (NOLOCK) ON ls_target.StationID = ds.TargetStationID
+        LEFT JOIN WMS_WeighOut wo     WITH (NOLOCK) ON wo.TripID      = t.TripID
+        LEFT JOIN WMS_WeighIn wi      WITH (NOLOCK) ON wi.TripID      = t.TripID
+        WHERE t.Status = 'Checker'
+          AND CAST(t.TripDate AS DATE) >= CAST(DATEADD(DAY,-1,GETDATE()) AS DATE)
+        ORDER BY t.CreatedAt ASC
+      `);
+      return result.recordset;
+    }, 10_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

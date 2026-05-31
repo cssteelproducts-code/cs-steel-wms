@@ -5,30 +5,25 @@ const { sql, getPool } = require('../config/db');
 const { authenticate, requireAdmin } = require('../middleware/auth');
 const { clearPermsCache } = require('./auth');
 
-// TTL cache for frequently-read, rarely-changing data
-const _c = new Map();
-const cGet = k => { const e = _c.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
-const cSet = (k, v, ms) => _c.set(k, { v, exp: Date.now() + ms });
-const cDel = (...keys) => keys.forEach(k => _c.delete(k));
+const cache = require('../utils/cache');
 
 // GET /api/users - List all users
 router.get('/', authenticate, requireAdmin, async (req, res) => {
-  const hit = cGet('users:list');
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request().query(`
-      SELECT u.UserID, u.Username, u.FullName, u.Email, u.IsActive, u.CreatedAt, u.LastLogin,
-             u.SessionDurationHours, u.UserLevel,
-             r.RoleName, r.RoleID,
-             w.WarehouseName, w.WarehouseID
-      FROM WMS_Users u WITH (NOLOCK)
-      LEFT JOIN WMS_Roles r WITH (NOLOCK) ON u.RoleID = r.RoleID
-      LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON u.WarehouseID = w.WarehouseID
-      ORDER BY u.UserLevel DESC, u.CreatedAt DESC
-    `);
-    cSet('users:list', result.recordset, 10000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('users:list', async () => {
+      const result = await getPool().request().query(`
+        SELECT u.UserID, u.Username, u.FullName, u.Email, u.IsActive, u.CreatedAt, u.LastLogin,
+               u.SessionDurationHours, u.UserLevel,
+               r.RoleName, r.RoleID,
+               w.WarehouseName, w.WarehouseID
+        FROM WMS_Users u WITH (NOLOCK)
+        LEFT JOIN WMS_Roles r WITH (NOLOCK) ON u.RoleID = r.RoleID
+        LEFT JOIN WMS_Warehouses w WITH (NOLOCK) ON u.WarehouseID = w.WarehouseID
+        ORDER BY u.UserLevel DESC, u.CreatedAt DESC
+      `);
+      return result.recordset;
+    }, 10_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -67,7 +62,7 @@ router.post('/', authenticate, requireAdmin, async (req, res) => {
       .query(`INSERT INTO WMS_Users (Username, Password, FullName, Email, RoleID, WarehouseID, SessionDurationHours, UserLevel)
               VALUES (@Username, @Password, @FullName, @Email, @RoleID, @WarehouseID, @SessionDurationHours, @UserLevel)`);
 
-    cDel('users:list');
+    cache.del('users:list');
     res.json({ success: true, message: `สร้างผู้ใช้ "${username}" สำเร็จ` });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -103,7 +98,7 @@ router.put('/:id', authenticate, requireAdmin, async (req, res) => {
     updateQuery += ' WHERE UserID=@UserID';
     await request.query(updateQuery);
 
-    cDel('users:list');
+    cache.del('users:list');
     res.json({ success: true, message: 'แก้ไขผู้ใช้สำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -117,7 +112,7 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
     await pool.request()
       .input('UserID', sql.Int, req.params.id)
       .query('UPDATE WMS_Users SET IsActive = 0 WHERE UserID = @UserID');
-    cDel('users:list');
+    cache.del('users:list');
     res.json({ success: true, message: 'ระงับการใช้งานผู้ใช้สำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -126,14 +121,13 @@ router.delete('/:id', authenticate, requireAdmin, async (req, res) => {
 
 // GET /api/users/roles - List roles
 router.get('/roles', authenticate, async (req, res) => {
-  const hit = cGet('users:roles');
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query('SELECT * FROM WMS_Roles WITH (NOLOCK) WHERE IsActive=1 ORDER BY SortOrder ASC, RoleName');
-    cSet('users:roles', result.recordset, 30000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('users:roles', async () => {
+      const result = await getPool().request()
+        .query('SELECT * FROM WMS_Roles WITH (NOLOCK) WHERE IsActive=1 ORDER BY SortOrder ASC, RoleName');
+      return result.recordset;
+    }, 30_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -155,7 +149,7 @@ router.post('/roles', authenticate, requireAdmin, async (req, res) => {
         .input('Description', sql.NVarChar, description || '')
         .input('SortOrder', sql.Int, sortOrder || 0)
         .query('UPDATE WMS_Roles SET IsActive=1, Description=@Description, SortOrder=@SortOrder WHERE RoleID=@RoleID');
-      cDel('users:roles');
+      cache.del('users:roles');
       return res.json({ success: true, message: 'เพิ่มบทบาทสำเร็จ' });
     }
     await pool.request()
@@ -163,7 +157,7 @@ router.post('/roles', authenticate, requireAdmin, async (req, res) => {
       .input('Description', sql.NVarChar, description || '')
       .input('SortOrder', sql.Int, sortOrder || 0)
       .query('INSERT INTO WMS_Roles (RoleName, Description, SortOrder) VALUES (@RoleName, @Description, @SortOrder)');
-    cDel('users:roles');
+    cache.del('users:roles');
     res.json({ success: true, message: 'เพิ่มบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -182,7 +176,7 @@ router.put('/roles/:roleId', authenticate, requireAdmin, async (req, res) => {
       .input('Description', sql.NVarChar, description || '')
       .input('SortOrder', sql.Int, sortOrder || 0)
       .query('UPDATE WMS_Roles SET RoleName=@RoleName, Description=@Description, SortOrder=@SortOrder WHERE RoleID=@RoleID');
-    cDel('users:roles');
+    cache.del('users:roles');
     res.json({ success: true, message: 'แก้ไขบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -201,7 +195,7 @@ router.delete('/roles/:roleId', authenticate, requireAdmin, async (req, res) => 
     await pool.request()
       .input('RoleID', sql.Int, req.params.roleId)
       .query('UPDATE WMS_Roles SET IsActive=0 WHERE RoleID=@RoleID');
-    cDel('users:roles');
+    cache.del('users:roles');
     res.json({ success: true, message: 'ลบบทบาทสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -211,15 +205,14 @@ router.delete('/roles/:roleId', authenticate, requireAdmin, async (req, res) => 
 // GET /api/users/permissions/:roleId
 router.get('/permissions/:roleId', authenticate, requireAdmin, async (req, res) => {
   const key = `users:perms:${req.params.roleId}`;
-  const hit = cGet(key);
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .input('RoleID', sql.Int, req.params.roleId)
-      .query(`SELECT * FROM WMS_MenuPermissions WITH (NOLOCK) WHERE RoleID = @RoleID ORDER BY MenuCode`);
-    cSet(key, result.recordset, 15000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(key, async () => {
+      const result = await getPool().request()
+        .input('RoleID', sql.Int, req.params.roleId)
+        .query(`SELECT * FROM WMS_MenuPermissions WITH (NOLOCK) WHERE RoleID = @RoleID ORDER BY MenuCode`);
+      return result.recordset;
+    }, 15_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -242,7 +235,7 @@ router.post('/permissions', authenticate, requireAdmin, async (req, res) => {
     }
 
     await pool.request().query(batch);
-    cDel(`users:perms:${rid}`);
+    cache.del(`users:perms:${rid}`);
     try { clearPermsCache(rid); } catch {}
     res.json({ success: true, message: 'บันทึกสิทธิ์การใช้งานสำเร็จ' });
   } catch (err) {

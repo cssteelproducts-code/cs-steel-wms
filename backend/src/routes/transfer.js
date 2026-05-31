@@ -5,24 +5,19 @@ const { authenticate } = require('../middleware/auth');
 
 router.use(authenticate);
 
-// TTL cache for frequently-read transfer data
-const _c = new Map();
-const cGet = k => { const e = _c.get(k); return (e && Date.now() < e.exp) ? e.v : null; };
-const cSet = (k, v, ms) => _c.set(k, { v, exp: Date.now() + ms });
-const cDel = (...keys) => keys.forEach(k => _c.delete(k));
+const cache = require('../utils/cache');
 
 // --- VEHICLES ---
 
 router.get('/vehicles', async (req, res) => {
-  const hit = cGet('tr:vehicles');
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request().query(
-      'SELECT * FROM WMS_TransferVehicles WITH (NOLOCK) WHERE IsActive=1 ORDER BY VehiclePlate'
-    );
-    cSet('tr:vehicles', result.recordset, 30000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('tr:vehicles', async () => {
+      const result = await getPool().request().query(
+        'SELECT * FROM WMS_TransferVehicles WITH (NOLOCK) WHERE IsActive=1 ORDER BY VehiclePlate'
+      );
+      return result.recordset;
+    }, 30_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -93,15 +88,14 @@ router.delete('/vehicles/:id', async (req, res) => {
 // --- STATIONS ---
 
 router.get('/stations', async (req, res) => {
-  const hit = cGet('tr:stations');
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request().query(
-      'SELECT * FROM WMS_TransferStations WITH (NOLOCK) WHERE IsActive=1 ORDER BY SortOrder, StationName'
-    );
-    cSet('tr:stations', result.recordset, 30000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('tr:stations', async () => {
+      const result = await getPool().request().query(
+        'SELECT * FROM WMS_TransferStations WITH (NOLOCK) WHERE IsActive=1 ORDER BY SortOrder, StationName'
+      );
+      return result.recordset;
+    }, 30_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -160,31 +154,30 @@ router.delete('/stations/:id', async (req, res) => {
 // --- JOBS ---
 
 router.get('/jobs/available', async (req, res) => {
-  const hit = cGet('tr:jobs:avail');
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request().query(`
-      SELECT j.JobID, j.JobCode, j.ProductDesc, j.Priority,
-        ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
-        j.PlannedBundles, j.PlannedWeightKg, j.ActualBundles, j.ActualWeightKg,
-        ISNULL(tc.ActiveTripCount, 0) AS ActiveTripCount
-      FROM WMS_TransferJobs j WITH (NOLOCK)
-      LEFT JOIN WMS_TransferStations ss WITH (NOLOCK) ON j.SourceStationID=ss.StationID
-      LEFT JOIN WMS_TransferStations ds WITH (NOLOCK) ON j.DestStationID=ds.StationID
-      LEFT JOIN (
-        SELECT JobID, COUNT(*) AS ActiveTripCount
-        FROM WMS_TransferTrips WITH (NOLOCK)
-        WHERE Status NOT IN ('COMPLETE','CANCELLED')
-        GROUP BY JobID
-      ) tc ON tc.JobID=j.JobID
-      WHERE j.Status IN ('PENDING','IN_PROGRESS')
-      ORDER BY
-        CASE j.Priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 ELSE 2 END,
-        j.CreatedAt ASC
-    `);
-    cSet('tr:jobs:avail', result.recordset, 10000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('tr:jobs:avail', async () => {
+      const result = await getPool().request().query(`
+        SELECT j.JobID, j.JobCode, j.ProductDesc, j.Priority,
+          ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
+          j.PlannedBundles, j.PlannedWeightKg, j.ActualBundles, j.ActualWeightKg,
+          ISNULL(tc.ActiveTripCount, 0) AS ActiveTripCount
+        FROM WMS_TransferJobs j WITH (NOLOCK)
+        LEFT JOIN WMS_TransferStations ss WITH (NOLOCK) ON j.SourceStationID=ss.StationID
+        LEFT JOIN WMS_TransferStations ds WITH (NOLOCK) ON j.DestStationID=ds.StationID
+        LEFT JOIN (
+          SELECT JobID, COUNT(*) AS ActiveTripCount
+          FROM WMS_TransferTrips WITH (NOLOCK)
+          WHERE Status NOT IN ('COMPLETE','CANCELLED')
+          GROUP BY JobID
+        ) tc ON tc.JobID=j.JobID
+        WHERE j.Status IN ('PENDING','IN_PROGRESS')
+        ORDER BY
+          CASE j.Priority WHEN 'URGENT' THEN 0 WHEN 'HIGH' THEN 1 ELSE 2 END,
+          j.CreatedAt ASC
+      `);
+      return result.recordset;
+    }, 10_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -193,42 +186,41 @@ router.get('/jobs/available', async (req, res) => {
 router.get('/jobs', async (req, res) => {
   const { status, date } = req.query;
   const cacheKey = `tr:jobs:${status||'all'}:${date||''}`;
-  const hit = cGet(cacheKey);
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const r = pool.request();
-    const conditions = [];
-    if (status) { r.input('status', sql.NVarChar, status); conditions.push('j.Status=@status'); }
-    if (date) { r.input('date', sql.Date, date); conditions.push('CAST(j.CreatedAt AS DATE)=@date'); }
-    const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
-
-    const result = await r.query(`
-      SELECT j.*,
-        ss.StationName AS SourceStationName, ss.StationCode AS SourceStationCode,
-        ds.StationName AS DestStationName, ds.StationCode AS DestStationCode,
-        u.FullName AS CreatedByName,
-        ISNULL(ts.TripCount, 0) AS TripCount,
-        ISNULL(ts.CompletedTripCount, 0) AS CompletedTripCount,
-        ts.FirstTripStart, ts.LastTripEnd
-      FROM WMS_TransferJobs j WITH (NOLOCK)
-      LEFT JOIN WMS_TransferStations ss WITH (NOLOCK) ON j.SourceStationID=ss.StationID
-      LEFT JOIN WMS_TransferStations ds WITH (NOLOCK) ON j.DestStationID=ds.StationID
-      LEFT JOIN WMS_Users u WITH (NOLOCK) ON j.CreatedBy=u.UserID
-      LEFT JOIN (
-        SELECT JobID,
-          COUNT(*) AS TripCount,
-          SUM(CASE WHEN Status='COMPLETE' THEN 1 ELSE 0 END) AS CompletedTripCount,
-          MIN(SourceEntryTime) AS FirstTripStart,
-          MAX(DestExitTime) AS LastTripEnd
-        FROM WMS_TransferTrips WITH (NOLOCK)
-        GROUP BY JobID
-      ) ts ON ts.JobID=j.JobID
-      ${where}
-      ORDER BY j.CreatedAt DESC
-    `);
-    cSet(cacheKey, result.recordset, 10000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(cacheKey, async () => {
+      const pool = getPool();
+      const r = pool.request();
+      const conditions = [];
+      if (status) { r.input('status', sql.NVarChar, status); conditions.push('j.Status=@status'); }
+      if (date) { r.input('date', sql.Date, date); conditions.push('CAST(j.CreatedAt AS DATE)=@date'); }
+      const where = conditions.length ? 'WHERE ' + conditions.join(' AND ') : '';
+      const result = await r.query(`
+        SELECT j.*,
+          ss.StationName AS SourceStationName, ss.StationCode AS SourceStationCode,
+          ds.StationName AS DestStationName, ds.StationCode AS DestStationCode,
+          u.FullName AS CreatedByName,
+          ISNULL(ts.TripCount, 0) AS TripCount,
+          ISNULL(ts.CompletedTripCount, 0) AS CompletedTripCount,
+          ts.FirstTripStart, ts.LastTripEnd
+        FROM WMS_TransferJobs j WITH (NOLOCK)
+        LEFT JOIN WMS_TransferStations ss WITH (NOLOCK) ON j.SourceStationID=ss.StationID
+        LEFT JOIN WMS_TransferStations ds WITH (NOLOCK) ON j.DestStationID=ds.StationID
+        LEFT JOIN WMS_Users u WITH (NOLOCK) ON j.CreatedBy=u.UserID
+        LEFT JOIN (
+          SELECT JobID,
+            COUNT(*) AS TripCount,
+            SUM(CASE WHEN Status='COMPLETE' THEN 1 ELSE 0 END) AS CompletedTripCount,
+            MIN(SourceEntryTime) AS FirstTripStart,
+            MAX(DestExitTime) AS LastTripEnd
+          FROM WMS_TransferTrips WITH (NOLOCK)
+          GROUP BY JobID
+        ) ts ON ts.JobID=j.JobID
+        ${where}
+        ORDER BY j.CreatedAt DESC
+      `);
+      return result.recordset;
+    }, 10_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }
@@ -380,27 +372,26 @@ router.put('/jobs/:id/status', async (req, res) => {
 
 router.get('/trips/active', async (req, res) => {
   const cacheKey = `tr:trips:active:${req.user.UserID}`;
-  const hit = cGet(cacheKey);
-  if (hit) return res.json({ success: true, data: hit });
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .input('op', sql.Int, req.user.UserID)
-      .query(`
-        SELECT t.*, j.JobCode, j.ProductDesc, j.SourceStationID, j.DestStationID,
-          ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
-          j.PlannedBundles, j.PlannedWeightKg, j.Priority,
-          v.VehiclePlate, v.VehicleCode
-        FROM WMS_TransferTrips t WITH (NOLOCK)
-        JOIN WMS_TransferJobs j        WITH (NOLOCK) ON t.JobID=j.JobID
-        LEFT JOIN WMS_TransferStations ss WITH (NOLOCK) ON j.SourceStationID=ss.StationID
-        LEFT JOIN WMS_TransferStations ds WITH (NOLOCK) ON j.DestStationID=ds.StationID
-        LEFT JOIN WMS_TransferVehicles v  WITH (NOLOCK) ON t.VehicleID=v.VehicleID
-        WHERE t.OperatorID=@op AND t.Status NOT IN ('COMPLETE','CANCELLED')
-        ORDER BY t.CreatedAt DESC
-      `);
-    cSet(cacheKey, result.recordset, 10000);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap(cacheKey, async () => {
+      const result = await getPool().request()
+        .input('op', sql.Int, req.user.UserID)
+        .query(`
+          SELECT t.*, j.JobCode, j.ProductDesc, j.SourceStationID, j.DestStationID,
+            ss.StationName AS SourceStationName, ds.StationName AS DestStationName,
+            j.PlannedBundles, j.PlannedWeightKg, j.Priority,
+            v.VehiclePlate, v.VehicleCode
+          FROM WMS_TransferTrips t WITH (NOLOCK)
+          JOIN WMS_TransferJobs j           WITH (NOLOCK) ON t.JobID=j.JobID
+          LEFT JOIN WMS_TransferStations ss WITH (NOLOCK) ON j.SourceStationID=ss.StationID
+          LEFT JOIN WMS_TransferStations ds WITH (NOLOCK) ON j.DestStationID=ds.StationID
+          LEFT JOIN WMS_TransferVehicles v  WITH (NOLOCK) ON t.VehicleID=v.VehicleID
+          WHERE t.OperatorID=@op AND t.Status NOT IN ('COMPLETE','CANCELLED')
+          ORDER BY t.CreatedAt DESC
+        `);
+      return result.recordset;
+    }, 10_000);
+    res.json({ success: true, data });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
   }

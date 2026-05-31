@@ -2,20 +2,23 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const cache = require('../utils/cache');
 
 // GET /api/shift-plan/config
 router.get('/config', authenticate, async (req, res) => {
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query(`SELECT TOP 1 ConfigJSON FROM WMS_ShiftPlanConfig WHERE ConfigKey='default' ORDER BY ConfigID DESC`);
-    if (!result.recordset.length) return res.json({ success: true, data: null });
-    res.json({ success: true, data: JSON.parse(result.recordset[0].ConfigJSON) });
+    const data = await cache.wrap('shiftplan:config', async () => {
+      const result = await getPool().request()
+        .query(`SELECT TOP 1 ConfigJSON FROM WMS_ShiftPlanConfig WHERE ConfigKey='default' ORDER BY ConfigID DESC`);
+      return result.recordset.length ? JSON.parse(result.recordset[0].ConfigJSON) : null;
+    }, 30_000);
+    res.json({ success: true, data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 // PUT /api/shift-plan/config
 router.put('/config', authenticate, async (req, res) => {
+  cache.del('shiftplan:config');
   try {
     const pool = getPool();
     const json = JSON.stringify(req.body);
@@ -35,15 +38,18 @@ router.put('/config', authenticate, async (req, res) => {
 // GET /api/shift-plan/records
 router.get('/records', authenticate, async (req, res) => {
   try {
-    const pool = getPool();
-    const result = await pool.request()
-      .query(`SELECT RecordID as id, CONVERT(VARCHAR(10),RecordDate,23) as date, EndTime as endTime, OTEmp as otEmp, OTHrs1 as otHrs1, OTHrs2 as otHrs2 FROM WMS_ShiftPlanRecords ORDER BY RecordDate ASC`);
-    res.json({ success: true, data: result.recordset });
+    const data = await cache.wrap('shiftplan:records', async () => {
+      const result = await getPool().request()
+        .query(`SELECT RecordID as id, CONVERT(VARCHAR(10),RecordDate,23) as date, EndTime as endTime, OTEmp as otEmp, OTHrs1 as otHrs1, OTHrs2 as otHrs2 FROM WMS_ShiftPlanRecords ORDER BY RecordDate ASC`);
+      return result.recordset;
+    }, 30_000);
+    res.json({ success: true, data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
 // POST /api/shift-plan/records  (single or batch)
 router.post('/records', authenticate, async (req, res) => {
+  cache.del('shiftplan:records');
   try {
     const pool = getPool();
     const rows = Array.isArray(req.body) ? req.body : [req.body];
