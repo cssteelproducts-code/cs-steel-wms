@@ -1,10 +1,10 @@
-import { useState, useEffect, useRef, useCallback, useMemo } from 'react';
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import {
   Plus, Upload, Download, Lock, Unlock, RefreshCw, RotateCcw,
-  ChevronLeft, CheckCircle2, AlertTriangle, Clock, FileText,
+  ChevronLeft, CheckCircle2, FileText,
   Search, X, Save, Trash2
 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
@@ -30,6 +30,134 @@ const DiffBadge = ({ sys, counted }) => {
   return <span className={`text-xs font-bold ${diff > 0 ? 'text-blue-600' : 'text-red-600'}`}>{diff > 0 ? '+' : ''}{diff.toFixed(2)}</span>;
 };
 
+// ── Memoized row — only re-renders when its own props change ──────────────────
+const ItemRow = memo(function ItemRow({ item, isDraft, showSelected, detailTab, sessionStatus, isSelected, onSelect, onLock, onUnlock, onRecount, onEntries }) {
+  const diff = Number(item.TotalCounted) - Number(item.SystemQty);
+  const hasDiff = item.EntryCount > 0 && Math.abs(diff) >= 0.001;
+  const rowCls = item.IsLocked ? 'bg-emerald-50/40' : item.NeedsRecount ? 'bg-amber-50/50' : hasDiff ? 'bg-red-50/30' : '';
+  return (
+    <tr className={`border-b border-slate-50 hover:bg-slate-50/50 ${rowCls}`}>
+      {isDraft && !showSelected && (
+        <td className="px-3 py-2 w-8">
+          <input type="checkbox" checked={isSelected} onChange={() => onSelect(item.ItemID)}
+            className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" />
+        </td>
+      )}
+      <td className="px-3 py-2">
+        <div className="font-mono text-xs text-blue-600">{item.Location}</div>
+        {item.Warehouse && <div className="text-[10px] text-slate-400 mt-0.5">{item.Warehouse}</div>}
+      </td>
+      <td className="px-3 py-2">
+        <div className="font-mono text-xs">{item.ItemCode}</div>
+        <div className="text-[10px] text-slate-400 mt-0.5 flex gap-1.5 flex-wrap">
+          {item.SizeCode && <span>{item.SizeCode}</span>}
+          {item.Thickness && item.Thickness !== '0' && <span>t{item.Thickness}</span>}
+        </div>
+      </td>
+      <td className="px-3 py-2 hide-mobile">
+        <div className="text-xs text-slate-600 max-w-[200px] truncate">{item.ItemName}</div>
+        {item.CategoryName && <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[200px]">{item.CategoryName}</div>}
+      </td>
+      <td className="px-3 py-2 text-right font-semibold">{Number(item.SystemQty).toLocaleString()}</td>
+      {detailTab === 'process' && <>
+        <td className="px-3 py-2 text-right font-semibold text-blue-700">
+          {item.EntryCount > 0 ? Number(item.TotalCounted).toLocaleString() : <span className="text-slate-300">—</span>}
+        </td>
+        <td className="px-3 py-2 text-right"><DiffBadge sys={item.SystemQty} counted={item.TotalCounted} /></td>
+      </>}
+      <td className="px-3 py-2 text-center">
+        {item.IsLocked
+          ? <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold"><Lock size={11}/>Lock</span>
+          : item.NeedsRecount
+          ? <span className="inline-flex items-center gap-1 text-amber-600 text-xs font-semibold"><RotateCcw size={11}/>ตรวจซ้ำ</span>
+          : item.EntryCount > 0
+          ? <span className="text-blue-600 text-xs font-semibold">นับแล้ว</span>
+          : <span className="text-slate-300 text-xs">รอนับ</span>
+        }
+      </td>
+      <td className="px-3 py-2">
+        <div className="flex items-center gap-1">
+          {item.EntryCount > 0 && (
+            <button onClick={() => onEntries(item)} title="ดูประวัติ"
+              className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
+              <FileText size={12} />
+            </button>
+          )}
+          {sessionStatus === 'OPEN' && !item.IsLocked && item.EntryCount > 0 && (
+            <button onClick={() => onLock(item.ItemID)} title="Lock"
+              className="p-1 rounded hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors">
+              <Lock size={12} />
+            </button>
+          )}
+          {sessionStatus === 'OPEN' && !item.IsLocked && item.EntryCount > 0 && (
+            <button onClick={() => onRecount(item.ItemID)} title="ส่งกลับนับใหม่"
+              className="p-1 rounded hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors">
+              <RotateCcw size={12} />
+            </button>
+          )}
+          {item.IsLocked && (
+            <button onClick={() => onUnlock(item.ItemID)} title="Unlock"
+              className="p-1 rounded hover:bg-slate-100 text-slate-300 hover:text-slate-600 transition-colors">
+              <Unlock size={12} />
+            </button>
+          )}
+        </div>
+      </td>
+    </tr>
+  );
+});
+
+// ── Memoized field card — own local input state, no parent re-render on type ──
+const FieldCard = memo(function FieldCard({ item, submitting, onSubmit }) {
+  const [qty, setQty] = useState('');
+  const submit = () => {
+    if (qty === '' || qty == null) return;
+    onSubmit(item.ItemID, parseFloat(qty));
+    setQty('');
+  };
+  return (
+    <div className={`card py-3 px-4 space-y-2 ${item.NeedsRecount ? 'border-amber-200 bg-amber-50/30' : ''} ${item.IsLocked ? 'border-emerald-200 bg-emerald-50/20 opacity-60' : ''}`}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="font-black text-slate-900 text-sm">{item.ItemCode}</span>
+            <span className="text-xs text-blue-600 font-mono bg-blue-50 px-1.5 py-0.5 rounded">{item.Location}</span>
+            {item.NeedsRecount && <span className="text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><RotateCcw size={10}/>ตรวจนับซ้ำ</span>}
+            {item.IsLocked && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Lock size={10}/>Lock</span>}
+          </div>
+          <div className="text-xs text-slate-500 mt-0.5 truncate">{item.ItemName}</div>
+        </div>
+        <div className="text-right flex-shrink-0">
+          <div className="text-xs text-slate-400">ยอดระบบ</div>
+          <div className="font-black text-slate-900">{Number(item.SystemQty).toLocaleString()}</div>
+          {item.EntryCount > 0 && (
+            <div className="text-xs text-blue-600 font-semibold">นับได้: {Number(item.TotalCounted).toLocaleString()}</div>
+          )}
+        </div>
+      </div>
+      {!item.IsLocked && (
+        <div className="flex gap-2">
+          <input
+            type="number" step="0.01" min="0"
+            value={qty}
+            onChange={e => setQty(e.target.value)}
+            placeholder="ใส่จำนวนที่นับได้"
+            className="input-field text-sm flex-1"
+            onKeyDown={e => { if (e.key === 'Enter') submit(); }}
+          />
+          <button onClick={submit} disabled={submitting || qty === '' || qty == null}
+            className="btn-primary text-sm px-4 flex-shrink-0">
+            {submitting
+              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+              : <><Save size={14} />บันทึก</>
+            }
+          </button>
+        </div>
+      )}
+    </div>
+  );
+});
+
 export default function StockCount() {
   const { hasPermission } = useAuth();
   const canOffice = hasPermission('STOCKCOUNT_OFFICE');
@@ -40,10 +168,10 @@ export default function StockCount() {
   // ── Office state ──
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [view, setView] = useState('list'); // 'list' | 'detail'
+  const [view, setView] = useState('list');
   const [detailTab, setDetailTab] = useState('items');
   const [selectedSession, setSelectedSession] = useState(null);
-  const [sessionData, setSessionData] = useState(null); // { session, items }
+  const [sessionData, setSessionData] = useState(null);
   const [detailLoading, setDetailLoading] = useState(false);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
@@ -56,7 +184,7 @@ export default function StockCount() {
   const [filterGname, setFilterGname] = useState('');
   const [filterSize, setFilterSize] = useState('');
   const [filterThick, setFilterThick] = useState('');
-  const [entriesModal, setEntriesModal] = useState(null); // item object
+  const [entriesModal, setEntriesModal] = useState(null);
   const [entries, setEntries] = useState([]);
 
   // ── Field state ──
@@ -64,10 +192,8 @@ export default function StockCount() {
   const [fieldSessionId, setFieldSessionId] = useState('');
   const [fieldData, setFieldData] = useState(null);
   const [fieldLoading, setFieldLoading] = useState(false);
-  const [countInputs, setCountInputs] = useState({});
-  const [countNotes, setCountNotes] = useState({});
   const [fieldSearch, setFieldSearch] = useState('');
-  const [fieldFilter, setFieldFilter] = useState('all'); // 'all' | 'recount' | 'pending' | 'done'
+  const [fieldFilter, setFieldFilter] = useState('all');
   const [submitting, setSubmitting] = useState({});
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [showSelected, setShowSelected] = useState(false);
@@ -107,8 +233,6 @@ export default function StockCount() {
     try {
       const res = await api.get(`/stock-count/${id}`);
       setFieldData(res.data.data);
-      setCountInputs({});
-      setCountNotes({});
     } catch { toast.error('โหลดข้อมูลล้มเหลว'); }
     finally { setFieldLoading(false); }
   }, []);
@@ -187,7 +311,6 @@ export default function StockCount() {
         toast.success(res.data.message);
         setSelectedIds(new Set());
         setShowSelected(false);
-        // Backend processes in background — poll fetchDetail every 3s until items load (max 60s)
         const sid = selectedSession.SessionID;
         let attempts = 0;
         const poll = async () => {
@@ -196,7 +319,7 @@ export default function StockCount() {
             const count = detail?.data?.data?.items?.length ?? 0;
             await fetchDetail(sid);
             if (count === 0 && ++attempts < 80) setTimeout(poll, 3000);
-          } catch { /* ignore poll errors */ }
+          } catch {}
         };
         setTimeout(poll, 3000);
       }
@@ -204,32 +327,32 @@ export default function StockCount() {
     finally { setImporting(false); }
   };
 
-  const handleLock = async (itemId) => {
+  const handleLock = useCallback(async (itemId) => {
     setSessionData(prev => ({ ...prev, items: prev.items.map(i => i.ItemID === itemId ? { ...i, IsLocked: 1, NeedsRecount: 0 } : i) }));
     try {
-      const res = await api.put(`/stock-count/${selectedSession.SessionID}/items/${itemId}/lock`);
+      const res = await api.put(`/stock-count/${selectedSession?.SessionID}/items/${itemId}/lock`);
       if (res.data.success) toast.success(res.data.message);
-      else fetchDetail(selectedSession.SessionID);
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession.SessionID); }
-  };
+      else fetchDetail(selectedSession?.SessionID);
+    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession?.SessionID); }
+  }, [selectedSession?.SessionID, fetchDetail]);
 
-  const handleUnlock = async (itemId) => {
+  const handleUnlock = useCallback(async (itemId) => {
     setSessionData(prev => ({ ...prev, items: prev.items.map(i => i.ItemID === itemId ? { ...i, IsLocked: 0, LockedAt: null, LockedBy: null } : i) }));
     try {
-      const res = await api.put(`/stock-count/${selectedSession.SessionID}/items/${itemId}/unlock`);
+      const res = await api.put(`/stock-count/${selectedSession?.SessionID}/items/${itemId}/unlock`);
       if (res.data.success) toast.success(res.data.message);
-      else fetchDetail(selectedSession.SessionID);
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession.SessionID); }
-  };
+      else fetchDetail(selectedSession?.SessionID);
+    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession?.SessionID); }
+  }, [selectedSession?.SessionID, fetchDetail]);
 
-  const handleRecount = async (itemId) => {
+  const handleRecount = useCallback(async (itemId) => {
     setSessionData(prev => ({ ...prev, items: prev.items.map(i => i.ItemID === itemId ? { ...i, NeedsRecount: 1, IsLocked: 0, TotalCounted: 0, EntryCount: 0 } : i) }));
     try {
-      const res = await api.put(`/stock-count/${selectedSession.SessionID}/items/${itemId}/recount`);
+      const res = await api.put(`/stock-count/${selectedSession?.SessionID}/items/${itemId}/recount`);
       if (res.data.success) toast.success(res.data.message);
-      else fetchDetail(selectedSession.SessionID);
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession.SessionID); }
-  };
+      else fetchDetail(selectedSession?.SessionID);
+    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession?.SessionID); }
+  }, [selectedSession?.SessionID, fetchDetail]);
 
   const handleLockCorrect = async () => {
     setSaving(true);
@@ -261,22 +384,19 @@ export default function StockCount() {
     window.open(`${api.defaults.baseURL}/stock-count/${selectedSession.SessionID}/report`, '_blank');
   };
 
-  const openEntries = async (item) => {
+  const onOpenEntries = useCallback(async (item) => {
     setEntriesModal(item);
     try {
-      const res = await api.get(`/stock-count/${selectedSession.SessionID}/items/${item.ItemID}/entries`);
+      const res = await api.get(`/stock-count/${selectedSession?.SessionID}/items/${item.ItemID}/entries`);
       setEntries(res.data.data || []);
     } catch { setEntries([]); }
-  };
+  }, [selectedSession?.SessionID]);
 
   // ── Field actions ─────────────────────────────────────
 
-  const handleSubmitCount = async (itemId) => {
-    const qty = countInputs[itemId];
-    if (qty === '' || qty == null) return toast.error('กรุณาระบุจำนวน');
-    const parsedQty = parseFloat(qty);
+  const handleSubmitCount = useCallback(async (itemId, parsedQty) => {
+    if (!parsedQty || isNaN(parsedQty)) return toast.error('กรุณาระบุจำนวน');
     setSubmitting(p => ({ ...p, [itemId]: true }));
-    setCountInputs(p => ({ ...p, [itemId]: '' }));
     setFieldData(prev => ({
       ...prev,
       items: prev.items.map(i => i.ItemID !== itemId ? i : {
@@ -284,14 +404,12 @@ export default function StockCount() {
       })
     }));
     try {
-      const res = await api.post(`/stock-count/${fieldSessionId}/count`, {
-        itemId, countedQty: parsedQty, notes: countNotes[itemId] || ''
-      });
+      const res = await api.post(`/stock-count/${fieldSessionId}/count`, { itemId, countedQty: parsedQty, notes: '' });
       if (res.data.success) toast.success(res.data.message);
       else fetchFieldData(fieldSessionId);
     } catch (err) { toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ'); fetchFieldData(fieldSessionId); }
     finally { setSubmitting(p => ({ ...p, [itemId]: false })); }
-  };
+  }, [fieldSessionId, fetchFieldData]);
 
   // ── Derived data ──────────────────────────────────────
 
@@ -317,13 +435,14 @@ export default function StockCount() {
     return baseFiltered.filter(i => i.ItemCode?.toLowerCase().includes(q) || i.ItemName?.toLowerCase().includes(q));
   }, [baseFiltered, search]);
 
-  const toggleSelect = (itemId) => {
+  const onSelectItem = useCallback((itemId) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
       next.has(itemId) ? next.delete(itemId) : next.add(itemId);
       return next;
     });
-  };
+  }, []);
+
   const toggleSelectAll = () => {
     const ids = filteredItems.map(i => i.ItemID);
     const allSel = ids.length > 0 && ids.every(id => selectedIds.has(id));
@@ -334,10 +453,17 @@ export default function StockCount() {
       return next;
     });
   };
-  const allFilteredSelected = filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.ItemID));
-  const someFilteredSelected = !allFilteredSelected && filteredItems.some(i => selectedIds.has(i.ItemID));
+
+  const allFilteredSelected = useMemo(() =>
+    filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.ItemID)),
+    [filteredItems, selectedIds]);
+  const someFilteredSelected = useMemo(() =>
+    !allFilteredSelected && filteredItems.some(i => selectedIds.has(i.ItemID)),
+    [allFilteredSelected, filteredItems, selectedIds]);
+
   const displayItems = useMemo(() => showSelected ? items.filter(i => selectedIds.has(i.ItemID)) : filteredItems, [showSelected, items, filteredItems, selectedIds]);
   const isDraft = sessionData?.session?.Status === 'DRAFT';
+  const sessionStatus = sessionData?.session?.Status;
 
   const stats = useMemo(() => ({
     total: items.length,
@@ -447,14 +573,14 @@ export default function StockCount() {
                     <div>
                       <h3 className="text-lg font-black text-slate-900">{sessionData?.session?.SessionName || selectedSession.SessionName}</h3>
                       <div className="flex items-center gap-2 mt-0.5 flex-wrap">
-                        <StatusBadge status={sessionData?.session?.Status || selectedSession.Status} />
+                        <StatusBadge status={sessionStatus || selectedSession.Status} />
                         {sessionData?.session?.WarehouseCode && <span className="text-xs text-slate-400">{sessionData.session.WarehouseCode}</span>}
                         <span className="text-xs text-slate-400">{dayjs(selectedSession.CreatedAt).format('D MMM BB HH:mm')}</span>
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
-                    {sessionData?.session?.Status === 'DRAFT' && (
+                    {sessionStatus === 'DRAFT' && (
                       <>
                         <input ref={importRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleImport} />
                         <button onClick={() => importRef.current?.click()} disabled={importing}
@@ -470,7 +596,7 @@ export default function StockCount() {
                         </button>
                       </>
                     )}
-                    {sessionData?.session?.Status === 'OPEN' && (
+                    {sessionStatus === 'OPEN' && (
                       <>
                         <button onClick={handleLockCorrect} disabled={saving} className="btn-secondary text-sm flex items-center gap-1.5">
                           <Lock size={13} />Lock ที่ถูกต้อง
@@ -484,7 +610,7 @@ export default function StockCount() {
                         </button>
                       </>
                     )}
-                    {sessionData?.session?.Status !== 'DRAFT' && (
+                    {sessionStatus !== 'DRAFT' && (
                       <button onClick={handleReport} className="btn-secondary text-sm flex items-center gap-1.5">
                         <Download size={14} />รายงาน
                       </button>
@@ -495,7 +621,6 @@ export default function StockCount() {
                   </div>
                 </div>
 
-                {/* Stats — always visible so user sees count change after import */}
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
                   {[
                     { label: 'ทั้งหมด', value: stats.total, cls: 'text-slate-700' },
@@ -525,7 +650,6 @@ export default function StockCount() {
                 ))}
               </div>
 
-              {/* Filters — hidden when reviewing selected items */}
               {!showSelected && (
                 <div className="flex gap-2 flex-wrap">
                   <select value={filterWH} onChange={e => { setFilterWH(e.target.value); setFilterLoc(''); }}
@@ -568,7 +692,6 @@ export default function StockCount() {
                 </div>
               )}
 
-              {/* Selection bar (DRAFT only) */}
               {isDraft && (
                 <div className="flex items-center gap-3 flex-wrap bg-white border border-slate-200 rounded-xl px-4 py-2.5">
                   {showSelected ? (
@@ -659,83 +782,22 @@ export default function StockCount() {
                           {showSelected ? 'ยังไม่ได้เลือกรายการ' : 'ไม่พบรายการ'}
                         </td></tr>
                       )}
-                      {pageItems.map(item => {
-                        const diff = Number(item.TotalCounted) - Number(item.SystemQty);
-                        const hasDiff = item.EntryCount > 0 && Math.abs(diff) >= 0.001;
-                        const rowCls = item.IsLocked ? 'bg-emerald-50/40' : item.NeedsRecount ? 'bg-amber-50/50' : hasDiff ? 'bg-red-50/30' : '';
-                        return (
-                          <tr key={item.ItemID} className={`border-b border-slate-50 hover:bg-slate-50/50 ${rowCls}`}>
-                            {isDraft && !showSelected && (
-                              <td className="px-3 py-2 w-8">
-                                <input type="checkbox"
-                                  checked={selectedIds.has(item.ItemID)}
-                                  onChange={() => toggleSelect(item.ItemID)}
-                                  className="w-4 h-4 rounded border-slate-300 accent-red-600 cursor-pointer" />
-                              </td>
-                            )}
-                            <td className="px-3 py-2">
-                              <div className="font-mono text-xs text-blue-600">{item.Location}</div>
-                              {item.Warehouse && <div className="text-[10px] text-slate-400 mt-0.5">{item.Warehouse}</div>}
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="font-mono text-xs">{item.ItemCode}</div>
-                              <div className="text-[10px] text-slate-400 mt-0.5 flex gap-1.5 flex-wrap">
-                                {item.SizeCode && <span>{item.SizeCode}</span>}
-                                {item.Thickness && item.Thickness !== '0' && <span>t{item.Thickness}</span>}
-                              </div>
-                            </td>
-                            <td className="px-3 py-2 hide-mobile">
-                              <div className="text-xs text-slate-600 max-w-[200px] truncate">{item.ItemName}</div>
-                              {item.CategoryName && <div className="text-[10px] text-slate-400 mt-0.5 truncate max-w-[200px]">{item.CategoryName}</div>}
-                            </td>
-                            <td className="px-3 py-2 text-right font-semibold">{Number(item.SystemQty).toLocaleString()}</td>
-                            {detailTab === 'process' && <>
-                              <td className="px-3 py-2 text-right font-semibold text-blue-700">
-                                {item.EntryCount > 0 ? Number(item.TotalCounted).toLocaleString() : <span className="text-slate-300">—</span>}
-                              </td>
-                              <td className="px-3 py-2 text-right"><DiffBadge sys={item.SystemQty} counted={item.TotalCounted} /></td>
-                            </>}
-                            <td className="px-3 py-2 text-center">
-                              {item.IsLocked
-                                ? <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold"><Lock size={11}/>Lock</span>
-                                : item.NeedsRecount
-                                ? <span className="inline-flex items-center gap-1 text-amber-600 text-xs font-semibold"><RotateCcw size={11}/>ตรวจซ้ำ</span>
-                                : item.EntryCount > 0
-                                ? <span className="text-blue-600 text-xs font-semibold">นับแล้ว</span>
-                                : <span className="text-slate-300 text-xs">รอนับ</span>
-                              }
-                            </td>
-                            <td className="px-3 py-2">
-                              <div className="flex items-center gap-1">
-                                {item.EntryCount > 0 && (
-                                  <button onClick={() => openEntries(item)} title="ดูประวัติ"
-                                    className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
-                                    <FileText size={12} />
-                                  </button>
-                                )}
-                                {sessionData?.session?.Status === 'OPEN' && !item.IsLocked && item.EntryCount > 0 && (
-                                  <button onClick={() => handleLock(item.ItemID)} title="Lock"
-                                    className="p-1 rounded hover:bg-emerald-50 text-slate-400 hover:text-emerald-600 transition-colors">
-                                    <Lock size={12} />
-                                  </button>
-                                )}
-                                {sessionData?.session?.Status === 'OPEN' && !item.IsLocked && item.EntryCount > 0 && (
-                                  <button onClick={() => handleRecount(item.ItemID)} title="ส่งกลับนับใหม่"
-                                    className="p-1 rounded hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors">
-                                    <RotateCcw size={12} />
-                                  </button>
-                                )}
-                                {item.IsLocked && (
-                                  <button onClick={() => handleUnlock(item.ItemID)} title="Unlock"
-                                    className="p-1 rounded hover:bg-slate-100 text-slate-300 hover:text-slate-600 transition-colors">
-                                    <Unlock size={12} />
-                                  </button>
-                                )}
-                              </div>
-                            </td>
-                          </tr>
-                        );
-                      })}
+                      {pageItems.map(item => (
+                        <ItemRow
+                          key={item.ItemID}
+                          item={item}
+                          isDraft={isDraft}
+                          showSelected={showSelected}
+                          detailTab={detailTab}
+                          sessionStatus={sessionStatus}
+                          isSelected={selectedIds.has(item.ItemID)}
+                          onSelect={onSelectItem}
+                          onLock={handleLock}
+                          onUnlock={handleUnlock}
+                          onRecount={handleRecount}
+                          onEntries={onOpenEntries}
+                        />
+                      ))}
                     </tbody>
                   </table>
                   {totalPages > 1 && (
@@ -757,7 +819,6 @@ export default function StockCount() {
       {/* ══════════ FIELD TAB ══════════ */}
       {tab === 'field' && (
         <div className="space-y-4">
-          {/* Session selector */}
           <div className="card">
             <label className="label">เลือกรอบตรวจนับ</label>
             <select value={fieldSessionId} onChange={e => setFieldSessionId(e.target.value)} className="input-field">
@@ -775,7 +836,6 @@ export default function StockCount() {
 
           {fieldSessionId && (
             <>
-              {/* Filter + Search */}
               <div className="flex gap-2 flex-wrap">
                 {[
                   { v: 'all', l: 'ทั้งหมด' },
@@ -824,48 +884,12 @@ export default function StockCount() {
                     </div>
                   )}
                   {fieldPageItems.map(item => (
-                    <div key={item.ItemID}
-                      className={`card py-3 px-4 space-y-2 ${item.NeedsRecount ? 'border-amber-200 bg-amber-50/30' : ''} ${item.IsLocked ? 'border-emerald-200 bg-emerald-50/20 opacity-60' : ''}`}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-black text-slate-900 text-sm">{item.ItemCode}</span>
-                            <span className="text-xs text-blue-600 font-mono bg-blue-50 px-1.5 py-0.5 rounded">{item.Location}</span>
-                            {item.NeedsRecount && <span className="text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><RotateCcw size={10}/>ตรวจนับซ้ำ</span>}
-                            {item.IsLocked && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Lock size={10}/>Lock</span>}
-                          </div>
-                          <div className="text-xs text-slate-500 mt-0.5 truncate">{item.ItemName}</div>
-                        </div>
-                        <div className="text-right flex-shrink-0">
-                          <div className="text-xs text-slate-400">ยอดระบบ</div>
-                          <div className="font-black text-slate-900">{Number(item.SystemQty).toLocaleString()}</div>
-                          {item.EntryCount > 0 && (
-                            <div className="text-xs text-blue-600 font-semibold">นับได้: {Number(item.TotalCounted).toLocaleString()}</div>
-                          )}
-                        </div>
-                      </div>
-                      {!item.IsLocked && (
-                        <div className="flex gap-2">
-                          <input
-                            type="number" step="0.01" min="0"
-                            value={countInputs[item.ItemID] ?? ''}
-                            onChange={e => setCountInputs(p => ({ ...p, [item.ItemID]: e.target.value }))}
-                            placeholder="ใส่จำนวนที่นับได้"
-                            className="input-field text-sm flex-1"
-                            onKeyDown={e => { if (e.key === 'Enter') handleSubmitCount(item.ItemID); }}
-                          />
-                          <button
-                            onClick={() => handleSubmitCount(item.ItemID)}
-                            disabled={submitting[item.ItemID] || countInputs[item.ItemID] === '' || countInputs[item.ItemID] == null}
-                            className="btn-primary text-sm px-4 flex-shrink-0">
-                            {submitting[item.ItemID]
-                              ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                              : <><Save size={14} />บันทึก</>
-                            }
-                          </button>
-                        </div>
-                      )}
-                    </div>
+                    <FieldCard
+                      key={item.ItemID}
+                      item={item}
+                      submitting={!!submitting[item.ItemID]}
+                      onSubmit={handleSubmitCount}
+                    />
                   ))}
                   {fieldTotalPages > 1 && (
                     <div className="flex items-center justify-center gap-1 pt-2">
@@ -885,7 +909,6 @@ export default function StockCount() {
 
       {/* ══════════ MODALS ══════════ */}
 
-      {/* Create Session Modal */}
       {createModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
@@ -916,7 +939,6 @@ export default function StockCount() {
         </div>
       )}
 
-      {/* Entries History Modal */}
       {entriesModal && (
         <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl border border-slate-200">

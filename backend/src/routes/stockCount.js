@@ -80,6 +80,8 @@ async function ensureTables() {
         CREATE INDEX IX_SCE_ItemID ON WMS_StockCountEntries(ItemID);
       IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_SCE_SessionID' AND object_id=OBJECT_ID('WMS_StockCountEntries'))
         CREATE INDEX IX_SCE_SessionID ON WMS_StockCountEntries(SessionID);
+      IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_SCI_Sess_Loc_Code' AND object_id=OBJECT_ID('WMS_StockCountItems'))
+        CREATE INDEX IX_SCI_Sess_Loc_Code ON WMS_StockCountItems(SessionID, Location, ItemCode);
     `);
     _ready = true;
   } catch (e) {

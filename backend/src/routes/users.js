@@ -201,44 +201,22 @@ router.get('/permissions/:roleId', authenticate, requireAdmin, async (req, res) 
   }
 });
 
-// POST /api/users/permissions - Set permissions for a role
+// POST /api/users/permissions - Set permissions for a role (2 round trips: DELETE + bulk INSERT)
 router.post('/permissions', authenticate, requireAdmin, async (req, res) => {
   try {
     const { roleId, permissions } = req.body;
-    // permissions = [{ menuCode, menuName, canView, canCreate, canEdit, canDelete }]
     const pool = getPool();
-
-    for (const perm of permissions) {
-      const existing = await pool.request()
-        .input('RoleID', sql.Int, roleId)
-        .input('MenuCode', sql.NVarChar, perm.menuCode)
-        .query('SELECT PermissionID FROM WMS_MenuPermissions WHERE RoleID=@RoleID AND MenuCode=@MenuCode');
-
-      if (existing.recordset.length > 0) {
-        await pool.request()
-          .input('RoleID', sql.Int, roleId)
-          .input('MenuCode', sql.NVarChar, perm.menuCode)
-          .input('CanView', sql.Bit, perm.canView ? 1 : 0)
-          .input('CanCreate', sql.Bit, perm.canCreate ? 1 : 0)
-          .input('CanEdit', sql.Bit, perm.canEdit ? 1 : 0)
-          .input('CanDelete', sql.Bit, perm.canDelete ? 1 : 0)
-          .query(`UPDATE WMS_MenuPermissions SET CanView=@CanView, CanCreate=@CanCreate,
-                  CanEdit=@CanEdit, CanDelete=@CanDelete
-                  WHERE RoleID=@RoleID AND MenuCode=@MenuCode`);
-      } else {
-        await pool.request()
-          .input('RoleID', sql.Int, roleId)
-          .input('MenuCode', sql.NVarChar, perm.menuCode)
-          .input('MenuName', sql.NVarChar, perm.menuName || '')
-          .input('CanView', sql.Bit, perm.canView ? 1 : 0)
-          .input('CanCreate', sql.Bit, perm.canCreate ? 1 : 0)
-          .input('CanEdit', sql.Bit, perm.canEdit ? 1 : 0)
-          .input('CanDelete', sql.Bit, perm.canDelete ? 1 : 0)
-          .query(`INSERT INTO WMS_MenuPermissions (RoleID, MenuCode, MenuName, CanView, CanCreate, CanEdit, CanDelete)
-                  VALUES (@RoleID, @MenuCode, @MenuName, @CanView, @CanCreate, @CanEdit, @CanDelete)`);
-      }
+    const esc = s => String(s || '').replace(/'/g, "''");
+    await pool.request().input('RoleID', sql.Int, roleId)
+      .query('DELETE FROM WMS_MenuPermissions WHERE RoleID=@RoleID');
+    if (permissions && permissions.length > 0) {
+      const vals = permissions.map(p =>
+        `(${parseInt(roleId)},N'${esc(p.menuCode)}',N'${esc(p.menuName)}',${p.canView?1:0},${p.canCreate?1:0},${p.canEdit?1:0},${p.canDelete?1:0})`
+      );
+      await pool.request().query(
+        `INSERT INTO WMS_MenuPermissions (RoleID,MenuCode,MenuName,CanView,CanCreate,CanEdit,CanDelete) VALUES ${vals.join(',')}`
+      );
     }
-
     res.json({ success: true, message: 'บันทึกสิทธิ์การใช้งานสำเร็จ' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
