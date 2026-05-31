@@ -5,6 +5,9 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { LanguageProvider } from './context/LanguageContext';
 import MainLayout from './layouts/MainLayout';
 import LoadingSpinner from './components/LoadingSpinner';
+// Login is critical-path — always eager-loaded so it shows instantly on first visit.
+// All other pages are lazy (separate chunks downloaded only when navigated to).
+import Login from './pages/Login';
 
 // Lazy-load every page — splits the bundle so only the current page's JS is downloaded.
 // Initial bundle drops from ~2MB to ~250KB; each page chunk loads on first visit.
@@ -30,7 +33,6 @@ const Records        = lazy(() => import('./pages/Records'));
 const LocationCheck  = lazy(() => import('./pages/LocationCheck'));
 const StockCount     = lazy(() => import('./pages/StockCount'));
 const Stock          = lazy(() => import('./pages/Stock'));
-const Login          = lazy(() => import('./pages/Login'));
 
 const PageSpinner = () => (
   <div className="flex items-center justify-center h-48">
