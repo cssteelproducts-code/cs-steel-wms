@@ -572,7 +572,6 @@ export default function Master() {
                     <span className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold bg-amber-50 text-amber-700">{ch}:{cm}</span>
                   </div>
                   <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.TypeName, line1: i.TypeName, line2: i.Description || null, line3: null, title: 'พิมพ์บาร์โค้ด ประเภทรถ' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                     <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700 transition-colors"><Edit size={14} /></button>
                     <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500 transition-colors"><Trash2 size={14} /></button>
                   </div>
@@ -619,7 +618,6 @@ export default function Master() {
               <div className="flex-1"><p className="text-sm font-semibold text-gray-900">{i.TypeName}</p><p className="text-xs text-gray-400">ลำดับ {i.SortOrder}</p></div>
               <span className={`flex-shrink-0 px-2.5 py-1 rounded-xl text-xs font-semibold ${i.IsActive ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-500'}`}>{i.IsActive ? '● ใช้งาน' : '○ ปิด'}</span>
               <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                <button onClick={(e) => { e.stopPropagation(); setPrintItem({ qrValue: i.TypeCode, line1: i.TypeCode, line2: i.TypeName, line3: null, title: 'พิมพ์บาร์โค้ด ประเภท Location' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
                 <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                 <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
               </div>
@@ -1167,7 +1165,7 @@ export default function Master() {
                   {printItem.line1}
                 </div>
                 {printItem.line2 && (
-                  <div className="text-sm text-gray-600 mt-1 leading-tight">{printItem.line2}</div>
+                  <div className="text-xs text-gray-600 mt-1 leading-tight whitespace-nowrap overflow-hidden text-ellipsis">{printItem.line2}</div>
                 )}
                 {printItem.line3 && (
                   <div className="text-xs text-gray-400 mt-1 flex items-center justify-center gap-1">

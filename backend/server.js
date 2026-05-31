@@ -20,7 +20,8 @@ app.use(cors({
 
 // Rate limiting
 app.use('/api/auth', rateLimit({ windowMs: 15 * 60 * 1000, max: 50 }));
-app.use('/api/', rateLimit({ windowMs: 60 * 1000, max: 300, skip: (req) => req.path === '/health' }));
+app.set('trust proxy', 1);
+app.use('/api/', rateLimit({ windowMs: 60 * 1000, max: 600, skip: (req) => req.path === '/health' }));
 
 // Logging & parsing
 app.use(morgan(process.env.NODE_ENV === 'production' ? 'combined' : 'dev'));
@@ -540,6 +541,14 @@ const runMigrations = async () => {
     }
   }
   console.log('✅ Performance indexes ready');
+
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT 1 FROM sys.columns WHERE object_id=OBJECT_ID('WMS_Customers') AND name='ARCode')
+        ALTER TABLE WMS_Customers ADD ARCode NVARCHAR(50) NULL;
+    `);
+    console.log('✅ WMS_Customers.ARCode column ready');
+  } catch (e) { console.warn('⚠ ARCode migration:', e.message); }
 
   try {
     await pool.request().query(`
