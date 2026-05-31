@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -34,10 +34,11 @@ const LocationCheck  = lazy(() => import('./pages/LocationCheck'));
 const StockCount     = lazy(() => import('./pages/StockCount'));
 const Stock          = lazy(() => import('./pages/Stock'));
 
-const PageSpinner = () => (
-  <div className="flex items-center justify-center h-48">
-    <LoadingSpinner size="lg" text="กำลังโหลด..." />
-  </div>
+// Thin top bar instead of full spinner — avoids jarring white flash during chunk load
+const PageFallback = () => (
+  <div style={{ position: 'fixed', top: 0, left: 0, right: 0, height: 3,
+    background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)',
+    backgroundSize: '200% 100%', animation: 'loading-sweep 1s linear infinite', zIndex: 99998 }} />
 );
 
 const ProtectedRoute = ({ children, menuCode, menuCodeAny }) => {
@@ -71,9 +72,35 @@ const PublicRoute = ({ children }) => {
   return children;
 };
 
+// Preload all page chunks after login so navigation is instant
+const LAZY_PAGES = [
+  () => import('./pages/Dashboard'),      () => import('./pages/TripMonitor'),
+  () => import('./pages/WeighIn'),        () => import('./pages/DataStation'),
+  () => import('./pages/LoadingStation'), () => import('./pages/WeighOut'),
+  () => import('./pages/Checker'),        () => import('./pages/Records'),
+  () => import('./pages/Alerts'),         () => import('./pages/Users'),
+  () => import('./pages/Master'),         () => import('./pages/Transfer'),
+  () => import('./pages/TransferDriver'), () => import('./pages/Stock'),
+  () => import('./pages/StockCount'),     () => import('./pages/LocationCheck'),
+  () => import('./pages/DeliveryPlan'),   () => import('./pages/ETA'),
+  () => import('./pages/Profile'),        () => import('./pages/Forecast'),
+  () => import('./pages/ShiftPlanning'),  () => import('./pages/FreightCalc'),
+];
+
 function AppRoutes() {
+  const { user } = useAuth();
+
+  useEffect(() => {
+    if (!user) return;
+    // Delay 1.5s so initial data fetches (master data warmup) get bandwidth first
+    const t = setTimeout(() => {
+      LAZY_PAGES.forEach(load => load().catch(() => {}));
+    }, 1500);
+    return () => clearTimeout(t);
+  }, [user]);
+
   return (
-    <Suspense fallback={<PageSpinner />}>
+    <Suspense fallback={<PageFallback />}>
       <Routes>
         <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/" element={<ProtectedRoute><MainLayout /></ProtectedRoute>}>
