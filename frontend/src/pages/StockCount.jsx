@@ -6,7 +6,7 @@ import toast from 'react-hot-toast';
 import {
   Plus, Upload, Download, Lock, Unlock, RefreshCw, RotateCcw,
   ChevronLeft, CheckCircle2, FileText, ChevronDown,
-  Search, X, Save, Trash2
+  Search, X, Save, Trash2, Eye, EyeOff
 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
@@ -270,7 +270,7 @@ export default function StockCount() {
   const [showSelected, setShowSelected] = useState(false);
   const [page, setPage] = useState(0);
   const [fieldPage, setFieldPage] = useState(0);
-  const [deleteModal, setDeleteModal] = useState({ open: false, session: null, password: '', loading: false });
+  const [deleteModal, setDeleteModal] = useState({ open: false, session: null, password: '', loading: false, showPw: false });
 
   // ── Fetch ─────────────────────────────────────────────
 
@@ -457,7 +457,7 @@ export default function StockCount() {
       const res = await api.delete(`/stock-count/${session.SessionID}`, { data: { password } });
       if (res.data.success) {
         toast.success(res.data.message);
-        setDeleteModal({ open: false, session: null, password: '', loading: false });
+        setDeleteModal({ open: false, session: null, password: '', loading: false, showPw: false });
         fetchSessions();
       }
     } catch (err) {
@@ -634,15 +634,22 @@ export default function StockCount() {
               </div>
             </div>
             <p className="text-sm text-slate-600">ข้อมูลทั้งหมดในรอบนี้จะถูกลบถาวร กรุณาใส่รหัสผ่านของคุณเพื่อยืนยัน</p>
-            <input
-              type="password"
-              placeholder="รหัสผ่านของคุณ"
-              value={deleteModal.password}
-              onChange={e => setDeleteModal(m => ({ ...m, password: e.target.value }))}
-              onKeyDown={e => e.key === 'Enter' && confirmDelete()}
-              autoFocus
-              className="input-field w-full"
-            />
+            <div className="relative">
+              <input
+                type={deleteModal.showPw ? 'text' : 'password'}
+                placeholder="รหัสผ่านของคุณ"
+                value={deleteModal.password}
+                onChange={e => setDeleteModal(m => ({ ...m, password: e.target.value }))}
+                onKeyDown={e => e.key === 'Enter' && confirmDelete()}
+                autoFocus
+                className="input-field w-full pr-10"
+              />
+              <button type="button"
+                onClick={() => setDeleteModal(m => ({ ...m, showPw: !m.showPw }))}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors">
+                {deleteModal.showPw ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
             <div className="flex gap-2 justify-end">
               <button onClick={() => setDeleteModal({ open: false, session: null, password: '', loading: false })}
                 className="btn-secondary text-sm" disabled={deleteModal.loading}>
