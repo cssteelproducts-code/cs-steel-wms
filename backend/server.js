@@ -52,6 +52,7 @@ app.use('/api/stock-count', require('./src/routes/stockCount'));
 app.use('/api/delivery', require('./src/routes/deliveryPlan'));
 app.use('/api/transfer', require('./src/routes/transfer'));
 app.use('/api/search', require('./src/routes/search'));
+app.use('/api/shift-plan', require('./src/routes/shiftPlan'));
 app.use('/api/records', require('./src/routes/records'));
 app.use('/api/forecast', require('./src/routes/forecast'));
 app.use('/api/location-check', require('./src/routes/locationCheck'));
@@ -541,6 +542,29 @@ const runMigrations = async () => {
     }
   }
   console.log('✅ Performance indexes ready');
+
+  try {
+    await pool.request().query(`
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_ShiftPlanConfig' AND xtype='U')
+        CREATE TABLE WMS_ShiftPlanConfig (
+          ConfigID INT IDENTITY(1,1) PRIMARY KEY,
+          ConfigKey NVARCHAR(50) NOT NULL DEFAULT 'default',
+          ConfigJSON NVARCHAR(MAX) NOT NULL,
+          UpdatedAt DATETIME DEFAULT GETDATE()
+        );
+      IF NOT EXISTS (SELECT * FROM sysobjects WHERE name='WMS_ShiftPlanRecords' AND xtype='U')
+        CREATE TABLE WMS_ShiftPlanRecords (
+          RecordID INT IDENTITY(1,1) PRIMARY KEY,
+          RecordDate DATE NOT NULL,
+          EndTime NVARCHAR(10) NOT NULL,
+          OTEmp INT DEFAULT 0,
+          OTHrs1 DECIMAL(10,2) DEFAULT 0,
+          OTHrs2 DECIMAL(10,2) DEFAULT 0,
+          CreatedAt DATETIME DEFAULT GETDATE()
+        );
+    `);
+    console.log('✅ WMS_ShiftPlan tables ready');
+  } catch (e) { console.warn('⚠ ShiftPlan migration:', e.message); }
 
   try {
     await pool.request().query(`

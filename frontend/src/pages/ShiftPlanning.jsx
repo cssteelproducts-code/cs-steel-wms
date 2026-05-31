@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import * as XLSX from 'xlsx';
-import { Users, Clock, Plus, Trash2, BarChart2, RefreshCw, Download, Pencil, Check, X as XIcon } from 'lucide-react';
+import { Users, Clock, Plus, Trash2, BarChart2, RefreshCw, Download, Pencil, Check, X as XIcon, Loader2 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import api from '../services/api';
 
 const toMin = (t) => { const [h, m] = t.split(':').map(Number); return h * 60 + m; };
 
@@ -22,9 +23,10 @@ function InputNum({ label, value, onChange, placeholder }) {
     </div>
   );
 }
+
 const toHrs = (min) => min <= 0 ? 0 : +(min / 60).toFixed(2);
 const fmtHr = (h) => h <= 0 ? '-' : `${h.toFixed(2)} ชม.`;
-const shiftLabel = (i) => String.fromCharCode(65 + i); // A, B, C, D...
+const shiftLabel = (i) => String.fromCharCode(65 + i);
 
 const DEFAULT_CONFIG = {
   s1: { start: '08:00', end: '17:00', emp: 10 },
@@ -33,17 +35,6 @@ const DEFAULT_CONFIG = {
     { start: '10:00', end: '19:00', emp: 4 },
   ],
 };
-
-const STORAGE_KEY = 'shiftplanning_v1';
-
-function migrateStored(stored) {
-  if (!stored.cfg) return stored;
-  const cfg = stored.cfg;
-  if (cfg.s2a && !cfg.s2) {
-    return { ...stored, cfg: { s1: cfg.s1, s2: [cfg.s2a, cfg.s2b].filter(Boolean) } };
-  }
-  return stored;
-}
 
 function calcOT1(endTime, cfg) {
   const endMin = toMin(endTime);
@@ -63,17 +54,42 @@ function calcOT2(endTime, cfg) {
 }
 
 export default function ShiftPlanning() {
-  const stored = migrateStored(JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'));
-  const [cfg, setCfg] = useState(stored.cfg || DEFAULT_CONFIG);
-  const [records, setRecords] = useState(stored.records || []);
+  const [cfg, setCfg] = useState(DEFAULT_CONFIG);
+  const [records, setRecords] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('records');
   const [form, setForm] = useState({ date: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
   const [addMode, setAddMode] = useState('single');
   const [batchForm, setBatchForm] = useState({ fromDate: new Date().toISOString().slice(0, 10), toDate: new Date().toISOString().slice(0, 10), endTime: '17:00', otEmp: '', otHrs2: '' });
+  const [editingId, setEditingId] = useState(null);
+  const [editRow, setEditRow] = useState({});
+  const cfgSaveTimer = useRef(null);
+  const cfgInitialized = useRef(false);
 
+  // Load config + records from DB on mount
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify({ cfg, records }));
-  }, [cfg, records]);
+    (async () => {
+      try {
+        const [cfgRes, recRes] = await Promise.all([
+          api.get('/shift-plan/config'),
+          api.get('/shift-plan/records'),
+        ]);
+        if (cfgRes.data.data) setCfg(cfgRes.data.data);
+        setRecords(recRes.data.data || []);
+      } catch {}
+      cfgInitialized.current = true;
+      setLoading(false);
+    })();
+  }, []);
+
+  // Auto-save config to DB (debounced 800ms) whenever cfg changes after init
+  useEffect(() => {
+    if (!cfgInitialized.current) return;
+    clearTimeout(cfgSaveTimer.current);
+    cfgSaveTimer.current = setTimeout(() => {
+      api.put('/shift-plan/config', cfg).catch(() => {});
+    }, 800);
+  }, [cfg]);
 
   const updateShift = (i, key, val) => setCfg(c => ({
     ...c, s2: c.s2.map((s, idx) => idx === i ? { ...s, [key]: val } : s)
@@ -85,30 +101,37 @@ export default function ShiftPlanning() {
     ...c, s2: c.s2.filter((_, idx) => idx !== i)
   }));
 
-  const addRecord = () => {
+  const addRecord = async () => {
     if (!form.date || !form.endTime) return;
     const ot1 = calcOT1(form.endTime, cfg);
     const ot2 = parseFloat(form.otHrs2) || calcOT2(form.endTime, cfg);
-    const newRec = { id: Date.now(), date: form.date, endTime: form.endTime, otEmp: parseInt(form.otEmp) || 0, otHrs2: ot2, otHrs1: ot1 };
-    setRecords(r => [...r, newRec].sort((a, b) => a.date.localeCompare(b.date)));
-    setForm(f => ({ ...f, endTime: '17:00', otEmp: '', otHrs2: '' }));
+    try {
+      const res = await api.post('/shift-plan/records', { date: form.date, endTime: form.endTime, otEmp: parseInt(form.otEmp) || 0, otHrs1: ot1, otHrs2: ot2 });
+      setRecords(r => [...r, ...res.data.data].sort((a, b) => a.date.localeCompare(b.date)));
+      setForm(f => ({ ...f, endTime: '17:00', otEmp: '', otHrs2: '' }));
+    } catch {}
   };
 
-  const removeRecord = (id) => setRecords(r => r.filter(x => x.id !== id));
-
-  const [editingId, setEditingId] = useState(null);
-  const [editRow, setEditRow] = useState({});
+  const removeRecord = async (id) => {
+    try {
+      await api.delete(`/shift-plan/records/${id}`);
+      setRecords(r => r.filter(x => x.id !== id));
+    } catch {}
+  };
 
   const startEdit = (r) => { setEditingId(r.id); setEditRow({ endTime: r.endTime, otEmp: r.otEmp, otHrs2: r.otHrs2 }); };
   const cancelEdit = () => setEditingId(null);
-  const saveEdit = (id) => {
+  const saveEdit = async (id) => {
     const ot1 = calcOT1(editRow.endTime, cfg);
     const ot2 = parseFloat(editRow.otHrs2) || calcOT2(editRow.endTime, cfg);
-    setRecords(r => r.map(x => x.id === id ? { ...x, endTime: editRow.endTime, otEmp: parseInt(editRow.otEmp) || 0, otHrs2: ot2, otHrs1: ot1 } : x));
-    setEditingId(null);
+    try {
+      await api.put(`/shift-plan/records/${id}`, { endTime: editRow.endTime, otEmp: parseInt(editRow.otEmp) || 0, otHrs1: ot1, otHrs2: ot2 });
+      setRecords(r => r.map(x => x.id === id ? { ...x, endTime: editRow.endTime, otEmp: parseInt(editRow.otEmp) || 0, otHrs2: ot2, otHrs1: ot1 } : x));
+      setEditingId(null);
+    } catch {}
   };
 
-  const addBatchRecords = () => {
+  const addBatchRecords = async () => {
     if (!batchForm.fromDate || !batchForm.toDate || !batchForm.endTime) return;
     const start = new Date(batchForm.fromDate);
     const end = new Date(batchForm.toDate);
@@ -120,10 +143,21 @@ export default function ShiftPlanning() {
       if (existDates.has(dateStr)) continue;
       const ot1 = calcOT1(batchForm.endTime, cfg);
       const ot2 = parseFloat(batchForm.otHrs2) || calcOT2(batchForm.endTime, cfg);
-      newRecs.push({ id: Date.now() + newRecs.length, date: dateStr, endTime: batchForm.endTime, otEmp: parseInt(batchForm.otEmp) || 0, otHrs2: ot2, otHrs1: ot1 });
+      newRecs.push({ date: dateStr, endTime: batchForm.endTime, otEmp: parseInt(batchForm.otEmp) || 0, otHrs1: ot1, otHrs2: ot2 });
     }
     if (!newRecs.length) { alert('ไม่มีวันใหม่ (วันที่ซ้ำถูกข้ามแล้ว)'); return; }
-    setRecords(r => [...r, ...newRecs].sort((a, b) => a.date.localeCompare(b.date)));
+    try {
+      const res = await api.post('/shift-plan/records', newRecs);
+      setRecords(r => [...r, ...res.data.data].sort((a, b) => a.date.localeCompare(b.date)));
+    } catch {}
+  };
+
+  const clearAll = async () => {
+    if (!confirm('ล้างข้อมูลทั้งหมด?')) return;
+    try {
+      await api.delete('/shift-plan/records');
+      setRecords([]);
+    } catch {}
   };
 
   const summary = useMemo(() => {
@@ -138,7 +172,7 @@ export default function ShiftPlanning() {
     'OT แบบที่ 2': r.otHrs2,
   }));
 
-  const exportCSV = () => {
+  const exportExcel = () => {
     const rows = [['วันที่', 'เวลาเลิก', 'OT พนักงาน', 'OT แบบ 2 (ชม.)', 'OT แบบ 1 (ชม.)', 'ต่าง (ชม.)']];
     records.forEach(r => rows.push([r.date, r.endTime, r.otEmp, r.otHrs2, r.otHrs1, parseFloat((r.otHrs1 - r.otHrs2).toFixed(2))]));
     const ws = XLSX.utils.aoa_to_sheet(rows);
@@ -150,6 +184,12 @@ export default function ShiftPlanning() {
 
   const totalS2Emp = cfg.s2.reduce((s, x) => s + (x.emp || 0), 0);
   const s2OTNote = cfg.s2.map((s, i) => `กะ ${shiftLabel(i)} หลัง ${s.end}`).join(', ');
+
+  if (loading) return (
+    <div className="flex items-center justify-center py-20 text-slate-400 gap-2">
+      <Loader2 size={18} className="animate-spin" />โหลดข้อมูล...
+    </div>
+  );
 
   return (
     <div className="space-y-5">
@@ -163,10 +203,10 @@ export default function ShiftPlanning() {
           <p className="text-slate-500 text-xs mt-0.5">เปรียบเทียบค่า OT ระหว่างกะเดียว vs {cfg.s2.length} กะ</p>
         </div>
         <div className="flex gap-2">
-          <button onClick={exportCSV} className="btn-secondary text-sm flex items-center gap-1.5">
+          <button onClick={exportExcel} className="btn-secondary text-sm flex items-center gap-1.5">
             <Download size={14} />Export
           </button>
-          <button onClick={() => { if (confirm('ล้างข้อมูลทั้งหมด?')) { setRecords([]); } }} className="btn-secondary text-sm text-red-500">
+          <button onClick={clearAll} className="btn-secondary text-sm text-red-500 flex items-center gap-1.5">
             <RefreshCw size={14} />ล้างข้อมูล
           </button>
         </div>
@@ -174,7 +214,6 @@ export default function ShiftPlanning() {
 
       {/* Config cards */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {/* แบบที่ 1 */}
         <div className="card border-2 border-blue-100">
           <p className="text-sm font-bold text-blue-600 mb-3 flex items-center gap-2"><Clock size={15} />แบบที่ 1 — กะเดียว</p>
           <div className="grid grid-cols-3 gap-3">
@@ -185,7 +224,6 @@ export default function ShiftPlanning() {
           <p className="text-xs text-blue-400 mt-2">OT เริ่มหลัง {cfg.s1.end} น.</p>
         </div>
 
-        {/* แบบที่ 2 */}
         <div className="card border-2 border-orange-100">
           <p className="text-sm font-bold text-orange-600 mb-3 flex items-center gap-2">
             <Clock size={15} />แบบที่ 2 — {cfg.s2.length} กะ
@@ -200,11 +238,7 @@ export default function ShiftPlanning() {
                     <InputNum label={`กะ ${shiftLabel(i)} (คน)`} value={s.emp} onChange={v => updateShift(i, 'emp', +v)} />
                   </div>
                   {cfg.s2.length > 1 && (
-                    <button
-                      onClick={() => removeShift(i)}
-                      className="mb-0.5 p-1.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors"
-                      title={`ลบกะ ${shiftLabel(i)}`}
-                    >
+                    <button onClick={() => removeShift(i)} className="mb-0.5 p-1.5 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 transition-colors" title={`ลบกะ ${shiftLabel(i)}`}>
                       <Trash2 size={14} />
                     </button>
                   )}
@@ -215,10 +249,7 @@ export default function ShiftPlanning() {
           <div className="flex items-center justify-between mt-3">
             <p className="text-xs text-orange-400">รวม {totalS2Emp} คน — OT {s2OTNote}</p>
             {cfg.s2.length < 6 && (
-              <button
-                onClick={addShift}
-                className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-700 hover:bg-orange-50 px-2 py-1 rounded-lg transition-colors"
-              >
+              <button onClick={addShift} className="flex items-center gap-1 text-xs text-orange-500 hover:text-orange-700 hover:bg-orange-50 px-2 py-1 rounded-lg transition-colors">
                 <Plus size={12} />เพิ่มกะ {shiftLabel(cfg.s2.length)}
               </button>
             )}
@@ -258,7 +289,6 @@ export default function ShiftPlanning() {
 
       {tab === 'records' && (
         <div className="card">
-          {/* Mode toggle */}
           <div className="flex gap-2 mb-3">
             {[{ key: 'single', label: 'ทีละวัน' }, { key: 'range', label: 'ช่วงวันที่ (หลายวัน)' }].map(m => (
               <button key={m.key} onClick={() => setAddMode(m.key)}
@@ -268,7 +298,6 @@ export default function ShiftPlanning() {
             ))}
           </div>
 
-          {/* Add single */}
           {addMode === 'single' && (
             <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mb-4 p-3 bg-slate-50 rounded-xl">
               <div>
@@ -293,7 +322,6 @@ export default function ShiftPlanning() {
             </div>
           )}
 
-          {/* Add range */}
           {addMode === 'range' && (
             <div className="p-3 bg-indigo-50 border border-indigo-100 rounded-xl mb-4 space-y-3">
               <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
@@ -329,7 +357,6 @@ export default function ShiftPlanning() {
             </div>
           )}
 
-          {/* Table */}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -356,27 +383,20 @@ export default function ShiftPlanning() {
                       <tr key={r.id} className="border-b border-indigo-100 bg-indigo-50">
                         <td className="px-3 py-1.5 font-medium text-indigo-700">{r.date}</td>
                         <td className="px-3 py-1.5">
-                          <input type="time" value={editRow.endTime} onChange={e => setEditRow(f => ({ ...f, endTime: e.target.value }))}
-                            className="input-field text-sm py-1 w-28" />
+                          <input type="time" value={editRow.endTime} onChange={e => setEditRow(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm py-1 w-28" />
                         </td>
                         <td className="px-3 py-1.5">
-                          <input type="number" min="0" value={editRow.otEmp} onChange={e => setEditRow(f => ({ ...f, otEmp: e.target.value }))}
-                            placeholder="คน" className="input-field text-sm py-1 w-20 text-center" />
+                          <input type="number" min="0" value={editRow.otEmp} onChange={e => setEditRow(f => ({ ...f, otEmp: e.target.value }))} placeholder="คน" className="input-field text-sm py-1 w-20 text-center" />
                         </td>
                         <td className="px-3 py-1.5 text-right text-xs text-blue-400">{fmtHr(previewOT1)}</td>
                         <td className="px-3 py-1.5">
-                          <input type="number" step="0.5" min="0" value={editRow.otHrs2} onChange={e => setEditRow(f => ({ ...f, otHrs2: e.target.value }))}
-                            placeholder={`≈${previewOT2}`} className="input-field text-sm py-1 w-24 text-right" />
+                          <input type="number" step="0.5" min="0" value={editRow.otHrs2} onChange={e => setEditRow(f => ({ ...f, otHrs2: e.target.value }))} placeholder={`≈${previewOT2}`} className="input-field text-sm py-1 w-24 text-right" />
                         </td>
                         <td className="px-3 py-1.5 text-right text-xs text-slate-400">-</td>
                         <td className="px-3 py-1.5">
                           <div className="flex items-center gap-1">
-                            <button onClick={() => saveEdit(r.id)} className="p-1 rounded text-emerald-500 hover:bg-emerald-100 transition-colors" title="บันทึก">
-                              <Check size={14} />
-                            </button>
-                            <button onClick={cancelEdit} className="p-1 rounded text-slate-400 hover:bg-slate-100 transition-colors" title="ยกเลิก">
-                              <XIcon size={14} />
-                            </button>
+                            <button onClick={() => saveEdit(r.id)} className="p-1 rounded text-emerald-500 hover:bg-emerald-100 transition-colors"><Check size={14} /></button>
+                            <button onClick={cancelEdit} className="p-1 rounded text-slate-400 hover:bg-slate-100 transition-colors"><XIcon size={14} /></button>
                           </div>
                         </td>
                       </tr>
@@ -394,12 +414,8 @@ export default function ShiftPlanning() {
                       </td>
                       <td className="px-3 py-2">
                         <div className="flex items-center gap-1">
-                          <button onClick={() => startEdit(r)} className="p-1 rounded text-slate-300 hover:text-indigo-500 transition-colors" title="แก้ไข">
-                            <Pencil size={13} />
-                          </button>
-                          <button onClick={() => removeRecord(r.id)} className="p-1 rounded text-slate-300 hover:text-red-500 transition-colors" title="ลบ">
-                            <Trash2 size={13} />
-                          </button>
+                          <button onClick={() => startEdit(r)} className="p-1 rounded text-slate-300 hover:text-indigo-500 transition-colors"><Pencil size={13} /></button>
+                          <button onClick={() => removeRecord(r.id)} className="p-1 rounded text-slate-300 hover:text-red-500 transition-colors"><Trash2 size={13} /></button>
                         </div>
                       </td>
                     </tr>
@@ -442,7 +458,6 @@ export default function ShiftPlanning() {
               </BarChart>
             </ResponsiveContainer>
           )}
-
           {records.length > 0 && (
             <div className="mt-4 p-4 rounded-xl bg-slate-50 border border-slate-200">
               <p className="text-sm font-bold text-slate-700 mb-2">สรุป</p>
