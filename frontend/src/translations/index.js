@@ -718,7 +718,7 @@ const translations = {
     'forecast.vehicleTypes': 'ประเภทรถที่คาดว่าจะเข้า',
     'forecast.topCustomers': 'ลูกค้าที่มาบ่อย',
     'forecast.avgByStation': 'เวลาเฉลี่ยต่อสถานีขึ้นสินค้า',
-    'dash.checkerAvgByType': 'เวลาเฉลี่ยรับเข้า → จบเช็คเกอร์ แยกตามประเภทรถ',
+    'dash.checkerAvgByType': 'เวลาเฉลี่ยแยกตามประเภทรถ',
     'dash.checkerAvgTrips': 'เที่ยว',
     'forecast.aiTitle': 'AI คำแนะนำการวางแผน',
     'forecast.aiAnalyze': 'วิเคราะห์ด้วย AI',
