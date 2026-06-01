@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { Suspense, useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -29,21 +29,39 @@ const pageTitles = {
   '/stock-count':       { title: 'page.stockCount', subtitle: 'page.stockCountSubtitle' },
 };
 
+const PageFallback = () => (
+  <div style={{
+    position: 'fixed', top: 0, left: 0, right: 0, height: 3,
+    background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)',
+    backgroundSize: '200% 100%', animation: 'loading-sweep 1s linear infinite', zIndex: 99998,
+  }} />
+);
+
 export default function MainLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { t } = useLang();
+  const mainRef = useRef(null);
+
   const pageInfo = pageTitles[location.pathname];
   const title = pageInfo ? t(pageInfo.title) : 'CS.Smart';
   const subtitle = pageInfo?.subtitle ? t(pageInfo.subtitle) : null;
+
+  useEffect(() => {
+    if (mainRef.current) mainRef.current.scrollTop = 0;
+  }, [location.pathname]);
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         <Header onMenuClick={() => setSidebarOpen(true)} title={title} subtitle={subtitle} />
-        <main className="flex-1 overflow-y-scroll p-5 lg:p-6" style={{ background: '#f1f5f9' }}>
-          <Outlet />
+        <main ref={mainRef} className="flex-1 overflow-y-scroll p-5 lg:p-6" style={{ background: '#f1f5f9' }}>
+          <Suspense fallback={<PageFallback />}>
+            <div key={location.pathname} className="animate-fade-in">
+              <Outlet />
+            </div>
+          </Suspense>
         </main>
       </div>
     </div>
