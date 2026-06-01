@@ -249,6 +249,23 @@ router.get('/summary', authenticate, async (req, res) => {
           AND (DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) < ISNULL(vt.StartHour,8)*60+ISNULL(vt.StartMinute,0)
             OR DATEPART(HOUR,wi.WeighDateTime)*60+DATEPART(MINUTE,wi.WeighDateTime) > ISNULL(vt.CutoffHour,16)*60+ISNULL(vt.CutoffMinute,0))
         GROUP BY vt.TypeName ORDER BY Count DESC
+      `),
+      pool.request().query(`
+        SELECT
+          vt.TypeName,
+          COUNT(*) as TripCount,
+          AVG(DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime)) as AvgMinutes,
+          MIN(DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime)) as MinMinutes,
+          MAX(DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime)) as MaxMinutes
+        FROM WMS_Trips t
+        JOIN WMS_VehicleTypes vt ON t.VehicleTypeID = vt.TypeID
+        JOIN WMS_WeighIn wi ON t.TripID = wi.TripID
+        JOIN WMS_CheckerRecord cr ON t.TripID = cr.TripID
+        WHERE cr.CheckTime > wi.WeighDateTime
+          AND DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime) < 600
+          AND wi.WeighDateTime >= DATEADD(DAY,-30,GETUTCDATE())
+        GROUP BY vt.TypeName, vt.TypeID
+        ORDER BY AVG(DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime)) DESC
       `)
     ]);
 
@@ -257,7 +274,8 @@ router.get('/summary', authenticate, async (req, res) => {
       stationLoad, weeklyTrend, tripCounts, weightHistory,
       vehicleTypesToday, onTimeStats, vtBreakdownMonth, vtBreakdownYear,
       incompleteLoading, completedToday, deliveryTypeResult, stationAvgTimeResult,
-      overtimeByTypeToday, overtimeByTypeMonth, overtimeByTypeYear
+      overtimeByTypeToday, overtimeByTypeMonth, overtimeByTypeYear,
+      checkerAvgByTypeResult
     ] = results.map(settle);
 
     // Log any failed queries for debugging
@@ -287,7 +305,8 @@ router.get('/summary', authenticate, async (req, res) => {
       stationAvgTime: stationAvgTimeResult?.recordset || [],
       overtimeByTypeToday: overtimeByTypeToday?.recordset || [],
       overtimeByTypeMonth: overtimeByTypeMonth?.recordset || [],
-      overtimeByTypeYear:  overtimeByTypeYear?.recordset  || []
+      overtimeByTypeYear:  overtimeByTypeYear?.recordset  || [],
+      checkerAvgByVehicleType: checkerAvgByTypeResult?.recordset || []
     };
       return responseData;
     }, 60_000); // 60s cache

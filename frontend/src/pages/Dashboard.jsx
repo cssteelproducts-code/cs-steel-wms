@@ -301,6 +301,46 @@ export default function Dashboard() {
         );
       })()}
 
+      {/* Checker avg time by vehicle type */}
+      {data?.checkerAvgByVehicleType?.length > 0 && (() => {
+        const maxAvg = Math.max(...data.checkerAvgByVehicleType.map(s => s.AvgMinutes || 0), 1);
+        return (
+          <div className="card">
+            <SectionHeader title={t('dash.checkerAvgByType')} sectionKey="checkerAvg" collapsed={collapsed.checkerAvg} onToggle={toggleSection}
+              icon={Clock}
+              extra={<span className="text-xs text-slate-400">30 {t('common.date')}</span>} />
+            {!collapsed.checkerAvg && (
+              <div className="space-y-3">
+                {data.checkerAvgByVehicleType.map(s => {
+                  const pct = Math.round((s.AvgMinutes / maxAvg) * 100);
+                  const barColor = pct >= 80 ? 'bg-red-400' : pct >= 50 ? 'bg-amber-400' : 'bg-emerald-400';
+                  return (
+                    <div key={s.TypeName}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="text-sm font-semibold text-slate-700 truncate">{s.TypeName}</span>
+                          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">
+                            {s.TripCount} {t('dash.checkerAvgTrips')}
+                          </span>
+                        </div>
+                        <span className="text-sm font-bold text-slate-800 ml-2 whitespace-nowrap">{fmtMin(s.AvgMinutes)}</span>
+                      </div>
+                      <div className="w-full h-2 rounded-full bg-slate-100">
+                        <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${Math.max(pct, 4)}%` }} />
+                      </div>
+                      <div className="flex justify-between mt-0.5">
+                        <span className="text-xs text-slate-400">{fmtMin(s.MinMinutes)}</span>
+                        <span className="text-xs text-slate-400">{fmtMin(s.MaxMinutes)}</span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        );
+      })()}
+
       {/* Weight history */}
       <div className="card">
         <SectionHeader title={t('dash.weight')} sectionKey="weight" collapsed={collapsed.weight} onToggle={toggleSection} />
