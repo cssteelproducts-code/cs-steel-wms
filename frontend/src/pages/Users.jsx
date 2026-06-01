@@ -19,14 +19,14 @@ const MENUS = [
   { code: 'RECORDS', nameKey: 'nav.records' },
   { divider: true, sectionKey: 'section.warehouse' },
   { code: 'STOCK', nameKey: 'nav.locationCheck' },
-  { code: 'STOCKCOUNT_OFFICE', nameKey: 'nav.stockCount', children: [
-    { code: 'STOCKCOUNT_FIELD', nameKey: 'stockCount.fieldTab' },
-  ]},
   { code: 'TRANSFER', nameKey: 'nav.transfer', children: [
     { code: 'TRANSFER_JOBS', nameKey: 'transfer.tabJobs' },
     { code: 'TRANSFER_STATIONS', nameKey: 'transfer.tabStations' },
     { code: 'TRANSFER_VEHICLES', nameKey: 'transfer.tabVehicles' },
     { code: 'TRANSFER_REPORTS', nameKey: 'transfer.tabReport' },
+  ]},
+  { code: 'STOCKCOUNT_OFFICE', nameKey: 'nav.stockCount', children: [
+    { code: 'STOCKCOUNT_FIELD', nameKey: 'stockCount.fieldTab' },
   ]},
   { divider: true, sectionKey: 'section.logistics' },
   { code: 'ETA', nameKey: 'nav.eta' },
@@ -38,7 +38,6 @@ const MENUS = [
   { divider: true, sectionKey: 'section.tools' },
   { code: 'SHIFT_PLANNING', nameKey: 'nav.shiftPlanning' },
   { code: 'FREIGHT_CALC', nameKey: 'nav.freightCalc' },
-  { code: 'REPORTS', nameKey: 'nav.records' },
 ];
 
 const ALL_MENU_CODES = MENUS.filter(m => !m.divider).flatMap(m => [m, ...(m.children || [])]);
