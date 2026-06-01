@@ -261,36 +261,96 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Checker avg time by vehicle type */}
+      {/* Checker avg time by vehicle type — monthly comparison */}
       {data?.checkerAvgByVehicleType?.length > 0 && (() => {
-        const maxAvg = Math.max(...data.checkerAvgByVehicleType.map(s => s.AvgMinutes || 0), 1);
+        const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        const now = new Date();
+        const last6 = Array.from({ length: 6 }, (_, i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+          return { year: d.getFullYear(), month: d.getMonth() + 1, label: THAI_MONTHS[d.getMonth()] };
+        });
+        const curSlot = last6[5];
+
+        // group rows by TypeName
+        const typeMap = {};
+        data.checkerAvgByVehicleType.forEach(r => {
+          if (!typeMap[r.TypeName]) typeMap[r.TypeName] = { typeID: r.TypeID, months: {} };
+          typeMap[r.TypeName].months[`${r.Year}-${r.Month}`] = r;
+        });
+
+        // sort by current-month avg desc, fallback to overall avg
+        const sorted = Object.entries(typeMap).sort(([, a], [, b]) => {
+          const aRow = a.months[`${curSlot.year}-${curSlot.month}`];
+          const bRow = b.months[`${curSlot.year}-${curSlot.month}`];
+          return (bRow?.AvgMinutes || 0) - (aRow?.AvgMinutes || 0);
+        });
+
+        const globalMax = Math.max(...data.checkerAvgByVehicleType.map(r => r.AvgMinutes || 0), 1);
+
         return (
           <div className="card">
             <SectionHeader title={t('dash.checkerAvgByType')} sectionKey="checkerAvg" collapsed={collapsed.checkerAvg} onToggle={toggleSection}
               icon={Clock}
-              extra={<span className="text-xs text-slate-400">30 {t('common.date')}</span>} />
+              extra={<span className="text-xs text-slate-400">6 {t('common.month') || 'เดือน'}</span>} />
             {!collapsed.checkerAvg && (
-              <div className="space-y-3">
-                {data.checkerAvgByVehicleType.map(s => {
-                  const pct = Math.round((s.AvgMinutes / maxAvg) * 100);
-                  const barColor = pct >= 80 ? 'bg-red-400' : pct >= 50 ? 'bg-amber-400' : 'bg-emerald-400';
+              <div className="space-y-4">
+                {sorted.map(([typeName, { months }]) => {
+                  const curRow = months[`${curSlot.year}-${curSlot.month}`];
+                  const curAvg = curRow?.AvgMinutes || 0;
+                  const curPct = Math.round((curAvg / globalMax) * 100);
+                  const curColor = curPct >= 80 ? 'bg-red-400' : curPct >= 50 ? 'bg-amber-400' : 'bg-emerald-400';
                   return (
-                    <div key={s.TypeName}>
-                      <div className="flex items-center justify-between mb-1">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <span className="text-sm font-semibold text-slate-700 truncate">{s.TypeName}</span>
-                          <span className="text-xs text-slate-400 whitespace-nowrap flex-shrink-0">
-                            {s.TripCount} {t('dash.checkerAvgTrips')}
-                          </span>
-                        </div>
-                        <span className="text-sm font-bold text-slate-800 ml-2 whitespace-nowrap">{fmtMin(s.AvgMinutes)}</span>
+                    <div key={typeName}>
+                      {/* type name + current month avg */}
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="text-sm font-semibold text-slate-700">{typeName}</span>
+                        {curRow
+                          ? <span className="text-sm font-bold text-slate-800">{fmtMin(curRow.AvgMinutes)}</span>
+                          : <span className="text-xs text-slate-400">ไม่มีข้อมูลเดือนนี้</span>}
                       </div>
-                      <div className="w-full h-2 rounded-full bg-slate-100">
-                        <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${Math.max(pct, 4)}%` }} />
+                      {/* 6-month sparkline */}
+                      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${last6.length}, 1fr)` }}>
+                        {last6.map(slot => {
+                          const row = months[`${slot.year}-${slot.month}`];
+                          const pct = row ? Math.round((row.AvgMinutes / globalMax) * 100) : 0;
+                          const isCurrentMonth = slot.year === curSlot.year && slot.month === curSlot.month;
+                          const colColor = pct >= 80 ? 'bg-red-400' : pct >= 50 ? 'bg-amber-400' : 'bg-emerald-400';
+                          return (
+                            <div key={`${slot.year}-${slot.month}`} className="flex flex-col items-center gap-0.5">
+                              {/* mini bar */}
+                              <div className="w-full h-10 rounded bg-slate-100 flex items-end overflow-hidden">
+                                {row && (
+                                  <div
+                                    className={`w-full rounded transition-all ${colColor} ${isCurrentMonth ? 'opacity-100' : 'opacity-60'}`}
+                                    style={{ height: `${Math.max(pct, 8)}%` }}
+                                  />
+                                )}
+                              </div>
+                              {/* month label */}
+                              <span className={`text-xs leading-tight text-center ${isCurrentMonth ? 'font-bold text-slate-700' : 'text-slate-400'}`}>
+                                {slot.label}
+                              </span>
+                              {/* avg value */}
+                              <span className="text-xs text-slate-500 leading-tight text-center" style={{ fontSize: '0.65rem' }}>
+                                {row ? fmtMin(row.AvgMinutes) : '–'}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
-                      <div className="flex justify-between mt-0.5">
-                        <span className="text-xs text-slate-400">{fmtMin(s.MinMinutes)}</span>
-                        <span className="text-xs text-slate-400">{fmtMin(s.MaxMinutes)}</span>
+                      {/* trip count row */}
+                      <div className="grid mt-0.5 gap-1" style={{ gridTemplateColumns: `repeat(${last6.length}, 1fr)` }}>
+                        {last6.map(slot => {
+                          const row = months[`${slot.year}-${slot.month}`];
+                          const isCurrentMonth = slot.year === curSlot.year && slot.month === curSlot.month;
+                          return (
+                            <div key={`cnt-${slot.year}-${slot.month}`} className="text-center" style={{ fontSize: '0.6rem' }}>
+                              <span className={isCurrentMonth ? 'text-slate-500 font-semibold' : 'text-slate-300'}>
+                                {row ? `${row.TripCount}${t('dash.checkerAvgTrips')}` : ''}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   );

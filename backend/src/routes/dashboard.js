@@ -253,6 +253,9 @@ router.get('/summary', authenticate, async (req, res) => {
       pool.request().query(`
         SELECT
           vt.TypeName,
+          vt.TypeID,
+          YEAR(DATEADD(HOUR,7,wi.WeighDateTime)) as Year,
+          MONTH(DATEADD(HOUR,7,wi.WeighDateTime)) as Month,
           COUNT(*) as TripCount,
           AVG(DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime)) as AvgMinutes,
           MIN(DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime)) as MinMinutes,
@@ -263,9 +266,13 @@ router.get('/summary', authenticate, async (req, res) => {
         JOIN WMS_CheckerRecord cr ON t.TripID = cr.TripID
         WHERE cr.CheckTime > wi.WeighDateTime
           AND DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime) < 600
-          AND wi.WeighDateTime >= DATEADD(DAY,-30,GETUTCDATE())
-        GROUP BY vt.TypeName, vt.TypeID
-        ORDER BY AVG(DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime)) DESC
+          AND wi.WeighDateTime >= DATEADD(MONTH,-6,GETUTCDATE())
+        GROUP BY vt.TypeName, vt.TypeID,
+                 YEAR(DATEADD(HOUR,7,wi.WeighDateTime)),
+                 MONTH(DATEADD(HOUR,7,wi.WeighDateTime))
+        ORDER BY vt.TypeID,
+                 YEAR(DATEADD(HOUR,7,wi.WeighDateTime)),
+                 MONTH(DATEADD(HOUR,7,wi.WeighDateTime))
       `)
     ]);
 
