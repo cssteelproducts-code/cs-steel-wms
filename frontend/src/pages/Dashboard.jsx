@@ -278,11 +278,10 @@ export default function Dashboard() {
           typeMap[r.TypeName].months[`${r.Year}-${r.Month}`] = r;
         });
 
-        // sort by current-month avg desc, fallback to overall avg
-        const sorted = Object.entries(typeMap).sort(([, a], [, b]) => {
-          const aRow = a.months[`${curSlot.year}-${curSlot.month}`];
-          const bRow = b.months[`${curSlot.year}-${curSlot.month}`];
-          return (bRow?.AvgMinutes || 0) - (aRow?.AvgMinutes || 0);
+        const TYPE_ORDER = ['รถ 4 ล้อ','รถ 6 ล้อ','รถ 10 ล้อ','รถ 12 ล้อ','รถเทรลเลอร์','รถพ่วง'];
+        const sorted = Object.entries(typeMap).sort(([a], [b]) => {
+          const ai = TYPE_ORDER.indexOf(a); const bi = TYPE_ORDER.indexOf(b);
+          return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
         });
 
         const globalMax = Math.max(...data.checkerAvgByVehicleType.map(r => r.AvgMinutes || 0), 1);
