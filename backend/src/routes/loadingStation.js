@@ -271,7 +271,7 @@ router.get('/stations-status', authenticate, async (req, res) => {
               AND CAST(t2.TripDate AS DATE) = CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE)
           ) ct ON ct.StationID = ls.StationID AND ct.rn = 1
           WHERE ls.IsActive = 1
-          GROUP BY ls.StationID, ls.StationCode, ls.StationName, ls.WarehouseID, w.WarehouseName, ct.LicensePlate
+          GROUP BY ls.StationID, ls.StationCode, ls.StationName, ls.SortOrder, ls.WarehouseID, w.WarehouseName, ct.LicensePlate
           ORDER BY ls.SortOrder, ls.StationName
         `);
       return result.recordset;
