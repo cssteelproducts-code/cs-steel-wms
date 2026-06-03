@@ -61,9 +61,12 @@ export default function Master() {
   const [editing, setEditing] = useState(null);
   const [saving, setSaving] = useState(false);
   const [importing, setImporting] = useState(false);
+  const [loadingProducts, setLoadingProducts] = useState(false);
   const [warehouses, setWarehouses] = useState([]);
   const [productSearch, setProductSearch] = useState('');
   const [productSKUFilter, setProductSKUFilter] = useState('');
+  const [productPage, setProductPage] = useState(1);
+  const PRODUCTS_PER_PAGE = 100;
   const productImportRef = useRef(null);
   const locationsImportRef = useRef(null);
   const internalVehiclesImportRef = useRef(null);
@@ -166,9 +169,11 @@ export default function Master() {
   }, [tab]);
   useEffect(() => {
     fetchWarehouses();
-    ['warehouses', 'customers', 'vehicleTypes', 'internalVehicles', 'loadingStations', 'products', 'locationTypes', 'locations'].forEach(t => fetchData(t));
+    // ไม่ prefetch products เพราะมีข้อมูลมาก — โหลดเมื่อเปิด tab เท่านั้น
+    ['warehouses', 'customers', 'vehicleTypes', 'internalVehicles', 'loadingStations', 'locationTypes', 'locations'].forEach(t => fetchData(t));
     api.get('/master/location-types').then(r => setLocationTypes(r.data.data || [])).catch(() => {});
   }, []);
+  useEffect(() => { setProductPage(1); }, [productSearch, productSKUFilter]);
 
   const fetchWarehouses = async () => {
     try {
@@ -178,6 +183,7 @@ export default function Master() {
   };
 
   const fetchData = async (type) => {
+    if (type === 'products') setLoadingProducts(true);
     try {
       const endpoints = {
         warehouses: '/master/warehouses',
@@ -192,6 +198,7 @@ export default function Master() {
       const res = await api.get(endpoints[type]);
       setData(p => ({ ...p, [type]: res.data.data || [] }));
     } catch {}
+    finally { if (type === 'products') setLoadingProducts(false); }
   };
 
   const handleProductImport = async (e) => {
@@ -658,6 +665,12 @@ export default function Master() {
         </div>
       );
       case 'products': {
+        if (loadingProducts) return (
+          <div className="flex flex-col items-center justify-center py-16 gap-3 text-slate-400">
+            <span className="w-7 h-7 border-2 border-slate-200 border-t-red-500 rounded-full animate-spin" />
+            <span className="text-sm">{t('common.loading')}</span>
+          </div>
+        );
         const skuColor = { 'ขายดี':'bg-emerald-50 text-emerald-700','ขายน้อยขายต่อเนื่อง':'bg-amber-50 text-amber-700','ขายน้อยขายไม่ต่อเนื่อง':'bg-orange-50 text-orange-700','สินค้าโป๊ว':'bg-red-50 text-red-500' };
         const filtered = items.filter(i => {
           const q = productSearch.toLowerCase();
@@ -665,6 +678,8 @@ export default function Master() {
           const matchSKU = !productSKUFilter || i.SKUType === productSKUFilter;
           return matchSearch && matchSKU;
         });
+        const displayed = filtered.slice(0, productPage * PRODUCTS_PER_PAGE);
+        const hasMore = filtered.length > displayed.length;
         return (
           <div>
             <div className="flex flex-wrap gap-2 mb-3">
@@ -676,11 +691,11 @@ export default function Master() {
                 <option value="">ทุก TypeSKU</option>
                 {SKU_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
               </select>
-              <span className="text-xs text-gray-400 self-center">{filtered.length} {t('unit.items')}</span>
+              <span className="text-xs text-gray-400 self-center">{displayed.length}/{filtered.length} {t('unit.items')}</span>
             </div>
             <div className="rounded-xl overflow-hidden border border-gray-100">
               <div className="space-y-0">
-                {filtered.map(i => (
+                {displayed.map(i => (
                   <div key={i.ProductID} className="flex items-center gap-3 px-4 py-2.5 border-b border-gray-50 transition-all group hover:bg-gray-50">
                     <div className="w-32 flex-shrink-0">
                       <span className="text-xs font-mono font-bold text-blue-600 truncate block">{i.ProductCode}</span>
@@ -705,6 +720,12 @@ export default function Master() {
                 {!filtered.length && <p className="text-center text-slate-400 py-8 text-sm">{t('common.noData')}</p>}
               </div>
             </div>
+            {hasMore && (
+              <button onClick={() => setProductPage(p => p + 1)}
+                className="mt-3 w-full py-2.5 rounded-xl border border-dashed border-gray-300 text-sm text-gray-500 hover:bg-gray-50 hover:border-gray-400 transition-colors">
+                แสดงเพิ่ม {Math.min(PRODUCTS_PER_PAGE, filtered.length - displayed.length)} รายการ (เหลือ {filtered.length - displayed.length})
+              </button>
+            )}
           </div>
         );
       }

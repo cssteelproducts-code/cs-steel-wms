@@ -84,6 +84,20 @@ router.put('/records/:id', authenticate, async (req, res) => {
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 
+// DELETE /api/shift-plan/records/bulk  (delete selected IDs in one query)
+router.delete('/records/bulk', authenticate, async (req, res) => {
+  try {
+    const { ids } = req.body;
+    if (!Array.isArray(ids) || !ids.length) return res.status(400).json({ success: false, message: 'ไม่มีรายการที่จะลบ' });
+    const pool = getPool();
+    const request = pool.request();
+    const safeIds = ids.map(id => parseInt(id)).filter(id => !isNaN(id));
+    safeIds.forEach((id, i) => request.input(`id${i}`, sql.Int, id));
+    await request.query(`DELETE FROM WMS_ShiftPlanRecords WHERE RecordID IN (${safeIds.map((_, i) => `@id${i}`).join(',')})`);
+    res.json({ success: true, message: `ลบ ${safeIds.length} รายการสำเร็จ` });
+  } catch (err) { res.status(500).json({ success: false, message: err.message }); }
+});
+
 // DELETE /api/shift-plan/records/:id
 router.delete('/records/:id', authenticate, async (req, res) => {
   try {

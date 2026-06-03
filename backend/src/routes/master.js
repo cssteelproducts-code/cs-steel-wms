@@ -546,14 +546,24 @@ router.post('/locations/import', authenticate, requireAdmin, upload.single('file
 // ==================== PRODUCTS ====================
 router.get('/products', authenticate, async (req, res) => {
   try {
-    const pool = getPool();
     const { search, skuType, categoryCode } = req.query;
+    // Cache full list (no filters) for 5 min to avoid repeated heavy queries
+    if (!search && !skuType && !categoryCode) {
+      const data = await cache.wrap('master:products:all', async () => {
+        const result = await getPool().request()
+          .query(`SELECT ProductID,ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight,IsActive
+                  FROM WMS_Products WHERE IsActive=1 ORDER BY ProductCode`);
+        return result.recordset;
+      }, TTL);
+      return res.json({ success: true, data });
+    }
+    const pool = getPool();
     let where = 'WHERE IsActive = 1';
     const request = pool.request();
     if (search) { where += ' AND (ProductCode LIKE @s OR ProductName LIKE @s OR CategoryName LIKE @s)'; request.input('s', sql.NVarChar, `%${search}%`); }
     if (skuType) { where += ' AND SKUType = @skuType'; request.input('skuType', sql.NVarChar, skuType); }
     if (categoryCode) { where += ' AND CategoryCode = @catCode'; request.input('catCode', sql.NVarChar, categoryCode); }
-    const result = await request.query(`SELECT * FROM WMS_Products ${where} ORDER BY ProductCode`);
+    const result = await request.query(`SELECT ProductID,ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight,IsActive FROM WMS_Products ${where} ORDER BY ProductCode`);
     res.json({ success: true, data: result.recordset });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -577,6 +587,7 @@ router.post('/products', authenticate, requireAdmin, async (req, res) => {
       .input('UnitNetWeight', sql.Decimal(10, 3), unitNetWeight ? parseFloat(unitNetWeight) : null)
       .query(`INSERT INTO WMS_Products (ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight)
               VALUES (@ProductCode,@ProductName,@SKUType,@CategoryCode,@CategoryName,@MaterialType,@FormCode,@SizeCode,@Thickness,@TargetGroup,@UnitNetWeight)`);
+    cache.del('master:products:all');
     res.json({ success: true, message: `เพิ่มสินค้า "${productCode}" สำเร็จ` });
   } catch (err) {
     if (err.number === 2627) return res.status(400).json({ success: false, message: 'รหัสสินค้านี้มีในระบบแล้ว' });
@@ -605,6 +616,7 @@ router.put('/products/:id', authenticate, requireAdmin, async (req, res) => {
               CategoryName=@CategoryName,MaterialType=@MaterialType,FormCode=@FormCode,SizeCode=@SizeCode,
               Thickness=@Thickness,TargetGroup=@TargetGroup,UnitNetWeight=@UnitNetWeight,IsActive=@IsActive,
               UpdatedAt=GETDATE() WHERE ProductID=@ProductID`);
+    cache.del('master:products:all');
     res.json({ success: true, message: 'แก้ไขสินค้าสำเร็จ' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
@@ -614,6 +626,7 @@ router.delete('/products/:id', authenticate, requireAdmin, async (req, res) => {
     const pool = getPool();
     await pool.request().input('ProductID', sql.Int, req.params.id)
       .query('UPDATE WMS_Products SET IsActive=0 WHERE ProductID=@ProductID');
+    cache.del('master:products:all');
     res.json({ success: true, message: 'ลบสินค้าสำเร็จ' });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });

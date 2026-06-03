@@ -74,6 +74,7 @@ export default function ShiftPlanning() {
   const [editingId, setEditingId] = useState(null);
   const [editRow, setEditRow] = useState({});
   const [selected, setSelected] = useState(new Set());
+  const [bulkDeleting, setBulkDeleting] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
   const cfgSaveTimer = useRef(null);
   const cfgInitialized = useRef(false);
@@ -183,11 +184,12 @@ export default function ShiftPlanning() {
   const bulkDelete = async () => {
     if (!selected.size || !confirm(t('common.confirm'))) return;
     const ids = [...selected];
-    for (const id of ids) {
-      try { await api.delete(`/shift-plan/records/${id}`); } catch {}
-    }
-    setRecords(r => r.filter(x => !ids.includes(x.id)));
-    setSelected(new Set());
+    setBulkDeleting(true);
+    try {
+      await api.delete('/shift-plan/records/bulk', { data: { ids } });
+      setRecords(r => r.filter(x => !ids.includes(x.id)));
+      setSelected(new Set());
+    } catch {} finally { setBulkDeleting(false); }
   };
 
   const toggleSelect = (id) => setSelected(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; });
@@ -444,10 +446,13 @@ export default function ShiftPlanning() {
           {selected.size > 0 && (
             <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl">
               <span className="text-sm font-semibold text-red-700">เลือก {selected.size} รายการ</span>
-              <button onClick={bulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
-                <Trash2 size={12} />ลบที่เลือก
+              <button onClick={bulkDelete} disabled={bulkDeleting}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 disabled:opacity-60 transition-colors">
+                {bulkDeleting
+                  ? <><span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />กำลังลบ...</>
+                  : <><Trash2 size={12} />ลบที่เลือก</>}
               </button>
-              <button onClick={() => setSelected(new Set())} className="text-xs text-red-400 hover:text-red-600 transition-colors ml-auto">ยกเลิก</button>
+              <button onClick={() => setSelected(new Set())} disabled={bulkDeleting} className="text-xs text-red-400 hover:text-red-600 transition-colors ml-auto disabled:opacity-40">ยกเลิก</button>
             </div>
           )}
           <div className="overflow-x-auto">
