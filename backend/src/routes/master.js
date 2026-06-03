@@ -546,25 +546,21 @@ router.post('/locations/import', authenticate, requireAdmin, upload.single('file
 // ==================== PRODUCTS ====================
 router.get('/products', authenticate, async (req, res) => {
   try {
-    const { search, skuType, categoryCode } = req.query;
-    // Cache full list (no filters) for 5 min to avoid repeated heavy queries
-    if (!search && !skuType && !categoryCode) {
-      const data = await cache.wrap('master:products:all', async () => {
-        const result = await getPool().request()
-          .query(`SELECT ProductID,ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight,IsActive
-                  FROM WMS_Products WHERE IsActive=1 ORDER BY ProductCode`);
-        return result.recordset;
-      }, TTL);
-      return res.json({ success: true, data });
-    }
     const pool = getPool();
+    const { search, skuType, categoryCode } = req.query;
     let where = 'WHERE IsActive = 1';
     const request = pool.request();
-    if (search) { where += ' AND (ProductCode LIKE @s OR ProductName LIKE @s OR CategoryName LIKE @s)'; request.input('s', sql.NVarChar, `%${search}%`); }
-    if (skuType) { where += ' AND SKUType = @skuType'; request.input('skuType', sql.NVarChar, skuType); }
-    if (categoryCode) { where += ' AND CategoryCode = @catCode'; request.input('catCode', sql.NVarChar, categoryCode); }
-    const result = await request.query(`SELECT ProductID,ProductCode,ProductName,SKUType,CategoryCode,CategoryName,MaterialType,FormCode,SizeCode,Thickness,TargetGroup,UnitNetWeight,IsActive FROM WMS_Products ${where} ORDER BY ProductCode`);
-    res.json({ success: true, data: result.recordset });
+    if (search)      { where += ' AND (ProductCode LIKE @s OR ProductName LIKE @s OR CategoryName LIKE @s)'; request.input('s', sql.NVarChar, `%${search}%`); }
+    if (skuType)     { where += ' AND SKUType = @skuType'; request.input('skuType', sql.NVarChar, skuType); }
+    if (categoryCode){ where += ' AND CategoryCode = @catCode'; request.input('catCode', sql.NVarChar, categoryCode); }
+    // Cache only the unfiltered full list to avoid repeated heavy queries
+    const cacheKey = (!search && !skuType && !categoryCode) ? 'master:products:all' : null;
+    const fetchFn = async () => {
+      const result = await request.query(`SELECT * FROM WMS_Products ${where} ORDER BY ProductCode`);
+      return result.recordset;
+    };
+    const data = cacheKey ? await cache.wrap(cacheKey, fetchFn, TTL) : await fetchFn();
+    res.json({ success: true, data });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
 

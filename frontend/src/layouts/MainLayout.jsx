@@ -64,7 +64,7 @@ export default function MainLayout() {
   }, [location.pathname]);
 
   return (
-    <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
+    <div className="flex h-screen" style={{ background: 'transparent', overflow: 'clip' }}>
       {/* Sidebar — desktop only */}
       <Sidebar collapsed={collapsed} onToggle={toggleCollapse} />
 
