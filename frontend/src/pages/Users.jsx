@@ -30,6 +30,7 @@ const MENUS = [
   ]},
   { divider: true, sectionKey: 'section.logistics' },
   { code: 'ETA', nameKey: 'nav.eta' },
+  { code: 'TMS',           nameKey: 'nav.tms' },
   { code: 'DELIVERY_PLAN', nameKey: 'nav.delivery' },
   { divider: true, sectionKey: 'section.system' },
   { code: 'ALERTS', nameKey: 'nav.alerts' },

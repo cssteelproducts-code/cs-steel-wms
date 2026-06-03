@@ -56,6 +56,7 @@ app.use('/api/shift-plan', require('./src/routes/shiftPlan'));
 app.use('/api/records', require('./src/routes/records'));
 app.use('/api/forecast', require('./src/routes/forecast'));
 app.use('/api/location-check', require('./src/routes/locationCheck'));
+app.use('/api/tms', require('./src/routes/tms'));
 
 // Serve React frontend (production build)
 const publicPath = path.join(__dirname, 'public');

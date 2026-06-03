@@ -28,6 +28,7 @@ const pageTitles = {
   '/freight-calc':      { title: 'page.freightCalc', subtitle: 'page.freightCalcSubtitle' },
   '/location-check':    { title: 'page.locationCheck', subtitle: 'page.locationCheckSubtitle' },
   '/stock-count':       { title: 'page.stockCount', subtitle: 'page.stockCountSubtitle' },
+  '/tms':               { title: 'ระบบวางแผนขนส่ง (TMS)' },
 };
 
 const PageFallback = () => (

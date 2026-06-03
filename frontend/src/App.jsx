@@ -24,6 +24,7 @@ const Master         = lazy(() => import('./pages/Master'));
 const Profile        = lazy(() => import('./pages/Profile'));
 const Alerts         = lazy(() => import('./pages/Alerts'));
 const DeliveryPlan   = lazy(() => import('./pages/DeliveryPlan'));
+const TMS            = lazy(() => import('./pages/TMS'));
 const Transfer       = lazy(() => import('./pages/Transfer'));
 const TransferDriver = lazy(() => import('./pages/TransferDriver'));
 const Records        = lazy(() => import('./pages/Records'));
@@ -76,6 +77,7 @@ const LAZY_PAGES = [
   () => import('./pages/DeliveryPlan'),   () => import('./pages/ETA'),
   () => import('./pages/Profile'),        () => import('./pages/Forecast'),
   () => import('./pages/ShiftPlanning'),  () => import('./pages/FreightCalc'),
+  () => import('./pages/TMS'),
 ];
 
 function AppRoutes() {
@@ -116,6 +118,7 @@ function AppRoutes() {
         <Route path="freight-calc" element={<ProtectedRoute menuCode="FREIGHT_CALC"><FreightCalc /></ProtectedRoute>} />
         <Route path="stock-count" element={<ProtectedRoute menuCodeAny={['STOCKCOUNT_OFFICE', 'STOCKCOUNT_FIELD']}><StockCount /></ProtectedRoute>} />
         <Route path="stock" element={<ProtectedRoute menuCode="STOCK"><Stock /></ProtectedRoute>} />
+        <Route path="tms" element={<ProtectedRoute menuCode="TMS"><TMS /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

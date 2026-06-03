@@ -18,6 +18,7 @@ const ALL_ITEMS = [
   { path: '/transfer',       icon: ArrowLeftRight,  key: 'nav.transfer',       code: 'TRANSFER' },
   { path: '/stock-count',    icon: ClipboardCheck,  key: 'nav.stockCount',     codes: ['STOCKCOUNT_OFFICE', 'STOCKCOUNT_FIELD'] },
   { path: '/monitor',        icon: Activity,        key: 'nav.monitor',        code: 'TRIP_MONITOR' },
+  { path: '/tms',            icon: Truck,           key: 'nav.tms',            code: 'TMS' },
   { path: '/eta',            icon: MapPin,          key: 'nav.eta',            code: 'ETA' },
   { path: '/delivery',       icon: Route,           key: 'nav.delivery',       code: 'DELIVERY_PLAN' },
   { path: '/data-station',   icon: FileText,        key: 'nav.dataStation',    code: 'DATA_STATION' },

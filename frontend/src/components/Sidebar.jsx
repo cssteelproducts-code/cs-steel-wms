@@ -26,6 +26,7 @@ const menuItems = [
   { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
   { path: '/stock-count', icon: ClipboardCheck, key: 'nav.stockCount', codes: ['STOCKCOUNT_OFFICE', 'STOCKCOUNT_FIELD'] },
   { key: 'section.logistics', divider: true },
+  { path: '/tms', icon: Truck, key: 'nav.tms', code: 'TMS' },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
   { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
   { key: 'section.system', divider: true },
