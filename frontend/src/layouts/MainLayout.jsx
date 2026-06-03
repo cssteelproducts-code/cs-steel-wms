@@ -2,6 +2,7 @@ import { Suspense, useState, useEffect, useRef } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
+import BottomNav from '../components/BottomNav';
 import { useLang } from '../context/LanguageContext';
 
 const pageTitles = {
@@ -38,10 +39,21 @@ const PageFallback = () => (
 );
 
 export default function MainLayout() {
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const location = useLocation();
   const { t } = useLang();
   const mainRef = useRef(null);
+
+  const [collapsed, setCollapsed] = useState(() => {
+    try { return localStorage.getItem('wms_sidebar_collapsed') === 'true'; } catch { return false; }
+  });
+
+  const toggleCollapse = () => {
+    setCollapsed(prev => {
+      const next = !prev;
+      try { localStorage.setItem('wms_sidebar_collapsed', String(next)); } catch {}
+      return next;
+    });
+  };
 
   const pageInfo = pageTitles[location.pathname];
   const title = pageInfo ? t(pageInfo.title) : 'CS.Smart';
@@ -53,10 +65,18 @@ export default function MainLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden" style={{ background: 'transparent' }}>
-      <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
+      {/* Sidebar — desktop only */}
+      <Sidebar collapsed={collapsed} onToggle={toggleCollapse} />
+
+      {/* Main area */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
-        <Header onMenuClick={() => setSidebarOpen(true)} title={title} subtitle={subtitle} />
-        <main ref={mainRef} className="flex-1 overflow-y-scroll p-5 lg:p-6" style={{ background: '#f1f5f9' }}>
+        <Header title={title} subtitle={subtitle} />
+
+        <main
+          ref={mainRef}
+          className="flex-1 overflow-y-scroll p-4 lg:p-6 pb-[72px] lg:pb-6"
+          style={{ background: '#f1f5f9' }}
+        >
           <Suspense fallback={<PageFallback />}>
             <div key={location.pathname} className="animate-fade-in">
               <Outlet />
@@ -64,6 +84,9 @@ export default function MainLayout() {
           </Suspense>
         </main>
       </div>
+
+      {/* Bottom navigation — mobile/tablet only */}
+      <BottomNav />
     </div>
   );
 }

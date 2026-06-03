@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LanguageContext';
 import { FLAGS } from './FlagIcons';
-import { Menu, LogOut, User } from 'lucide-react';
+import { LogOut, User } from 'lucide-react';
 import AlertBell from './AlertBell';
 import dayjs from 'dayjs';
 const LANGS = [
@@ -12,7 +12,7 @@ const LANGS = [
   { code: 'my', label: 'မြန်မာ' },
 ];
 
-export default function Header({ onMenuClick, title, subtitle }) {
+export default function Header({ title, subtitle }) {
   const { user, logout } = useAuth();
   const { lang, changeLang, t } = useLang();
   const navigate = useNavigate();
@@ -58,15 +58,8 @@ export default function Header({ onMenuClick, title, subtitle }) {
         }}>
 
         {/* Left */}
-        <div className="flex items-center gap-3 min-w-0">
-          <button onClick={onMenuClick}
-            className="lg:hidden p-2 rounded-xl transition-all flex-shrink-0"
-            style={{ color: '#6b7280' }}
-            onMouseEnter={e => { e.currentTarget.style.background = '#fef2f2'; e.currentTarget.style.color = '#dc2626'; }}
-            onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#6b7280'; }}>
-            <Menu size={20} />
-          </button>
-          <div className="hidden sm:block min-w-0">
+        <div className="flex items-center gap-2 min-w-0 flex-1">
+          <div className="min-w-0">
             <h1 className="font-bold truncate leading-tight" style={{ color: '#0f172a', fontSize: 16, letterSpacing: '-0.02em' }}>{title}</h1>
             {subtitle && <p className="text-xs text-slate-400 truncate mt-0.5">{subtitle}</p>}
           </div>

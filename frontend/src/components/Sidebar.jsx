@@ -3,11 +3,11 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
-  MapPin, Users, Settings, X, Activity,
-  Bell, Route, ClipboardList, BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck
+  MapPin, Users, Settings, Activity, Bell, Route, ClipboardList,
+  BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck,
+  ChevronLeft, ChevronRight,
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
-
 
 const menuItems = [
   { path: '/', icon: LayoutDashboard, key: 'nav.dashboard', code: 'DASHBOARD' },
@@ -37,7 +37,7 @@ const menuItems = [
   { path: '/freight-calc', icon: Truck, key: 'nav.freightCalc', code: 'FREIGHT_CALC' },
 ];
 
-export default function Sidebar({ isOpen, onClose }) {
+export default function Sidebar({ collapsed, onToggle }) {
   const { hasPermission } = useAuth();
   const { t } = useLang();
 
@@ -48,104 +48,135 @@ export default function Sidebar({ isOpen, onClose }) {
   });
 
   return (
-    <>
-      <div
-        className={`fixed inset-0 z-[9998] lg:hidden backdrop-blur-sm transition-opacity duration-200
-          ${isOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        style={{ background: 'rgba(0,0,0,0.4)' }}
-        onClick={onClose}
-      />
-
-      <aside className={`
-        fixed top-0 left-0 h-full w-60 z-[9999]
-        flex flex-col transition-transform duration-250 ease-out
-        lg:translate-x-0 lg:static lg:z-auto
-        ${isOpen ? 'translate-x-0' : '-translate-x-full'}
-      `} style={{
+    <aside
+      className="hidden lg:flex flex-col flex-shrink-0 transition-all duration-200 ease-out h-screen sticky top-0"
+      style={{
+        width: collapsed ? 64 : 240,
         backgroundColor: '#0d1520',
         borderRight: '1px solid rgba(255,255,255,0.06)',
         boxShadow: '2px 0 20px rgba(0,0,0,0.25)',
-      }}>
+      }}
+    >
+      {/* Logo */}
+      <div
+        className="flex items-center justify-center flex-shrink-0 overflow-hidden"
+        style={{
+          height: collapsed ? 56 : 92,
+          borderBottom: '1px solid rgba(255,255,255,0.07)',
+          transition: 'height 0.2s ease-out',
+        }}
+      >
+        <img
+          src={logoImg}
+          alt="CS.Smart"
+          className="object-contain transition-all duration-200"
+          style={{ height: collapsed ? 32 : 72, width: 'auto' }}
+        />
+      </div>
 
-        {/* Logo */}
-        <div className="flex items-center justify-between px-4 py-2 flex-shrink-0"
-          style={{ borderBottom: '1px solid rgba(255,255,255,0.07)' }}>
-          <div className="flex-1 flex justify-center">
-            <img src={logoImg} alt="CS.Smart" className="w-auto object-contain" style={{ height: 80 }} />
-          </div>
-          <button onClick={onClose}
-            className="lg:hidden p-1.5 rounded-lg transition-colors flex-shrink-0"
-            style={{ color: '#64748b' }}
-            onMouseEnter={e => { e.currentTarget.style.color = '#f1f5f9'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-            onMouseLeave={e => { e.currentTarget.style.color = '#64748b'; e.currentTarget.style.background = ''; }}>
-            <X size={15} />
-          </button>
-        </div>
+      {/* Red accent line */}
+      <div style={{ height: 2, background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)', flexShrink: 0 }} />
 
-        {/* Red accent line */}
-        <div style={{ height: 2, background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)', flexShrink: 0 }} />
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto py-3 px-2.5 space-y-0.5">
-          {visibleItems.map((item, idx) => {
-            if (item.divider) {
+      {/* Navigation */}
+      <nav className="flex-1 overflow-y-auto overflow-x-hidden py-3 space-y-0.5" style={{ padding: collapsed ? '12px 6px' : '12px 10px' }}>
+        {visibleItems.map((item, idx) => {
+          if (item.divider) {
+            if (collapsed) {
               return (
-                <div key={idx} className="px-2 pt-5 pb-1.5 flex items-center gap-2">
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
-                  <span className="text-[10px] font-semibold uppercase tracking-widest"
-                    style={{ color: '#475569' }}>
-                    {t(item.key)}
-                  </span>
-                  <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
-                </div>
+                <div key={idx} className="my-2 mx-1" style={{ height: 1, background: 'rgba(255,255,255,0.08)' }} />
               );
             }
             return (
-              <NavLink
-                key={item.path}
-                to={item.path}
-                end={item.path === '/'}
-                onClick={onClose}
-                className="flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150"
-                style={({ isActive }) => isActive
-                  ? {
-                      background: 'rgba(220,38,38,0.18)',
-                      color: '#fca5a5',
-                      borderLeft: '3px solid #dc2626',
-                      paddingLeft: '9px',
-                    }
-                  : {
-                      color: '#94a3b8',
-                      borderLeft: '3px solid transparent',
-                      paddingLeft: '9px',
-                    }
-                }
-                onMouseEnter={e => {
-                  if (!e.currentTarget.style.background?.includes('220,38,38')) {
-                    e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
-                    e.currentTarget.style.color = '#e2e8f0';
-                  }
-                }}
-                onMouseLeave={e => {
-                  if (!e.currentTarget.style.background?.includes('220,38,38')) {
-                    e.currentTarget.style.background = '';
-                    e.currentTarget.style.color = '#94a3b8';
-                  }
-                }}
-              >
-                <item.icon size={15} className="flex-shrink-0" />
-                <span className="flex-1 leading-tight">{t(item.key)}</span>
-              </NavLink>
+              <div key={idx} className="px-2 pt-4 pb-1 flex items-center gap-2">
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+                <span className="text-[10px] font-semibold uppercase tracking-widest" style={{ color: '#475569' }}>
+                  {t(item.key)}
+                </span>
+                <div style={{ flex: 1, height: '1px', background: 'rgba(255,255,255,0.07)' }} />
+              </div>
             );
-          })}
-        </nav>
+          }
 
-        {/* Footer */}
-        <div className="px-4 py-3 flex-shrink-0" style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}>
-          <div className="text-[11px] font-semibold" style={{ color: '#475569' }}>CS Steel Products Co., Ltd.</div>
-          <div className="text-[10px] mt-0.5" style={{ color: '#334155' }}>WMS v1.0 © 2026</div>
-        </div>
-      </aside>
-    </>
+          return collapsed ? (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              title={t(item.key)}
+              className="flex items-center justify-center rounded-lg transition-all duration-150"
+              style={({ isActive }) => ({
+                height: 40,
+                background: isActive ? 'rgba(220,38,38,0.20)' : 'transparent',
+                color: isActive ? '#fca5a5' : '#94a3b8',
+                borderLeft: isActive ? '3px solid #dc2626' : '3px solid transparent',
+              })}
+              onMouseEnter={e => {
+                if (!e.currentTarget.style.background?.includes('220,38,38')) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.07)';
+                  e.currentTarget.style.color = '#e2e8f0';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!e.currentTarget.style.background?.includes('220,38,38')) {
+                  e.currentTarget.style.background = 'transparent';
+                  e.currentTarget.style.color = '#94a3b8';
+                }
+              }}
+            >
+              <item.icon size={17} />
+            </NavLink>
+          ) : (
+            <NavLink
+              key={item.path}
+              to={item.path}
+              end={item.path === '/'}
+              className="flex items-center gap-2.5 py-2.5 rounded-lg text-[13px] font-medium transition-all duration-150 whitespace-nowrap overflow-hidden"
+              style={({ isActive }) => isActive
+                ? { background: 'rgba(220,38,38,0.18)', color: '#fca5a5', borderLeft: '3px solid #dc2626', paddingLeft: 9, paddingRight: 10 }
+                : { color: '#94a3b8', borderLeft: '3px solid transparent', paddingLeft: 9, paddingRight: 10 }
+              }
+              onMouseEnter={e => {
+                if (!e.currentTarget.style.background?.includes('220,38,38')) {
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.color = '#e2e8f0';
+                }
+              }}
+              onMouseLeave={e => {
+                if (!e.currentTarget.style.background?.includes('220,38,38')) {
+                  e.currentTarget.style.background = '';
+                  e.currentTarget.style.color = '#94a3b8';
+                }
+              }}
+            >
+              <item.icon size={15} className="flex-shrink-0" />
+              <span className="flex-1 leading-tight">{t(item.key)}</span>
+            </NavLink>
+          );
+        })}
+      </nav>
+
+      {/* Footer + collapse toggle */}
+      <div
+        className="flex-shrink-0 overflow-hidden"
+        style={{ borderTop: '1px solid rgba(255,255,255,0.07)' }}
+      >
+        {!collapsed && (
+          <div className="px-4 pt-2.5 pb-1">
+            <div className="text-[11px] font-semibold" style={{ color: '#475569' }}>CS Steel Products Co., Ltd.</div>
+            <div className="text-[10px] mt-0.5" style={{ color: '#334155' }}>WMS v1.0 © 2026</div>
+          </div>
+        )}
+        <button
+          onClick={onToggle}
+          className="w-full flex items-center justify-center transition-colors duration-150"
+          style={{ height: 36, color: '#475569' }}
+          onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.06)'; e.currentTarget.style.color = '#94a3b8'; }}
+          onMouseLeave={e => { e.currentTarget.style.background = ''; e.currentTarget.style.color = '#475569'; }}
+          title={collapsed ? 'ขยาย Sidebar' : 'ย่อ Sidebar'}
+        >
+          {collapsed ? <ChevronRight size={15} /> : <ChevronLeft size={15} />}
+        </button>
+      </div>
+    </aside>
   );
 }

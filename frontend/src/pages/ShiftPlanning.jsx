@@ -73,6 +73,7 @@ export default function ShiftPlanning() {
   const [batchForm, setBatchForm] = useState({ fromDate: new Date().toISOString().slice(0, 10), toDate: new Date().toISOString().slice(0, 10), endTime: '17:00', shiftEndTimes: DEFAULT_CONFIG.s2.map(s => s.end) });
   const [editingId, setEditingId] = useState(null);
   const [editRow, setEditRow] = useState({});
+  const [selected, setSelected] = useState(new Set());
   const [batchLoading, setBatchLoading] = useState(false);
   const cfgSaveTimer = useRef(null);
   const cfgInitialized = useRef(false);
@@ -176,8 +177,21 @@ export default function ShiftPlanning() {
 
   const clearAll = async () => {
     if (!confirm(t('common.confirm'))) return;
-    try { await api.delete('/shift-plan/records'); setRecords([]); } catch {}
+    try { await api.delete('/shift-plan/records'); setRecords([]); setSelected(new Set()); } catch {}
   };
+
+  const bulkDelete = async () => {
+    if (!selected.size || !confirm(t('common.confirm'))) return;
+    const ids = [...selected];
+    for (const id of ids) {
+      try { await api.delete(`/shift-plan/records/${id}`); } catch {}
+    }
+    setRecords(r => r.filter(x => !ids.includes(x.id)));
+    setSelected(new Set());
+  };
+
+  const toggleSelect = (id) => setSelected(p => { const s = new Set(p); s.has(id) ? s.delete(id) : s.add(id); return s; });
+  const toggleSelectAll = () => setSelected(selected.size === records.length ? new Set() : new Set(records.map(r => r.id)));
 
   const summary = useMemo(() => {
     const totalOT1 = records.reduce((s, r) => s + (r.otHrs1 || 0), 0);
@@ -427,10 +441,24 @@ export default function ShiftPlanning() {
             </div>
           )}
 
+          {selected.size > 0 && (
+            <div className="mb-3 flex items-center gap-3 px-4 py-2.5 bg-red-50 border border-red-200 rounded-xl">
+              <span className="text-sm font-semibold text-red-700">เลือก {selected.size} รายการ</span>
+              <button onClick={bulkDelete} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-semibold hover:bg-red-700 transition-colors">
+                <Trash2 size={12} />ลบที่เลือก
+              </button>
+              <button onClick={() => setSelected(new Set())} className="text-xs text-red-400 hover:text-red-600 transition-colors ml-auto">ยกเลิก</button>
+            </div>
+          )}
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
+                  <th className="table-header px-3 py-2 w-8">
+                    <input type="checkbox" className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                      checked={records.length > 0 && selected.size === records.length}
+                      onChange={toggleSelectAll} />
+                  </th>
                   <th className="table-header text-left px-3 py-2">{t('shift.colDate')}</th>
                   <th className="table-header text-center px-3 py-2">{t('shift.colEndTime')}</th>
                   <th className="table-header text-center px-3 py-2">{t('shift.colOTEmp')}</th>
@@ -442,7 +470,7 @@ export default function ShiftPlanning() {
               </thead>
               <tbody>
                 {records.length === 0 ? (
-                  <tr><td colSpan={7} className="text-center py-10 text-slate-400">{t('shift.noRecords')}</td></tr>
+                  <tr><td colSpan={8} className="text-center py-10 text-slate-400">{t('shift.noRecords')}</td></tr>
                 ) : records.map(r => {
                   const isEditing = editingId === r.id;
                   const diff = +(r.otHrs1 - r.otHrs2).toFixed(2);
@@ -453,6 +481,7 @@ export default function ShiftPlanning() {
                     const previewOT2 = calcOT2(shiftTimes, cfg);
                     return (
                       <tr key={r.id} className="border-b border-indigo-100 bg-indigo-50">
+                        <td className="px-3 py-1.5" />
                         <td className="px-3 py-1.5 font-medium text-indigo-700">{r.date}</td>
                         <td className="px-3 py-1.5">
                           <input type="time" value={editRow.endTime} onChange={e => setEditRow(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm py-1 w-28" />
@@ -489,7 +518,11 @@ export default function ShiftPlanning() {
                     );
                   }
                   return (
-                    <tr key={r.id} className="border-b border-slate-100 hover:bg-slate-50">
+                    <tr key={r.id} className={`border-b border-slate-100 ${selected.has(r.id) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
+                      <td className="px-3 py-2 text-center">
+                        <input type="checkbox" className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
+                          checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} />
+                      </td>
                       <td className="px-3 py-2 font-medium">{r.date}</td>
                       <td className="px-3 py-2 text-center">{r.endTime}</td>
                       <td className="px-3 py-2 text-center text-slate-500">{r.otEmp || '-'}</td>
@@ -511,6 +544,7 @@ export default function ShiftPlanning() {
               {records.length > 0 && (
                 <tfoot>
                   <tr className="border-t-2 border-slate-200 bg-slate-50 font-bold">
+                    <td className="px-3 py-2" />
                     <td className="px-3 py-2 text-sm" colSpan={3}>{summary.days} {t('common.date')}</td>
                     <td className="px-3 py-2 text-right text-blue-700">{summary.totalOT1.toFixed(2)} h</td>
                     <td className="px-3 py-2 text-right text-orange-700">{summary.totalOT2.toFixed(2)} h</td>

@@ -1098,7 +1098,7 @@ export default function Master() {
 
       <div className="card">
         <div className="flex items-center justify-between mb-4">
-          <h3 className="card-header mb-0">{tabs.find(t => t.key === tab)?.label}</h3>
+          <h3 className="card-header mb-0">{t(tabs.find(tb => tb.key === tab)?.labelKey || '')}</h3>
           <div className="flex items-center gap-2">
             {tab === 'internalVehicles' && (<>
               <input ref={internalVehiclesImportRef} type="file" accept=".xlsx,.xls" className="hidden" onChange={handleInternalVehiclesImport} />
@@ -1203,7 +1203,7 @@ export default function Master() {
           <div className={`rounded-2xl w-full p-6 bg-white border border-slate-200 shadow-xl ${modal === 'warehouses' ? 'max-w-xl' : modal === 'internalVehicles' ? 'max-w-lg' : 'max-w-md'}`}>
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900">
-                {editing ? 'แก้ไข' : 'เพิ่ม'} {tabs.find(t => t.key === tab)?.label}
+                {editing ? 'แก้ไข' : 'เพิ่ม'} {t(tabs.find(tb => tb.key === tab)?.labelKey || '')}
               </h3>
               <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
             </div>

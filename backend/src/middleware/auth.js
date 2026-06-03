@@ -59,11 +59,16 @@ const authenticate = async (req, res, next) => {
   }
 };
 
-const requireAdmin = (req, res, next) => {
-  if (req.user.RoleName !== 'Admin') {
-    return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ดำเนินการ (Admin เท่านั้น)' });
-  }
-  next();
+const requireAdmin = async (req, res, next) => {
+  if (req.user.RoleName === 'Admin') return next();
+  try {
+    const result = await getPool().request()
+      .input('RoleID', sql.Int, req.user.RoleID)
+      .query(`SELECT 1 FROM WMS_MenuPermissions WITH (NOLOCK)
+              WHERE RoleID = @RoleID AND MenuCode = 'USERS' AND CanView = 1`);
+    if (result.recordset.length > 0) return next();
+  } catch {}
+  return res.status(403).json({ success: false, message: 'ไม่มีสิทธิ์ดำเนินการนี้' });
 };
 
 module.exports = { authenticate, requireAdmin };
