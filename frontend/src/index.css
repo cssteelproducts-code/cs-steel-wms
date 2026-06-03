@@ -277,3 +277,19 @@ button:has(.lucide-refresh-cw):active .lucide-refresh-cw {
 @media (max-width: 640px) {
   .hide-mobile { display: none !important; }
 }
+
+/* ─── Modal tall-form fix ────────────────────────────────────────────────────
+   flex items-center justify-center + position:fixed fails when content is
+   taller than viewport on iOS — the top portion disappears above the fold.
+   Override to flex-start + overflow-y:auto on small screens so modal scrolls.
+──────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 767px) {
+  .fixed.inset-0.z-50,
+  .fixed.inset-0.z-\[9999\],
+  .fixed.inset-0.z-\[200\] {
+    overflow-y: auto !important;
+    align-items: flex-start !important;
+    padding-top: 0.75rem !important;
+    padding-bottom: 4rem !important; /* clear bottom nav */
+  }
+}

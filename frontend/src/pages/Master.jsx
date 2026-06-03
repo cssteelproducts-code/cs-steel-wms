@@ -710,9 +710,9 @@ export default function Master() {
                       </p>
                     </div>
                     {i.SKUType && <span className={`flex-shrink-0 px-2 py-0.5 rounded-full text-xs font-semibold ${skuColor[i.SKUType] || 'bg-slate-100 text-slate-500'}`}>{i.SKUType}</span>}
-                    <div className="flex-shrink-0 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <div className="flex-shrink-0 flex gap-1 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity">
                       <button onClick={(e) => { e.stopPropagation(); const _n = i.ProductName || ''; const _b = (_n.match(/\([^)]+\)/) || [])[0] || null; setPrintItem({ qrValue: i.ProductCode, line1: i.ProductCode, line2: _b ? _n.replace(_b, '').replace(/\s+/g, ' ').trim() : _n, line2b: _b, line3: i.CategoryName || null, badge: i.SKUType || null, badgeClass: skuColor[i.SKUType] || 'bg-slate-100 text-slate-500', title: 'พิมพ์บาร์โค้ด สินค้า' }); }} className="p-1.5 rounded-xl hover:bg-blue-50 text-gray-300 hover:text-blue-500 transition-colors" title="พิมพ์บาร์โค้ด"><Printer size={14} /></button>
-                      <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-white text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
+                      <button onClick={() => openEdit(i)} className="p-1.5 rounded-xl hover:bg-slate-100 text-gray-400 hover:text-gray-700"><Edit size={14} /></button>
                       <button onClick={() => handleDelete(i)} className="p-1.5 rounded-xl hover:bg-red-50 text-gray-300 hover:text-red-500"><Trash2 size={14} /></button>
                     </div>
                   </div>
@@ -1220,20 +1220,24 @@ export default function Master() {
       )}
 
       {modal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className={`rounded-2xl w-full p-6 bg-white border border-slate-200 shadow-xl ${modal === 'warehouses' ? 'max-w-xl' : modal === 'internalVehicles' ? 'max-w-lg' : 'max-w-md'}`}>
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="text-lg font-bold text-slate-900">
-                {editing ? 'แก้ไข' : 'เพิ่ม'} {t(tabs.find(tb => tb.key === tab)?.labelKey || '')}
-              </h3>
-              <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
-            </div>
-            {renderForm()}
-            <div className="flex gap-3 mt-5">
-              <button onClick={openPinConfirm} disabled={saving} className="btn-primary flex-1">
-                {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึก</>}
-              </button>
-              <button onClick={() => setModal(null)} className="btn-secondary px-6">ยกเลิก</button>
+        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
+          <div className="flex min-h-full items-center justify-center p-4">
+            <div className={`rounded-2xl w-full bg-white border border-slate-200 shadow-xl my-4 ${modal === 'warehouses' ? 'max-w-xl' : modal === 'internalVehicles' ? 'max-w-lg' : 'max-w-md'}`}>
+              <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
+                <h3 className="text-lg font-bold text-slate-900">
+                  {editing ? 'แก้ไข' : 'เพิ่ม'} {t(tabs.find(tb => tb.key === tab)?.labelKey || '')}
+                </h3>
+                <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
+              </div>
+              <div className="px-6 py-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+                {renderForm()}
+              </div>
+              <div className="flex gap-3 px-6 pb-5 pt-3 border-t border-slate-100">
+                <button onClick={openPinConfirm} disabled={saving} className="btn-primary flex-1">
+                  {saving ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" /> : <><Save size={14} />บันทึก</>}
+                </button>
+                <button onClick={() => setModal(null)} className="btn-secondary px-6">ยกเลิก</button>
+              </div>
             </div>
           </div>
         </div>
