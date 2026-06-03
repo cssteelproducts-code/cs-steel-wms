@@ -239,7 +239,7 @@ export default function Records() {
 
       {/* Filters */}
       <div className="card">
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 items-end">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 items-end">
           <div>
             <label className="label">{t('records.filterDate')}</label>
             <input type="date" value={filterDate} onChange={e => setFilterDate(e.target.value)}
@@ -311,16 +311,16 @@ export default function Records() {
                       className="w-3.5 h-3.5 cursor-pointer accent-red-600" />
                   </th>
                   <th className="table-header px-4 py-2 text-left w-8"></th>
-                  <th className="table-header px-4 py-2 text-left">#</th>
-                  <th className="table-header px-4 py-2 text-left">{t('records.colDate')}</th>
-                  <th className="table-header px-4 py-2 text-left">{t('records.colPlate')}</th>
-                  <th className="table-header px-4 py-2 text-left">{t('records.colCustomer')}</th>
-                  <th className="table-header px-4 py-2 text-right">{t('records.colTare')}</th>
-                  <th className="table-header px-4 py-2 text-right">{t('records.colGross')}</th>
-                  <th className="table-header px-4 py-2 text-right">{t('records.colNet')}</th>
-                  <th className="table-header px-4 py-2 text-center">{t('records.colResult')}</th>
-                  <th className="table-header px-4 py-2 text-left">{t('records.colCompleted')}</th>
-                  <th className="table-header px-4 py-2 text-center">{t('records.colActions')}</th>
+                  <th className="table-header px-3 py-2 text-left">#</th>
+                  <th className="table-header px-3 py-2 text-left">{t('records.colDate')}</th>
+                  <th className="table-header px-3 py-2 text-left">{t('records.colPlate')}</th>
+                  <th className="table-header px-3 py-2 text-left">{t('records.colCustomer')}</th>
+                  <th className="table-header px-3 py-2 text-right hide-mobile">{t('records.colTare')}</th>
+                  <th className="table-header px-3 py-2 text-right hide-mobile">{t('records.colGross')}</th>
+                  <th className="table-header px-3 py-2 text-right">{t('records.colNet')}</th>
+                  <th className="table-header px-3 py-2 text-center hide-mobile">{t('records.colResult')}</th>
+                  <th className="table-header px-3 py-2 text-left hide-mobile">{t('records.colCompleted')}</th>
+                  <th className="table-header px-3 py-2 text-center">{t('records.colActions')}</th>
                 </tr>
               </thead>
               <tbody>
@@ -335,36 +335,36 @@ export default function Records() {
                           {expandedTripIds.has(row.TripID) ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </button>
                       </td>
-                      <td className="px-4 py-2 text-xs text-slate-400 font-mono">#{row.TripID}</td>
-                      <td className="px-4 py-2 text-sm text-slate-600 whitespace-nowrap">
+                      <td className="px-3 py-2 text-xs text-slate-400 font-mono">#{row.TripID}</td>
+                      <td className="px-3 py-2 text-sm text-slate-600 whitespace-nowrap">
                         {row.TripDate ? new Date(row.TripDate).toLocaleDateString('th-TH', { day: '2-digit', month: '2-digit', year: '2-digit' }) : '-'}
                       </td>
-                      <td className="px-4 py-2">
-                        <div className="font-bold text-slate-900 text-sm">{row.LicensePlate}</div>
+                      <td className="px-3 py-2">
+                        <div className="font-bold text-slate-900 text-sm whitespace-nowrap">{row.LicensePlate}</div>
                         <div className="text-xs text-slate-400">{row.VehicleType}</div>
                       </td>
-                      <td className="px-4 py-2">
-                        <div className="text-sm text-slate-700">{row.CustomerName || '-'}</div>
-                        {row.PickDocumentNo && <div className="text-xs text-purple-500 font-mono">{row.PickDocumentNo}</div>}
+                      <td className="px-3 py-2 max-w-[110px]">
+                        <div className="text-sm text-slate-700 truncate" title={row.CustomerName}>{row.CustomerName || '-'}</div>
+                        {row.PickDocumentNo && <div className="text-xs text-purple-500 font-mono truncate">{row.PickDocumentNo}</div>}
                       </td>
-                      <td className="px-4 py-2 text-right text-sm text-slate-600">{fmtKg(row.TareWeight)}</td>
-                      <td className="px-4 py-2 text-right text-sm text-slate-600">{fmtKg(row.GrossWeight)}</td>
-                      <td className="px-4 py-2 text-right text-sm font-semibold text-emerald-700">{fmtKg(row.NetWeight)}</td>
-                      <td className="px-4 py-2 text-center">
+                      <td className="px-3 py-2 text-right text-sm text-slate-600 hide-mobile">{fmtKg(row.TareWeight)}</td>
+                      <td className="px-3 py-2 text-right text-sm text-slate-600 hide-mobile">{fmtKg(row.GrossWeight)}</td>
+                      <td className="px-3 py-2 text-right text-sm font-semibold text-emerald-700 whitespace-nowrap">{fmtKg(row.NetWeight)}</td>
+                      <td className="px-3 py-2 text-center hide-mobile">
                         {row.IsApproved === true || row.IsApproved === 1
                           ? <CheckCircle size={16} className="text-emerald-500 mx-auto" />
                           : row.IsApproved === false || row.IsApproved === 0
                             ? <XCircle size={16} className="text-red-400 mx-auto" />
                             : <span className="text-slate-300 text-xs">-</span>}
                       </td>
-                      <td className="px-4 py-2 text-xs text-slate-500 whitespace-nowrap">{formatDateTime(row.CompletedAt)}</td>
+                      <td className="px-3 py-2 text-xs text-slate-500 whitespace-nowrap hide-mobile">{formatDateTime(row.CompletedAt)}</td>
                       <td className="px-4 py-2">
-                        <div className="flex items-center justify-center gap-1.5">
+                        <div className="flex items-center justify-center gap-1">
                           <button onClick={() => openEdit(row)} className="p-1.5 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-blue-50 transition-colors" title={t('common.edit')}>
-                            <Pencil size={14} />
+                            <Pencil size={13} />
                           </button>
                           <button onClick={() => setDeleteRow(row)} className="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 transition-colors" title={t('common.delete')}>
-                            <Trash2 size={14} />
+                            <Trash2 size={13} />
                           </button>
                         </div>
                       </td>

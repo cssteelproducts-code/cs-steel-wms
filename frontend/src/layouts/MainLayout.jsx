@@ -68,8 +68,8 @@ export default function MainLayout() {
       {/* Sidebar — desktop only */}
       <Sidebar collapsed={collapsed} onToggle={toggleCollapse} />
 
-      {/* Main area */}
-      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
+      {/* Main area — no overflow-hidden so position:fixed modals cover full viewport on iOS */}
+      <div className="flex-1 flex flex-col min-w-0">
         <Header title={title} subtitle={subtitle} />
 
         <main

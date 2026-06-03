@@ -205,17 +205,19 @@ export default function Users() {
 
   return (
     <div className="space-y-6">
-      <div className="flex gap-2 items-center">
-        <button onClick={() => setTab('users')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'users' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <UsersIcon size={14} className="inline mr-1" />{t('users.usersTab')} ({users.length})
-        </button>
-        <button onClick={() => setTab('roles')}
-          className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'roles' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-          <Shield size={14} className="inline mr-1" />{t('users.rolesTab')}
-        </button>
+      <div className="flex items-center gap-2">
+        <div className="flex gap-2 overflow-x-auto flex-1 min-w-0">
+          <button onClick={() => setTab('users')}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'users' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+            <UsersIcon size={14} />{t('users.usersTab')} ({users.length})
+          </button>
+          <button onClick={() => setTab('roles')}
+            className={`flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${tab === 'roles' ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
+            <Shield size={14} />{t('users.rolesTab')}
+          </button>
+        </div>
         <button onClick={fetchAll}
-          className="ml-auto p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
+          className="flex-shrink-0 p-2 rounded-lg text-slate-400 hover:text-blue-500 hover:bg-slate-100 transition-colors border border-slate-200 bg-white">
           <RefreshCw size={14} />
         </button>
       </div>
