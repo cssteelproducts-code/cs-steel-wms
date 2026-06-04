@@ -4,7 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LanguageContext';
 import {
   MoreHorizontal, X, LayoutDashboard, Scale, FileText, Package, CheckSquare,
-  TruckIcon, MapPin, Users, Settings, Activity, Bell, Route, ClipboardList,
+  TruckIcon, MapPin, Users, Settings, Activity, Bell, ClipboardList,
   BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck
 } from 'lucide-react';
 
@@ -20,7 +20,6 @@ const ALL_ITEMS = [
   { path: '/monitor',        icon: Activity,        key: 'nav.monitor',        code: 'TRIP_MONITOR' },
   { path: '/tms',            icon: Truck,           key: 'nav.tms',            code: 'TMS' },
   { path: '/eta',            icon: MapPin,          key: 'nav.eta',            code: 'ETA' },
-  { path: '/delivery',       icon: Route,           key: 'nav.delivery',       code: 'DELIVERY_PLAN' },
   { path: '/data-station',   icon: FileText,        key: 'nav.dataStation',    code: 'DATA_STATION' },
   { path: '/checker',        icon: CheckSquare,     key: 'nav.checker',        code: 'CHECKER' },
   { path: '/forecast',       icon: BrainCircuit,    key: 'nav.forecast',       code: 'FORECAST' },

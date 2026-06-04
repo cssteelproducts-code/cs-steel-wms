@@ -1220,9 +1220,10 @@ export default function Master() {
       )}
 
       {modal && (
-        <div className="fixed inset-0 z-50 overflow-y-auto" style={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}>
-          <div className="flex min-h-full items-center justify-center p-4">
-            <div className={`rounded-2xl w-full bg-white border border-slate-200 shadow-xl my-4 ${modal === 'warehouses' ? 'max-w-xl' : modal === 'internalVehicles' ? 'max-w-lg' : 'max-w-md'}`}>
+        <div className="fixed inset-0 z-50 overflow-y-auto">
+          <div className="fixed inset-0 bg-black/50" onClick={() => setModal(null)} />
+          <div className="relative flex min-h-full items-center justify-center p-4">
+            <div className={`relative rounded-2xl w-full bg-white border border-slate-200 shadow-xl my-4 ${modal === 'warehouses' ? 'max-w-xl' : modal === 'internalVehicles' ? 'max-w-lg' : 'max-w-md'}`}>
               <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">
                 <h3 className="text-lg font-bold text-slate-900">
                   {editing ? 'แก้ไข' : 'เพิ่ม'} {t(tabs.find(tb => tb.key === tab)?.labelKey || '')}

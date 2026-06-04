@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LanguageContext';
 import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
-  MapPin, Users, Settings, Activity, Bell, Route, ClipboardList,
+  MapPin, Users, Settings, Activity, Bell, ClipboardList,
   BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck,
   ChevronLeft, ChevronRight,
 } from 'lucide-react';
@@ -28,7 +28,6 @@ const menuItems = [
   { key: 'section.logistics', divider: true },
   { path: '/tms', icon: Truck, key: 'nav.tms', code: 'TMS' },
   { path: '/eta', icon: MapPin, key: 'nav.eta', code: 'ETA' },
-  { path: '/delivery', icon: Route, key: 'nav.delivery', code: 'DELIVERY_PLAN' },
   { key: 'section.system', divider: true },
   { path: '/alerts', icon: Bell, key: 'nav.alerts', code: 'ALERTS' },
   { path: '/users', icon: Users, key: 'nav.users', code: 'USERS' },
