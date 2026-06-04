@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+﻿import React, { useState, useEffect } from 'react';
 import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -361,7 +361,7 @@ export default function Users() {
 
       {/* Role Modal */}
       {modal === 'role' && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900">{editingRole ? t('users.editRole') : t('users.newRole')}</h3>
@@ -391,7 +391,7 @@ export default function Users() {
 
       {/* User Modal */}
       {(modal === 'create' || modal === 'edit') && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900 mb-4">
               {modal === 'create' ? t('users.newUser') : t('users.editUser')}
@@ -459,7 +459,7 @@ export default function Users() {
 
       {/* Permissions Modal */}
       {modal === 'permissions' && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-xl flex flex-col" style={{ maxHeight: '90vh' }}>
             <div className="px-6 pt-6 pb-3 flex-shrink-0">
               <h3 className="text-lg font-bold text-slate-900 mb-1">{t('users.permissionsTitle')} {selectedRole?.RoleName}</h3>
@@ -514,7 +514,7 @@ export default function Users() {
                           <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/40'}`}>
                             <td className="pl-10 pr-3 py-1.5">
                               <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                                <span className="text-slate-300">└</span>
+                                <span className="text-slate-300">โ””</span>
                                 <span>{t(child.nameKey)}</span>
                               </div>
                             </td>

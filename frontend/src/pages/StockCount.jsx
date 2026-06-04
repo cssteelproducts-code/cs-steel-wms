@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
+﻿import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LanguageContext';
 import api from '../services/api';
@@ -12,7 +12,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
 import '../utils/helpers';
 
-// Searchable dropdown with max-height scroll — fixes overflow on long lists
+// Searchable dropdown with max-height scroll โ€” fixes overflow on long lists
 function SearchSelect({ value, onChange, options, placeholder, className = '' }) {
   const [open, setOpen] = useState(false);
   const [q, setQ] = useState('');
@@ -39,7 +39,7 @@ function SearchSelect({ value, onChange, options, placeholder, className = '' })
           style={{ minWidth: 150, maxHeight: 260 }}>
           <div className="p-1.5 border-b border-slate-100 flex-shrink-0">
             <input autoFocus value={q} onChange={e => setQ(e.target.value)}
-              placeholder="ค้นหา..." onClick={e => e.stopPropagation()}
+              placeholder="เธเนเธเธซเธฒ..." onClick={e => e.stopPropagation()}
               className="w-full px-2 py-1 text-xs border border-slate-200 rounded-lg outline-none focus:border-red-400" />
           </div>
           <div className="overflow-y-auto flex-1 p-1">
@@ -51,7 +51,7 @@ function SearchSelect({ value, onChange, options, placeholder, className = '' })
                 {o}
               </button>
             ))}
-            {filtered.length === 0 && <p className="text-center text-xs text-slate-400 py-3">ไม่พบ</p>}
+            {filtered.length === 0 && <p className="text-center text-xs text-slate-400 py-3">เนเธกเนเธเธ</p>}
           </div>
         </div>
       )}
@@ -75,13 +75,13 @@ const StatusBadge = ({ status }) => {
   return <span className={`px-2.5 py-0.5 rounded-full text-xs font-bold ${cls}`}>{label}</span>;
 };
 const DiffBadge = ({ sys, counted }) => {
-  if (counted == null || counted === 0 && sys > 0) return <span className="text-slate-300 text-xs">รอนับ</span>;
+  if (counted == null || counted === 0 && sys > 0) return <span className="text-slate-300 text-xs">เธฃเธญเธเธฑเธ</span>;
   const diff = Number(counted) - Number(sys);
-  if (Math.abs(diff) < 0.001) return <span className="text-emerald-600 text-xs font-bold">✓ ตรงกัน</span>;
+  if (Math.abs(diff) < 0.001) return <span className="text-emerald-600 text-xs font-bold">โ“ เธ•เธฃเธเธเธฑเธ</span>;
   return <span className={`text-xs font-bold ${diff > 0 ? 'text-blue-600' : 'text-red-600'}`}>{diff > 0 ? '+' : ''}{diff.toFixed(2)}</span>;
 };
 
-// ── Memoized row — only re-renders when its own props change ──────────────────
+// โ”€โ”€ Memoized row โ€” only re-renders when its own props change โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 const ItemRow = memo(function ItemRow({ item, isDraft, showSelected, detailTab, sessionStatus, isSelected, onSelect, onLock, onUnlock, onRecount, onEntries }) {
   const diff = Number(item.TotalCounted) - Number(item.SystemQty);
   const hasDiff = item.EntryCount > 0 && Math.abs(diff) >= 0.001;
@@ -112,7 +112,7 @@ const ItemRow = memo(function ItemRow({ item, isDraft, showSelected, detailTab, 
       <td className="px-3 py-2 text-right font-semibold">{Number(item.SystemQty).toLocaleString()}</td>
       {detailTab === 'process' && <>
         <td className="px-3 py-2 text-right font-semibold text-blue-700">
-          {item.EntryCount > 0 ? Number(item.TotalCounted).toLocaleString() : <span className="text-slate-300">—</span>}
+          {item.EntryCount > 0 ? Number(item.TotalCounted).toLocaleString() : <span className="text-slate-300">โ€”</span>}
         </td>
         <td className="px-3 py-2 text-right"><DiffBadge sys={item.SystemQty} counted={item.TotalCounted} /></td>
       </>}
@@ -120,16 +120,16 @@ const ItemRow = memo(function ItemRow({ item, isDraft, showSelected, detailTab, 
         {item.IsLocked
           ? <span className="inline-flex items-center gap-1 text-emerald-600 text-xs font-semibold"><Lock size={11}/>Lock</span>
           : item.NeedsRecount
-          ? <span className="inline-flex items-center gap-1 text-amber-600 text-xs font-semibold"><RotateCcw size={11}/>ตรวจซ้ำ</span>
+          ? <span className="inline-flex items-center gap-1 text-amber-600 text-xs font-semibold"><RotateCcw size={11}/>เธ•เธฃเธงเธเธเนเธณ</span>
           : item.EntryCount > 0
-          ? <span className="text-blue-600 text-xs font-semibold">นับแล้ว</span>
-          : <span className="text-slate-300 text-xs">รอนับ</span>
+          ? <span className="text-blue-600 text-xs font-semibold">เธเธฑเธเนเธฅเนเธง</span>
+          : <span className="text-slate-300 text-xs">เธฃเธญเธเธฑเธ</span>
         }
       </td>
       <td className="px-3 py-2">
         <div className="flex items-center gap-1">
           {item.EntryCount > 0 && (
-            <button onClick={() => onEntries(item)} title="ดูประวัติ"
+            <button onClick={() => onEntries(item)} title="เธ”เธนเธเธฃเธฐเธงเธฑเธ•เธด"
               className="p-1 rounded hover:bg-slate-100 text-slate-400 hover:text-slate-700 transition-colors">
               <FileText size={12} />
             </button>
@@ -141,7 +141,7 @@ const ItemRow = memo(function ItemRow({ item, isDraft, showSelected, detailTab, 
             </button>
           )}
           {sessionStatus === 'OPEN' && !item.IsLocked && item.EntryCount > 0 && (
-            <button onClick={() => onRecount(item.ItemID)} title="ส่งกลับนับใหม่"
+            <button onClick={() => onRecount(item.ItemID)} title="เธชเนเธเธเธฅเธฑเธเธเธฑเธเนเธซเธกเน"
               className="p-1 rounded hover:bg-amber-50 text-slate-400 hover:text-amber-600 transition-colors">
               <RotateCcw size={12} />
             </button>
@@ -158,7 +158,7 @@ const ItemRow = memo(function ItemRow({ item, isDraft, showSelected, detailTab, 
   );
 });
 
-// ── Memoized field card — own local input state, no parent re-render on type ──
+// โ”€โ”€ Memoized field card โ€” own local input state, no parent re-render on type โ”€โ”€
 const FieldCard = memo(function FieldCard({ item, submitting, onSubmit, isActive, onSubmitDone }) {
   const [qty, setQty] = useState('');
   const inputRef = useRef(null);
@@ -187,16 +187,16 @@ const FieldCard = memo(function FieldCard({ item, submitting, onSubmit, isActive
             <span className="font-black text-slate-900 text-sm">{item.ItemCode}</span>
             <span className="text-xs text-blue-600 font-mono bg-blue-50 px-1.5 py-0.5 rounded">{item.Location}</span>
             {item.Warehouse && <span className="text-xs text-slate-400 font-mono">{item.Warehouse}</span>}
-            {item.NeedsRecount && <span className="text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><RotateCcw size={10}/>ตรวจนับซ้ำ</span>}
+            {item.NeedsRecount && <span className="text-xs font-bold text-amber-700 bg-amber-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><RotateCcw size={10}/>เธ•เธฃเธงเธเธเธฑเธเธเนเธณ</span>}
             {item.IsLocked && <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-1.5 py-0.5 rounded-full flex items-center gap-1"><Lock size={10}/>Lock</span>}
           </div>
           <div className="text-xs text-slate-500 mt-0.5 truncate">{item.ItemName}</div>
         </div>
         <div className="text-right flex-shrink-0">
-          <div className="text-xs text-slate-400">ยอดระบบ</div>
+          <div className="text-xs text-slate-400">เธขเธญเธ”เธฃเธฐเธเธ</div>
           <div className="font-black text-slate-900">{Number(item.SystemQty).toLocaleString()}</div>
           {item.EntryCount > 0 && (
-            <div className="text-xs text-blue-600 font-semibold">นับได้: {Number(item.TotalCounted).toLocaleString()}</div>
+            <div className="text-xs text-blue-600 font-semibold">เธเธฑเธเนเธ”เน: {Number(item.TotalCounted).toLocaleString()}</div>
           )}
         </div>
       </div>
@@ -207,7 +207,7 @@ const FieldCard = memo(function FieldCard({ item, submitting, onSubmit, isActive
             type="number" step="0.01" min="0"
             value={qty}
             onChange={e => setQty(e.target.value)}
-            placeholder="ใส่จำนวนที่นับได้"
+            placeholder="เนเธชเนเธเธณเธเธงเธเธ—เธตเนเธเธฑเธเนเธ”เน"
             className="input-field text-sm flex-1"
             onKeyDown={e => { if (e.key === 'Enter') submit(); }}
           />
@@ -215,7 +215,7 @@ const FieldCard = memo(function FieldCard({ item, submitting, onSubmit, isActive
             className="btn-primary text-sm px-4 flex-shrink-0">
             {submitting
               ? <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-              : <><Save size={14} />บันทึก</>
+              : <><Save size={14} />เธเธฑเธเธ—เธถเธ</>
             }
           </button>
         </div>
@@ -232,7 +232,7 @@ export default function StockCount() {
   const defaultTab = canOffice ? 'office' : 'field';
   const [tab, setTab] = useState(defaultTab);
 
-  // ── Office state ──
+  // โ”€โ”€ Office state โ”€โ”€
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [view, setView] = useState('list');
@@ -254,7 +254,7 @@ export default function StockCount() {
   const [entriesModal, setEntriesModal] = useState(null);
   const [entries, setEntries] = useState([]);
 
-  // ── Field state ──
+  // โ”€โ”€ Field state โ”€โ”€
   const [fieldSessions, setFieldSessions] = useState([]);
   const [fieldSessionId, setFieldSessionId] = useState('');
   const [fieldData, setFieldData] = useState(null);
@@ -272,14 +272,14 @@ export default function StockCount() {
   const [fieldPage, setFieldPage] = useState(0);
   const [deleteModal, setDeleteModal] = useState({ open: false, session: null, password: '', loading: false, showPw: false });
 
-  // ── Fetch ─────────────────────────────────────────────
+  // โ”€โ”€ Fetch โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
   const fetchSessions = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.get('/stock-count');
       setSessions(res.data.data || []);
-    } catch { toast.error('โหลดข้อมูลล้มเหลว'); }
+    } catch { toast.error('เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅเธฅเนเธกเน€เธซเธฅเธง'); }
     finally { setLoading(false); }
   }, []);
 
@@ -288,7 +288,7 @@ export default function StockCount() {
     try {
       const res = await api.get(`/stock-count/${id}`);
       setSessionData(res.data.data);
-    } catch { toast.error('โหลดรายละเอียดล้มเหลว'); }
+    } catch { toast.error('เนเธซเธฅเธ”เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธฅเนเธกเน€เธซเธฅเธง'); }
     finally { setDetailLoading(false); }
   }, []);
 
@@ -305,7 +305,7 @@ export default function StockCount() {
     try {
       const res = await api.get(`/stock-count/${id}`);
       setFieldData(res.data.data);
-    } catch { toast.error('โหลดข้อมูลล้มเหลว'); }
+    } catch { toast.error('เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅเธฅเนเธกเน€เธซเธฅเธง'); }
     finally { setFieldLoading(false); }
   }, []);
 
@@ -316,7 +316,7 @@ export default function StockCount() {
   useEffect(() => { setFieldPage(0); setFilterFieldWH(''); setFilterFieldLoc(''); }, [fieldSessionId]);
   useEffect(() => { setFieldPage(0); }, [fieldSearch, fieldFilter, filterFieldWH, filterFieldLoc]);
 
-  // ── Office actions ────────────────────────────────────
+  // โ”€โ”€ Office actions โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
   const openDetail = (session) => {
     setSelectedSession(session);
@@ -330,7 +330,7 @@ export default function StockCount() {
   };
 
   const handleCreate = async () => {
-    if (!createForm.countDate) return toast.error('กรุณาระบุวันที่');
+    if (!createForm.countDate) return toast.error('เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธงเธฑเธเธ—เธตเน');
     setSaving(true);
     try {
       const sessionName = dayjs(createForm.countDate).format('D MMMM BBBB');
@@ -341,18 +341,18 @@ export default function StockCount() {
         setCreateForm({ countDate: dayjs().format('YYYY-MM-DD'), notes: '' });
         await fetchSessions();
       }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”'); }
     finally { setSaving(false); }
   };
 
   const handleStatusChange = async (status) => {
     if (status === 'OPEN' && selectedIds.size > 0 && selectedIds.size < items.length) {
-      if (!confirm(`เปิดรอบเฉพาะ ${selectedIds.size} รายการที่เลือก (จากทั้งหมด ${items.length} รายการ)\nรายการที่ไม่ได้เลือกจะถูกลบออกจากรอบนี้ ยืนยันไหม?`)) return;
+      if (!confirm(`เน€เธเธดเธ”เธฃเธญเธเน€เธเธเธฒเธฐ ${selectedIds.size} เธฃเธฒเธขเธเธฒเธฃเธ—เธตเนเน€เธฅเธทเธญเธ (เธเธฒเธเธ—เธฑเนเธเธซเธกเธ” ${items.length} เธฃเธฒเธขเธเธฒเธฃ)\nเธฃเธฒเธขเธเธฒเธฃเธ—เธตเนเนเธกเนเนเธ”เนเน€เธฅเธทเธญเธเธเธฐเธ–เธนเธเธฅเธเธญเธญเธเธเธฒเธเธฃเธญเธเธเธตเน เธขเธทเธเธขเธฑเธเนเธซเธก?`)) return;
       setSaving(true);
       try {
         await api.post(`/stock-count/${selectedSession.SessionID}/trim-items`, { keepIds: [...selectedIds] });
       } catch (err) {
-        toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด');
+        toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”');
         setSaving(false);
         return;
       }
@@ -367,7 +367,7 @@ export default function StockCount() {
         setShowSelected(false);
         await Promise.all([fetchSessions(), fetchDetail(selectedSession.SessionID)]);
       }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”'); }
     finally { setSaving(false); }
   };
 
@@ -396,7 +396,7 @@ export default function StockCount() {
         };
         setTimeout(poll, 3000);
       }
-    } catch (err) { toast.error(err.response?.data?.message || 'นำเข้าล้มเหลว'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เธเธณเน€เธเนเธฒเธฅเนเธกเน€เธซเธฅเธง'); }
     finally { setImporting(false); }
   };
 
@@ -406,7 +406,7 @@ export default function StockCount() {
       const res = await api.put(`/stock-count/${selectedSession?.SessionID}/items/${itemId}/lock`);
       if (res.data.success) toast.success(res.data.message);
       else fetchDetail(selectedSession?.SessionID);
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession?.SessionID); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”'); fetchDetail(selectedSession?.SessionID); }
   }, [selectedSession?.SessionID, fetchDetail]);
 
   const handleUnlock = useCallback(async (itemId) => {
@@ -415,7 +415,7 @@ export default function StockCount() {
       const res = await api.put(`/stock-count/${selectedSession?.SessionID}/items/${itemId}/unlock`);
       if (res.data.success) toast.success(res.data.message);
       else fetchDetail(selectedSession?.SessionID);
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession?.SessionID); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”'); fetchDetail(selectedSession?.SessionID); }
   }, [selectedSession?.SessionID, fetchDetail]);
 
   const handleRecount = useCallback(async (itemId) => {
@@ -424,7 +424,7 @@ export default function StockCount() {
       const res = await api.put(`/stock-count/${selectedSession?.SessionID}/items/${itemId}/recount`);
       if (res.data.success) toast.success(res.data.message);
       else fetchDetail(selectedSession?.SessionID);
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); fetchDetail(selectedSession?.SessionID); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”'); fetchDetail(selectedSession?.SessionID); }
   }, [selectedSession?.SessionID, fetchDetail]);
 
   const handleLockCorrect = async () => {
@@ -432,7 +432,7 @@ export default function StockCount() {
     try {
       const res = await api.post(`/stock-count/${selectedSession.SessionID}/lock-correct`);
       if (res.data.success) { toast.success(res.data.message); fetchDetail(selectedSession.SessionID); }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”'); }
     finally { setSaving(false); }
   };
 
@@ -441,7 +441,7 @@ export default function StockCount() {
     try {
       const res = await api.post(`/stock-count/${selectedSession.SessionID}/recount-diff`);
       if (res.data.success) { toast.success(res.data.message); fetchDetail(selectedSession.SessionID); }
-    } catch (err) { toast.error(err.response?.data?.message || 'เกิดข้อผิดพลาด'); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”'); }
     finally { setSaving(false); }
   };
 
@@ -451,7 +451,7 @@ export default function StockCount() {
 
   const confirmDelete = async () => {
     const { session, password } = deleteModal;
-    if (!password) { toast.error('กรุณาระบุรหัสผ่าน'); return; }
+    if (!password) { toast.error('เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธฃเธซเธฑเธชเธเนเธฒเธ'); return; }
     setDeleteModal(m => ({ ...m, loading: true }));
     try {
       const res = await api.delete(`/stock-count/${session.SessionID}`, { data: { password } });
@@ -461,7 +461,7 @@ export default function StockCount() {
         fetchSessions();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'ลบไม่สำเร็จ');
+      toast.error(err.response?.data?.message || 'เธฅเธเนเธกเนเธชเธณเน€เธฃเนเธ');
       setDeleteModal(m => ({ ...m, loading: false }));
     }
   };
@@ -478,7 +478,7 @@ export default function StockCount() {
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
     } catch {
-      toast.error('ดาวน์โหลดรายงานไม่สำเร็จ');
+      toast.error('เธ”เธฒเธงเธเนเนเธซเธฅเธ”เธฃเธฒเธขเธเธฒเธเนเธกเนเธชเธณเน€เธฃเนเธ');
     }
   };
 
@@ -490,10 +490,10 @@ export default function StockCount() {
     } catch { setEntries([]); }
   }, [selectedSession?.SessionID]);
 
-  // ── Field actions ─────────────────────────────────────
+  // โ”€โ”€ Field actions โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
   const handleSubmitCount = useCallback(async (itemId, parsedQty) => {
-    if (!parsedQty || isNaN(parsedQty)) return toast.error('กรุณาระบุจำนวน');
+    if (!parsedQty || isNaN(parsedQty)) return toast.error('เธเธฃเธธเธ“เธฒเธฃเธฐเธเธธเธเธณเธเธงเธ');
     setSubmitting(p => ({ ...p, [itemId]: true }));
     setFieldData(prev => ({
       ...prev,
@@ -505,7 +505,7 @@ export default function StockCount() {
       const res = await api.post(`/stock-count/${fieldSessionId}/count`, { itemId, countedQty: parsedQty, notes: '' });
       if (res.data.success) toast.success(res.data.message);
       else fetchFieldData(fieldSessionId);
-    } catch (err) { toast.error(err.response?.data?.message || 'บันทึกไม่สำเร็จ'); fetchFieldData(fieldSessionId); }
+    } catch (err) { toast.error(err.response?.data?.message || 'เธเธฑเธเธ—เธถเธเนเธกเนเธชเธณเน€เธฃเนเธ'); fetchFieldData(fieldSessionId); }
     finally { setSubmitting(p => ({ ...p, [itemId]: false })); }
   }, [fieldSessionId, fetchFieldData]);
 
@@ -514,13 +514,13 @@ export default function StockCount() {
     if (fieldLocations.includes(code)) {
       setFilterFieldLoc(code);
       setActiveItemId(null);
-      toast.success(`📍 Location: ${code}`);
+      toast.success(`๐“ Location: ${code}`);
       return;
     }
     if (fieldWarehouses.includes(code)) {
       setFilterFieldWH(code); setFilterFieldLoc('');
       setActiveItemId(null);
-      toast.success(`คลัง: ${code}`);
+      toast.success(`เธเธฅเธฑเธ: ${code}`);
       return;
     }
     const found = fieldItems.find(i => i.ItemCode?.toLowerCase() === code.toLowerCase());
@@ -530,11 +530,11 @@ export default function StockCount() {
       setActiveItemId(found.ItemID);
       return;
     }
-    toast.error(`ไม่พบรหัส: ${code}`);
+    toast.error(`เนเธกเนเธเธเธฃเธซเธฑเธช: ${code}`);
   };
   const clearActive = useCallback(() => setActiveItemId(null), []);
 
-  // ── Derived data ──────────────────────────────────────
+  // โ”€โ”€ Derived data โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
   const items = useMemo(() => sessionData?.items || [], [sessionData]);
   const warehouses = useMemo(() => [...new Set(items.map(i => i.Warehouse).filter(Boolean))].sort(), [items]);
@@ -617,27 +617,27 @@ export default function StockCount() {
   const fieldPageItems = useMemo(() => filteredFieldItems.slice(fieldPage * FIELD_PAGE_SIZE, (fieldPage + 1) * FIELD_PAGE_SIZE), [filteredFieldItems, fieldPage]);
   const fieldTotalPages = Math.max(1, Math.ceil(filteredFieldItems.length / FIELD_PAGE_SIZE));
 
-  // ── Render ────────────────────────────────────────────
+  // โ”€โ”€ Render โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€โ”€
 
   return (
     <div className="space-y-4">
 
-      {/* ── Delete confirm modal ── */}
+      {/* โ”€โ”€ Delete confirm modal โ”€โ”€ */}
       {deleteModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 backdrop-blur-sm px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-red-50"><Trash2 size={18} className="text-red-500" /></div>
               <div>
-                <h3 className="font-bold text-slate-900">ยืนยันการลบรอบนับ</h3>
+                <h3 className="font-bold text-slate-900">เธขเธทเธเธขเธฑเธเธเธฒเธฃเธฅเธเธฃเธญเธเธเธฑเธ</h3>
                 <p className="text-xs text-slate-500 mt-0.5">"{deleteModal.session?.SessionName}"</p>
               </div>
             </div>
-            <p className="text-sm text-slate-600">ข้อมูลทั้งหมดในรอบนี้จะถูกลบถาวร กรุณาใส่รหัสผ่านของคุณเพื่อยืนยัน</p>
+            <p className="text-sm text-slate-600">เธเนเธญเธกเธนเธฅเธ—เธฑเนเธเธซเธกเธ”เนเธเธฃเธญเธเธเธตเนเธเธฐเธ–เธนเธเธฅเธเธ–เธฒเธงเธฃ เธเธฃเธธเธ“เธฒเนเธชเนเธฃเธซเธฑเธชเธเนเธฒเธเธเธญเธเธเธธเธ“เน€เธเธทเนเธญเธขเธทเธเธขเธฑเธ</p>
             <div className="relative">
               <input
                 type={deleteModal.showPw ? 'text' : 'password'}
-                placeholder="รหัสผ่านของคุณ"
+                placeholder="เธฃเธซเธฑเธชเธเนเธฒเธเธเธญเธเธเธธเธ“"
                 value={deleteModal.password}
                 onChange={e => setDeleteModal(m => ({ ...m, password: e.target.value }))}
                 onKeyDown={e => e.key === 'Enter' && confirmDelete()}
@@ -653,14 +653,14 @@ export default function StockCount() {
             <div className="flex gap-2 justify-end">
               <button onClick={() => setDeleteModal({ open: false, session: null, password: '', loading: false })}
                 className="btn-secondary text-sm" disabled={deleteModal.loading}>
-                ยกเลิก
+                เธขเธเน€เธฅเธดเธ
               </button>
               <button onClick={confirmDelete} disabled={deleteModal.loading || !deleteModal.password}
                 className="btn-danger text-sm flex items-center gap-1.5">
                 {deleteModal.loading
                   ? <span className="w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full animate-spin" />
                   : <Trash2 size={13} />}
-                ลบรอบนี้
+                เธฅเธเธฃเธญเธเธเธตเน
               </button>
             </div>
           </div>
@@ -687,7 +687,7 @@ export default function StockCount() {
         </button>
       </div>
 
-      {/* ══════════ OFFICE TAB ══════════ */}
+      {/* โ•โ•โ•โ•โ•โ•โ•โ•โ•โ• OFFICE TAB โ•โ•โ•โ•โ•โ•โ•โ•โ•โ• */}
       {tab === 'office' && (
         <>
           {view === 'list' && (
@@ -714,14 +714,14 @@ export default function StockCount() {
                           {s.WarehouseCode && <span className="text-xs text-slate-400">{s.WarehouseCode}</span>}
                         </div>
                         <div className="flex items-center gap-3 mt-1 text-xs text-slate-400">
-                          <span>รายการ: {s.ItemCount}</span>
+                          <span>เธฃเธฒเธขเธเธฒเธฃ: {s.ItemCount}</span>
                           <span>Lock: {s.LockedCount}/{s.ItemCount}</span>
-                          {s.RecountCount > 0 && <span className="text-amber-600">ตรวจนับซ้ำ: {s.RecountCount}</span>}
+                          {s.RecountCount > 0 && <span className="text-amber-600">เธ•เธฃเธงเธเธเธฑเธเธเนเธณ: {s.RecountCount}</span>}
                           <span>{dayjs(s.CreatedAt).format('D MMM BB')}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity" onClick={e => e.stopPropagation()}>
-                        <button onClick={() => handleDelete(s)} title="ลบรอบนับ" className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors">
+                        <button onClick={() => handleDelete(s)} title="เธฅเธเธฃเธญเธเธเธฑเธ" className="p-1.5 rounded-lg hover:bg-red-50 text-slate-300 hover:text-red-500 transition-colors">
                           <Trash2 size={14} />
                         </button>
                       </div>
@@ -763,28 +763,28 @@ export default function StockCount() {
                         <button onClick={() => handleStatusChange('OPEN')} disabled={saving || !items.length}
                           className="btn-primary text-sm">
                           {selectedIds.size > 0 && selectedIds.size < items.length
-                            ? `ส่งให้หน้างาน (เลือก ${selectedIds.size} รายการ)`
-                            : 'ส่งให้หน้างาน'}
+                            ? `เธชเนเธเนเธซเนเธซเธเนเธฒเธเธฒเธ (เน€เธฅเธทเธญเธ ${selectedIds.size} เธฃเธฒเธขเธเธฒเธฃ)`
+                            : 'เธชเนเธเนเธซเนเธซเธเนเธฒเธเธฒเธ'}
                         </button>
                       </>
                     )}
                     {sessionStatus === 'OPEN' && (
                       <>
                         <button onClick={handleLockCorrect} disabled={saving} className="btn-secondary text-sm flex items-center gap-1.5">
-                          <Lock size={13} />Lock ที่ถูกต้อง
+                          <Lock size={13} />Lock เธ—เธตเนเธ–เธนเธเธ•เนเธญเธ
                         </button>
                         <button onClick={handleRecountDiff} disabled={saving} className="btn-secondary text-sm flex items-center gap-1.5">
-                          <RotateCcw size={13} />ส่งกลับที่มีผลต่าง
+                          <RotateCcw size={13} />เธชเนเธเธเธฅเธฑเธเธ—เธตเนเธกเธตเธเธฅเธ•เนเธฒเธ
                         </button>
                         <button onClick={() => handleStatusChange('COMPLETED')} disabled={saving}
                           className="btn-primary text-sm flex items-center gap-1.5">
-                          <CheckCircle2 size={14} />ปิดรอบ
+                          <CheckCircle2 size={14} />เธเธดเธ”เธฃเธญเธ
                         </button>
                       </>
                     )}
                     {sessionStatus !== 'DRAFT' && (
                       <button onClick={handleReport} className="btn-secondary text-sm flex items-center gap-1.5">
-                        <Download size={14} />รายงาน
+                        <Download size={14} />เธฃเธฒเธขเธเธฒเธ
                       </button>
                     )}
                     <button onClick={() => fetchDetail(selectedSession.SessionID)} className="p-2 rounded-xl border border-slate-200 text-slate-400 hover:text-blue-500 transition-colors">
@@ -795,10 +795,10 @@ export default function StockCount() {
 
                 <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mt-4">
                   {[
-                    { label: 'ทั้งหมด', value: stats.total, cls: 'text-slate-700' },
-                    { label: 'นับแล้ว', value: stats.counted, cls: 'text-blue-600' },
-                    { label: 'ผลต่าง', value: stats.diff, cls: 'text-red-500' },
-                    { label: 'ตรวจซ้ำ', value: stats.recount, cls: 'text-amber-600' },
+                    { label: 'เธ—เธฑเนเธเธซเธกเธ”', value: stats.total, cls: 'text-slate-700' },
+                    { label: 'เธเธฑเธเนเธฅเนเธง', value: stats.counted, cls: 'text-blue-600' },
+                    { label: 'เธเธฅเธ•เนเธฒเธ', value: stats.diff, cls: 'text-red-500' },
+                    { label: 'เธ•เธฃเธงเธเธเนเธณ', value: stats.recount, cls: 'text-amber-600' },
                     { label: 'Lock', value: stats.locked, cls: 'text-emerald-600' },
                   ].map(({ label, value, cls }) => (
                     <div key={label} className="text-center py-2 px-3 rounded-xl bg-slate-50">
@@ -811,7 +811,7 @@ export default function StockCount() {
 
               {/* Detail Tabs */}
               <div className="flex gap-1.5">
-                {[{ key: 'items', label: 'รายการ' }, { key: 'process', label: 'ประมวลผล' }].map(t => (
+                {[{ key: 'items', label: 'เธฃเธฒเธขเธเธฒเธฃ' }, { key: 'process', label: 'เธเธฃเธฐเธกเธงเธฅเธเธฅ' }].map(t => (
                   <button key={t.key} onClick={() => setDetailTab(t.key)}
                     className={`px-4 py-2 rounded-xl text-sm font-semibold transition-all ${detailTab === t.key ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
                     {t.label}
@@ -825,25 +825,25 @@ export default function StockCount() {
               {!showSelected && (
                 <div className="bg-white border border-slate-200 rounded-xl px-3 py-2 flex gap-2 flex-wrap items-center">
                   <SearchSelect value={filterWH} onChange={v => { setFilterWH(v); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); }}
-                    options={warehouses} placeholder="— คลัง —" className="w-32 flex-shrink-0" />
+                    options={warehouses} placeholder="โ€” เธเธฅเธฑเธ โ€”" className="w-32 flex-shrink-0" />
                   <SearchSelect value={filterLoc} onChange={v => { setFilterLoc(v); setFilterGname(''); setFilterSize(''); setFilterThick(''); }}
-                    options={locations} placeholder="— Location —" className="w-36 flex-shrink-0" />
+                    options={locations} placeholder="โ€” Location โ€”" className="w-36 flex-shrink-0" />
                   <SearchSelect value={filterGname} onChange={v => { setFilterGname(v); setFilterSize(''); setFilterThick(''); }}
-                    options={gnames} placeholder="— หมวดหมู่ —" className="w-36 flex-shrink-0" />
+                    options={gnames} placeholder="โ€” เธซเธกเธงเธ”เธซเธกเธนเน โ€”" className="w-36 flex-shrink-0" />
                   <SearchSelect value={filterSize} onChange={v => { setFilterSize(v); setFilterThick(''); }}
-                    options={sizes} placeholder="— SizeCode —" className="w-36 flex-shrink-0" />
+                    options={sizes} placeholder="โ€” SizeCode โ€”" className="w-36 flex-shrink-0" />
                   <SearchSelect value={filterThick} onChange={setFilterThick}
-                    options={thicks} placeholder="— Thickness —" className="w-32 flex-shrink-0" />
+                    options={thicks} placeholder="โ€” Thickness โ€”" className="w-32 flex-shrink-0" />
                   <div className="relative flex-1 min-w-40">
                     <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                     <input value={search} onChange={e => setSearch(e.target.value)}
-                      placeholder="ค้นหา รหัส / ชื่อสินค้า..."
+                      placeholder="เธเนเธเธซเธฒ เธฃเธซเธฑเธช / เธเธทเนเธญเธชเธดเธเธเนเธฒ..."
                       className="input-field pl-8 text-sm" />
                   </div>
                   {(filterWH || filterLoc || filterGname || filterSize || filterThick || search) && (
                     <button onClick={() => { setFilterWH(''); setFilterLoc(''); setFilterGname(''); setFilterSize(''); setFilterThick(''); setSearch(''); }}
                       className="px-3 py-1.5 text-xs text-slate-400 hover:text-red-500 border border-slate-200 rounded-xl bg-white transition-colors whitespace-nowrap flex-shrink-0">
-                      ล้างทั้งหมด
+                      เธฅเนเธฒเธเธ—เธฑเนเธเธซเธกเธ”
                     </button>
                   )}
                 </div>
@@ -855,36 +855,36 @@ export default function StockCount() {
                     <>
                       <button onClick={() => setShowSelected(false)}
                         className="flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-200 text-slate-600 hover:bg-slate-50 text-xs font-semibold transition-colors">
-                        <ChevronLeft size={13} />กลับ
+                        <ChevronLeft size={13} />เธเธฅเธฑเธ
                       </button>
-                      <span className="text-sm font-bold text-red-600">ยืนยันรายการที่เลือก — {selectedIds.size} รายการ</span>
+                      <span className="text-sm font-bold text-red-600">เธขเธทเธเธขเธฑเธเธฃเธฒเธขเธเธฒเธฃเธ—เธตเนเน€เธฅเธทเธญเธ โ€” {selectedIds.size} เธฃเธฒเธขเธเธฒเธฃ</span>
                       <button onClick={() => { setSelectedIds(new Set()); setShowSelected(false); }}
                         className="ml-auto text-xs text-slate-400 hover:text-red-500 transition-colors">
-                        ล้างการเลือกทั้งหมด
+                        เธฅเนเธฒเธเธเธฒเธฃเน€เธฅเธทเธญเธเธ—เธฑเนเธเธซเธกเธ”
                       </button>
                     </>
                   ) : (
                     <>
                       <span className="text-sm text-slate-500">
-                        เลือกแล้ว{' '}
+                        เน€เธฅเธทเธญเธเนเธฅเนเธง{' '}
                         <span className={`font-bold ${selectedIds.size > 0 ? 'text-red-600' : 'text-slate-400'}`}>
                           {selectedIds.size}
                         </span>
-                        {' '}/ {items.length} รายการ
+                        {' '}/ {items.length} เธฃเธฒเธขเธเธฒเธฃ
                       </span>
                       {selectedIds.size > 0 ? (
                         <div className="ml-auto flex items-center gap-2">
                           <button onClick={() => setSelectedIds(new Set())}
                             className="text-xs text-slate-400 hover:text-red-500 transition-colors">
-                            ล้าง
+                            เธฅเนเธฒเธ
                           </button>
                           <button onClick={() => setShowSelected(true)}
                             className="px-3 py-1.5 rounded-lg bg-red-600 text-white text-xs font-bold hover:bg-red-700 transition-colors flex items-center gap-1.5">
-                            <CheckCircle2 size={12} />ดูที่เลือก ({selectedIds.size})
+                            <CheckCircle2 size={12} />เธ”เธนเธ—เธตเนเน€เธฅเธทเธญเธ ({selectedIds.size})
                           </button>
                         </div>
                       ) : (
-                        <span className="ml-auto text-xs text-slate-400">Checkbox เพื่อเลือกรายการ</span>
+                        <span className="ml-auto text-xs text-slate-400">Checkbox เน€เธเธทเนเธญเน€เธฅเธทเธญเธเธฃเธฒเธขเธเธฒเธฃ</span>
                       )}
                     </>
                   )}
@@ -898,14 +898,14 @@ export default function StockCount() {
                   {displayItems.length > PAGE_SIZE && (
                     <div className="flex items-center justify-between mb-2 px-1">
                       <span className="text-xs text-slate-400">
-                        แสดง {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, displayItems.length)} จาก {displayItems.length} รายการ
+                        เนเธชเธ”เธ {page * PAGE_SIZE + 1}โ€“{Math.min((page + 1) * PAGE_SIZE, displayItems.length)} เธเธฒเธ {displayItems.length} เธฃเธฒเธขเธเธฒเธฃ
                       </span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">โ€น</button>
                         <span className="text-xs text-slate-500 px-1">{page + 1} / {totalPages}</span>
                         <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">โ€บ</button>
                       </div>
                     </div>
                   )}
@@ -922,14 +922,14 @@ export default function StockCount() {
                           </th>
                         )}
                         <th className="table-header text-left px-3 py-2">Location</th>
-                        <th className="table-header text-left px-3 py-2">รหัสสินค้า</th>
-                        <th className="table-header text-left px-3 py-2 hide-mobile">ชื่อสินค้า</th>
-                        <th className="table-header text-right px-3 py-2">ยอดระบบ</th>
+                        <th className="table-header text-left px-3 py-2">เธฃเธซเธฑเธชเธชเธดเธเธเนเธฒ</th>
+                        <th className="table-header text-left px-3 py-2 hide-mobile">เธเธทเนเธญเธชเธดเธเธเนเธฒ</th>
+                        <th className="table-header text-right px-3 py-2">เธขเธญเธ”เธฃเธฐเธเธ</th>
                         {detailTab === 'process' && <>
-                          <th className="table-header text-right px-3 py-2">ยอดนับ</th>
-                          <th className="table-header text-right px-3 py-2">ผลต่าง</th>
+                          <th className="table-header text-right px-3 py-2">เธขเธญเธ”เธเธฑเธ</th>
+                          <th className="table-header text-right px-3 py-2">เธเธฅเธ•เนเธฒเธ</th>
                         </>}
-                        <th className="table-header text-center px-3 py-2">สถานะ</th>
+                        <th className="table-header text-center px-3 py-2">เธชเธ–เธฒเธเธฐ</th>
                         <th className="table-header px-3 py-2" />
                       </tr>
                     </thead>
@@ -960,10 +960,10 @@ export default function StockCount() {
                   {totalPages > 1 && (
                     <div className="flex items-center justify-center gap-1 mt-3 pt-3 border-t border-slate-100">
                       <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
-                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹ ก่อนหน้า</button>
-                      <span className="text-xs text-slate-400 px-3">หน้า {page + 1} จาก {totalPages}</span>
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">โ€น เธเนเธญเธเธซเธเนเธฒ</button>
+                      <span className="text-xs text-slate-400 px-3">เธซเธเนเธฒ {page + 1} เธเธฒเธ {totalPages}</span>
                       <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">ถัดไป ›</button>
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">เธ–เธฑเธ”เนเธ โ€บ</button>
                     </div>
                   )}
                 </div>
@@ -973,16 +973,16 @@ export default function StockCount() {
         </>
       )}
 
-      {/* ══════════ FIELD TAB ══════════ */}
+      {/* โ•โ•โ•โ•โ•โ•โ•โ•โ•โ• FIELD TAB โ•โ•โ•โ•โ•โ•โ•โ•โ•โ• */}
       {tab === 'field' && (
         <div className="space-y-4">
           <div className="card">
             <label className="label">{t('stockCount.selectSession')}</label>
             <select value={fieldSessionId} onChange={e => setFieldSessionId(e.target.value)} className="input-field">
-              <option value="">-- เลือกรอบ --</option>
+              <option value="">-- เน€เธฅเธทเธญเธเธฃเธญเธ --</option>
               {fieldSessions.map(s => (
                 <option key={s.SessionID} value={s.SessionID}>
-                  {s.SessionName} ({s.ItemCount} รายการ, นับแล้ว {s.LockedCount})
+                  {s.SessionName} ({s.ItemCount} เธฃเธฒเธขเธเธฒเธฃ, เธเธฑเธเนเธฅเนเธง {s.LockedCount})
                 </option>
               ))}
             </select>
@@ -993,10 +993,10 @@ export default function StockCount() {
 
           {fieldSessionId && (
             <>
-              {/* ── Barcode scan panel ── */}
+              {/* โ”€โ”€ Barcode scan panel โ”€โ”€ */}
               <div className="card py-3 px-4 border-slate-200 bg-slate-50">
                 <label className="text-xs text-slate-500 font-semibold block mb-1.5 flex items-center gap-1">
-                  <Search size={12} />สแกนบาร์โค้ด (Location / รหัสสินค้า)
+                  <Search size={12} />เธชเนเธเธเธเธฒเธฃเนเนเธเนเธ” (Location / เธฃเธซเธฑเธชเธชเธดเธเธเนเธฒ)
                 </label>
                 <input
                   value={scanInput}
@@ -1013,9 +1013,9 @@ export default function StockCount() {
                 {(filterFieldWH || filterFieldLoc) && (
                   <div className="flex items-center gap-2 mt-2 flex-wrap">
                     {filterFieldWH && <span className="text-xs bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full font-mono">{filterFieldWH}</span>}
-                    {filterFieldLoc && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono font-bold">📍 {filterFieldLoc}</span>}
+                    {filterFieldLoc && <span className="text-xs bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full font-mono font-bold">๐“ {filterFieldLoc}</span>}
                     <button onClick={() => { setFilterFieldWH(''); setFilterFieldLoc(''); setActiveItemId(null); }}
-                      className="text-xs text-slate-400 hover:text-red-500 transition-colors">ล้าง</button>
+                      className="text-xs text-slate-400 hover:text-red-500 transition-colors">เธฅเนเธฒเธ</button>
                   </div>
                 )}
               </div>
@@ -1039,11 +1039,11 @@ export default function StockCount() {
                 ))}
                 {fieldWarehouses.length > 0 && (
                   <SearchSelect value={filterFieldWH} onChange={v => { setFilterFieldWH(v); setFilterFieldLoc(''); }}
-                    options={fieldWarehouses} placeholder="— คลัง —" className="w-32 flex-shrink-0" />
+                    options={fieldWarehouses} placeholder="โ€” เธเธฅเธฑเธ โ€”" className="w-32 flex-shrink-0" />
                 )}
                 {fieldLocations.length > 0 && (
                   <SearchSelect value={filterFieldLoc} onChange={setFilterFieldLoc}
-                    options={fieldLocations} placeholder="— Location —" className="w-32 flex-shrink-0" />
+                    options={fieldLocations} placeholder="โ€” Location โ€”" className="w-32 flex-shrink-0" />
                 )}
                 <div className="relative flex-1 min-w-[140px]">
                   <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1064,14 +1064,14 @@ export default function StockCount() {
                   {filteredFieldItems.length > FIELD_PAGE_SIZE && (
                     <div className="flex items-center justify-between px-1">
                       <span className="text-xs text-slate-400">
-                        แสดง {fieldPage * FIELD_PAGE_SIZE + 1}–{Math.min((fieldPage + 1) * FIELD_PAGE_SIZE, filteredFieldItems.length)} จาก {filteredFieldItems.length} รายการ
+                        เนเธชเธ”เธ {fieldPage * FIELD_PAGE_SIZE + 1}โ€“{Math.min((fieldPage + 1) * FIELD_PAGE_SIZE, filteredFieldItems.length)} เธเธฒเธ {filteredFieldItems.length} เธฃเธฒเธขเธเธฒเธฃ
                       </span>
                       <div className="flex items-center gap-1">
                         <button onClick={() => setFieldPage(p => Math.max(0, p - 1))} disabled={fieldPage === 0}
-                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹</button>
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">โ€น</button>
                         <span className="text-xs text-slate-500 px-1">{fieldPage + 1} / {fieldTotalPages}</span>
                         <button onClick={() => setFieldPage(p => Math.min(fieldTotalPages - 1, p + 1))} disabled={fieldPage >= fieldTotalPages - 1}
-                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">›</button>
+                          className="px-2.5 py-1 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">โ€บ</button>
                       </div>
                     </div>
                   )}
@@ -1088,10 +1088,10 @@ export default function StockCount() {
                   {fieldTotalPages > 1 && (
                     <div className="flex items-center justify-center gap-1 pt-2">
                       <button onClick={() => setFieldPage(p => Math.max(0, p - 1))} disabled={fieldPage === 0}
-                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">‹ ก่อนหน้า</button>
-                      <span className="text-xs text-slate-400 px-3">หน้า {fieldPage + 1} จาก {fieldTotalPages}</span>
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">โ€น เธเนเธญเธเธซเธเนเธฒ</button>
+                      <span className="text-xs text-slate-400 px-3">เธซเธเนเธฒ {fieldPage + 1} เธเธฒเธ {fieldTotalPages}</span>
                       <button onClick={() => setFieldPage(p => Math.min(fieldTotalPages - 1, p + 1))} disabled={fieldPage >= fieldTotalPages - 1}
-                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">ถัดไป ›</button>
+                        className="px-3 py-1.5 text-xs rounded-lg border border-slate-200 text-slate-500 hover:bg-slate-50 disabled:opacity-40 disabled:cursor-not-allowed">เธ–เธฑเธ”เนเธ โ€บ</button>
                     </div>
                   )}
                 </div>
@@ -1101,10 +1101,10 @@ export default function StockCount() {
         </div>
       )}
 
-      {/* ══════════ MODALS ══════════ */}
+      {/* โ•โ•โ•โ•โ•โ•โ•โ•โ•โ• MODALS โ•โ•โ•โ•โ•โ•โ•โ•โ•โ• */}
 
       {createModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900">{t('stockCount.createSession')}</h3>
@@ -1134,22 +1134,22 @@ export default function StockCount() {
       )}
 
       {entriesModal && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="text-base font-bold text-slate-900">ประวัติการนับ</h3>
-                <p className="text-xs text-slate-500">{entriesModal.ItemCode} — {entriesModal.Location}</p>
+                <h3 className="text-base font-bold text-slate-900">เธเธฃเธฐเธงเธฑเธ•เธดเธเธฒเธฃเธเธฑเธ</h3>
+                <p className="text-xs text-slate-500">{entriesModal.ItemCode} โ€” {entriesModal.Location}</p>
               </div>
               <button onClick={() => setEntriesModal(null)} className="text-slate-400 hover:text-slate-700"><X size={18} /></button>
             </div>
             <div className="space-y-2">
               {entries.length === 0
-                ? <p className="text-center text-slate-400 text-sm py-4">ยังไม่มีการนับ</p>
+                ? <p className="text-center text-slate-400 text-sm py-4">เธขเธฑเธเนเธกเนเธกเธตเธเธฒเธฃเธเธฑเธ</p>
                 : entries.map(e => (
                   <div key={e.EntryID} className="flex items-center justify-between px-3 py-2 rounded-xl bg-slate-50">
                     <div>
-                      <span className="text-xs font-bold text-slate-600">รอบที่ {e.Round}</span>
+                      <span className="text-xs font-bold text-slate-600">เธฃเธญเธเธ—เธตเน {e.Round}</span>
                       <span className="text-xs text-slate-400 ml-2">{e.CountedBy}</span>
                       {e.Notes && <span className="text-xs text-slate-400 ml-2">({e.Notes})</span>}
                     </div>
@@ -1161,7 +1161,7 @@ export default function StockCount() {
                 ))
               }
               <div className="flex items-center justify-between px-3 py-2 rounded-xl bg-blue-50 mt-2">
-                <span className="text-sm font-bold text-blue-700">รวมทั้งหมด</span>
+                <span className="text-sm font-bold text-blue-700">เธฃเธงเธกเธ—เธฑเนเธเธซเธกเธ”</span>
                 <span className="text-lg font-black text-blue-700">
                   {entries.reduce((s, e) => s + Number(e.CountedQty), 0).toLocaleString()}
                 </span>

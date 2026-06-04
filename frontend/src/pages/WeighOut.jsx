@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+﻿import { useState, useEffect, useRef } from 'react';
 import { Scale, CheckCircle, RefreshCw, Search, Edit2, Trash2, X } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -267,7 +267,7 @@ export default function WeighOut() {
                     )}
                   </div>
 
-                  <div className="text-xs text-slate-400 mt-1">{selected.WarehouseName} · #{selected.TripID}</div>
+                  <div className="text-xs text-slate-400 mt-1">{selected.WarehouseName} ยท #{selected.TripID}</div>
                 </div>
 
                 <div>
@@ -379,7 +379,7 @@ export default function WeighOut() {
 
       {/* Delete confirm dialog */}
       {deleteConfirm && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
             <div className="px-6 pt-6 pb-4">
               <div className="flex items-center gap-3 mb-3">
@@ -388,7 +388,7 @@ export default function WeighOut() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-800">{t('common.confirm')}</h3>
-                  <p className="text-sm text-slate-500">Trip #{deleteConfirm.TripID} — {deleteConfirm.LicensePlate}</p>
+                  <p className="text-sm text-slate-500">Trip #{deleteConfirm.TripID} โ€” {deleteConfirm.LicensePlate}</p>
                 </div>
               </div>
             </div>

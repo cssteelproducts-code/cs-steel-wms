@@ -1172,7 +1172,7 @@ export default function Master() {
       </div>
 
       {printItem && (
-        <div className="fixed inset-0 flex items-center justify-center z-[200] p-4" style={{ background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)' }}>
+        <div className="fixed inset-0 flex items-center justify-center z-[200] p-4">
           <div className="bg-white rounded-2xl shadow-2xl w-80 overflow-hidden">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <span className="font-bold text-slate-800 flex items-center gap-2"><Printer size={15} />{printItem.title}</span>
@@ -1221,7 +1221,7 @@ export default function Master() {
 
       {modal && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
-          <div className="fixed inset-0 bg-black/50" onClick={() => setModal(null)} />
+          <div className="fixed inset-0" onClick={() => setModal(null)} />
           <div className="relative flex min-h-full items-center justify-center p-4">
             <div className={`relative rounded-2xl w-full bg-white border border-slate-200 shadow-xl my-4 ${modal === 'warehouses' ? 'max-w-xl' : modal === 'internalVehicles' ? 'max-w-lg' : 'max-w-md'}`}>
               <div className="flex items-center justify-between px-6 pt-5 pb-4 border-b border-slate-100">

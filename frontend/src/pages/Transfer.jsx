@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from 'react';
+﻿import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLang } from '../context/LanguageContext';
 import api from '../services/api';
@@ -28,7 +28,7 @@ const TRIP_STATUS = {
   COMPLETE:     { labelKey: 'transfer.tripComplete',     color: '#10b981' },
 };
 
-const PRIORITY_LABEL = { NORMAL: 'ปกติ', HIGH: 'เร่งด่วน', URGENT: 'ด่วนมาก' };
+const PRIORITY_LABEL = { NORMAL: 'เธเธเธ•เธด', HIGH: 'เน€เธฃเนเธเธ”เนเธงเธ', URGENT: 'เธ”เนเธงเธเธกเธฒเธ' };
 const PRIORITY_COLOR = { NORMAL: '#6b7280', HIGH: '#f59e0b', URGENT: '#ef4444' };
 
 const TRANSFER_SUB_CODES = ['TRANSFER_JOBS', 'TRANSFER_STATIONS', 'TRANSFER_VEHICLES', 'TRANSFER_REPORTS'];
@@ -99,7 +99,7 @@ export default function Transfer() {
       const res = await api.get(`/transfer/jobs${params}`);
       if (res.data.success) setJobs(res.data.data);
     } catch {
-      toast.error('ไม่สามารถโหลดข้อมูลได้');
+      toast.error('เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธซเธฅเธ”เธเนเธญเธกเธนเธฅเนเธ”เน');
     } finally {
       setLoading(false);
     }
@@ -156,22 +156,22 @@ export default function Transfer() {
 
   const deleteJob = async (jobId, jobCode, status) => {
     const msg = (status === 'PENDING' || status === 'CANCELLED')
-      ? `ลบงาน ${jobCode} ?\nการกระทำนี้ไม่สามารถยกเลิกได้`
-      : `ยกเลิกงาน ${jobCode} ?\nรอบที่ยังไม่เสร็จจะถูกยกเลิกทั้งหมด`;
+      ? `เธฅเธเธเธฒเธ ${jobCode} ?\nเธเธฒเธฃเธเธฃเธฐเธ—เธณเธเธตเนเนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธขเธเน€เธฅเธดเธเนเธ”เน`
+      : `เธขเธเน€เธฅเธดเธเธเธฒเธ ${jobCode} ?\nเธฃเธญเธเธ—เธตเนเธขเธฑเธเนเธกเนเน€เธชเธฃเนเธเธเธฐเธ–เธนเธเธขเธเน€เธฅเธดเธเธ—เธฑเนเธเธซเธกเธ”`;
     if (!confirm(msg)) return;
     try {
       await api.delete(`/transfer/jobs/${jobId}`);
-      toast.success(status === 'PENDING' ? 'ลบงานสำเร็จ' : 'ยกเลิกงานสำเร็จ');
+      toast.success(status === 'PENDING' ? 'เธฅเธเธเธฒเธเธชเธณเน€เธฃเนเธ' : 'เธขเธเน€เธฅเธดเธเธเธฒเธเธชเธณเน€เธฃเนเธ');
       if (expandedJob === jobId) { setExpandedJob(null); setJobDetail(null); }
       loadJobs();
     } catch (err) {
-      toast.error(err.response?.data?.message || 'ไม่สามารถลบงานได้');
+      toast.error(err.response?.data?.message || 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธฅเธเธเธฒเธเนเธ”เน');
     }
   };
 
   const createJob = async () => {
     if (!jobForm.sourceStationId || !jobForm.destStationId || !jobForm.productDesc.trim()) {
-      toast.error('กรุณากรอกสถานีต้นทาง ปลายทาง และรายละเอียดสินค้า');
+      toast.error('เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธชเธ–เธฒเธเธตเธ•เนเธเธ—เธฒเธ เธเธฅเธฒเธขเธ—เธฒเธ เนเธฅเธฐเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”เธชเธดเธเธเนเธฒ');
       return;
     }
     setSavingJob(true);
@@ -189,7 +189,7 @@ export default function Transfer() {
         ? await api.put(`/transfer/jobs/${editingJob.JobID}`, payload)
         : await api.post('/transfer/jobs', payload);
       if (res.data.success) {
-        toast.success(editingJob ? 'แก้ไขงานสำเร็จ' : `สร้างงาน ${res.data.jobCode} สำเร็จ`);
+        toast.success(editingJob ? 'เนเธเนเนเธเธเธฒเธเธชเธณเน€เธฃเนเธ' : `เธชเธฃเนเธฒเธเธเธฒเธ ${res.data.jobCode} เธชเธณเน€เธฃเนเธ`);
         setShowCreateJob(false);
         setEditingJob(null);
         setJobForm({ sourceStationId: '', destStationId: '', productDesc: '', plannedBundles: '', plannedWeightKg: '', priority: 'NORMAL', notes: '' });
@@ -197,7 +197,7 @@ export default function Transfer() {
         loadJobs();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || (editingJob ? 'ไม่สามารถแก้ไขงานได้' : 'ไม่สามารถสร้างงานได้'));
+      toast.error(err.response?.data?.message || (editingJob ? 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเนเนเธเธเธฒเธเนเธ”เน' : 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธชเธฃเนเธฒเธเธเธฒเธเนเธ”เน'));
     } finally {
       setSavingJob(false);
     }
@@ -206,34 +206,34 @@ export default function Transfer() {
   const updateJobStatus = async (jobId, status) => {
     try {
       await api.put(`/transfer/jobs/${jobId}/status`, { status });
-      toast.success(status === 'COMPLETE' ? 'ปิดงานเรียบร้อย' : 'ยกเลิกงานเรียบร้อย');
+      toast.success(status === 'COMPLETE' ? 'เธเธดเธ”เธเธฒเธเน€เธฃเธตเธขเธเธฃเนเธญเธข' : 'เธขเธเน€เธฅเธดเธเธเธฒเธเน€เธฃเธตเธขเธเธฃเนเธญเธข');
       if (expandedJob === jobId) { setExpandedJob(null); setJobDetail(null); }
       loadJobs();
     } catch {
-      toast.error('เกิดข้อผิดพลาด');
+      toast.error('เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”');
     }
   };
 
   const saveStation = async () => {
     if (!stationForm.stationCode.trim() || !stationForm.stationName.trim()) {
-      toast.error('กรุณากรอกรหัสและชื่อสถานี');
+      toast.error('เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธฃเธซเธฑเธชเนเธฅเธฐเธเธทเนเธญเธชเธ–เธฒเธเธต');
       return;
     }
     setSavingStation(true);
     try {
       if (editStation) {
         await api.put(`/transfer/stations/${editStation.StationID}`, stationForm);
-        toast.success('แก้ไขสถานีสำเร็จ');
+        toast.success('เนเธเนเนเธเธชเธ–เธฒเธเธตเธชเธณเน€เธฃเนเธ');
       } else {
         await api.post('/transfer/stations', stationForm);
-        toast.success('เพิ่มสถานีสำเร็จ');
+        toast.success('เน€เธเธดเนเธกเธชเธ–เธฒเธเธตเธชเธณเน€เธฃเนเธ');
       }
       setShowStationModal(false);
       setEditStation(null);
       setStationForm({ stationCode: '', stationName: '', stationType: 'BOTH', sortOrder: 0 });
       loadStations();
     } catch {
-      toast.error('เกิดข้อผิดพลาด');
+      toast.error('เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”');
     } finally {
       setSavingStation(false);
     }
@@ -246,36 +246,36 @@ export default function Transfer() {
   };
 
   const deleteStation = async (id) => {
-    if (!confirm('ต้องการลบสถานีนี้?')) return;
+    if (!confirm('เธ•เนเธญเธเธเธฒเธฃเธฅเธเธชเธ–เธฒเธเธตเธเธตเน?')) return;
     try {
       await api.delete(`/transfer/stations/${id}`);
-      toast.success('ลบสถานีสำเร็จ');
+      toast.success('เธฅเธเธชเธ–เธฒเธเธตเธชเธณเน€เธฃเนเธ');
       loadStations();
     } catch {
-      toast.error('เกิดข้อผิดพลาด');
+      toast.error('เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”');
     }
   };
 
   const saveVehicle = async () => {
     if (!vehicleForm.vehiclePlate.trim()) {
-      toast.error('กรุณากรอกทะเบียนรถ');
+      toast.error('เธเธฃเธธเธ“เธฒเธเธฃเธญเธเธ—เธฐเน€เธเธตเธขเธเธฃเธ–');
       return;
     }
     setSavingVehicle(true);
     try {
       if (editVehicle) {
         await api.put(`/transfer/vehicles/${editVehicle.VehicleID}`, vehicleForm);
-        toast.success('แก้ไขข้อมูลรถสำเร็จ');
+        toast.success('เนเธเนเนเธเธเนเธญเธกเธนเธฅเธฃเธ–เธชเธณเน€เธฃเนเธ');
       } else {
         await api.post('/transfer/vehicles', vehicleForm);
-        toast.success('เพิ่มรถสำเร็จ');
+        toast.success('เน€เธเธดเนเธกเธฃเธ–เธชเธณเน€เธฃเนเธ');
       }
       setShowVehicleModal(false);
       setEditVehicle(null);
       setVehicleForm({ vehicleCode: '', vehiclePlate: '', vehicleName: '', vehicleType: '', vehicleStatus: 'READY', statusNote: '', repairStartDate: '', repairExpectedDate: '' });
       loadVehicles();
     } catch {
-      toast.error('เกิดข้อผิดพลาด');
+      toast.error('เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”');
     } finally {
       setSavingVehicle(false);
     }
@@ -297,13 +297,13 @@ export default function Transfer() {
   };
 
   const deleteVehicle = async (id) => {
-    if (!confirm('ต้องการลบรถคันนี้?')) return;
+    if (!confirm('เธ•เนเธญเธเธเธฒเธฃเธฅเธเธฃเธ–เธเธฑเธเธเธตเน?')) return;
     try {
       await api.delete(`/transfer/vehicles/${id}`);
-      toast.success('ลบรถสำเร็จ');
+      toast.success('เธฅเธเธฃเธ–เธชเธณเน€เธฃเนเธ');
       loadVehicles();
     } catch {
-      toast.error('เกิดข้อผิดพลาด');
+      toast.error('เน€เธเธดเธ”เธเนเธญเธเธดเธ”เธเธฅเธฒเธ”');
     }
   };
 
@@ -321,7 +321,7 @@ export default function Transfer() {
 
   const submitEditTrip = async () => {
     if (!editTripForm.operatorId || !editTripForm.vehicleId) {
-      toast.error('กรุณาเลือกพนักงานและรถ');
+      toast.error('เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเธเธเธฑเธเธเธฒเธเนเธฅเธฐเธฃเธ–');
       return;
     }
     setSavingEditTrip(true);
@@ -331,14 +331,14 @@ export default function Transfer() {
         vehicleId: parseInt(editTripForm.vehicleId),
       });
       if (res.data.success) {
-        toast.success('แก้ไขการมอบหมายสำเร็จ');
+        toast.success('เนเธเนเนเธเธเธฒเธฃเธกเธญเธเธซเธกเธฒเธขเธชเธณเน€เธฃเนเธ');
         setShowEditTripModal(false);
         const res2 = await api.get(`/transfer/jobs/${expandedJob}`);
         if (res2.data.success) setJobDetail(res2.data);
         loadJobs();
       }
     } catch (err) {
-      toast.error(err.response?.data?.message || 'ไม่สามารถแก้ไขได้');
+      toast.error(err.response?.data?.message || 'เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เนเธเนเนเธเนเธ”เน');
     } finally {
       setSavingEditTrip(false);
     }
@@ -351,7 +351,7 @@ export default function Transfer() {
   const submitAssign = async () => {
     const valid = assignForm.filter(p => p.operatorId && p.vehicleId);
     if (valid.length === 0) {
-      toast.error('กรุณาเลือกพนักงานและรถอย่างน้อย 1 คู่');
+      toast.error('เธเธฃเธธเธ“เธฒเน€เธฅเธทเธญเธเธเธเธฑเธเธเธฒเธเนเธฅเธฐเธฃเธ–เธญเธขเนเธฒเธเธเนเธญเธข 1 เธเธนเน');
       return;
     }
     setSavingAssign(true);
@@ -363,13 +363,13 @@ export default function Transfer() {
           vehicleId: parseInt(pair.vehicleId),
         });
       }
-      toast.success(`มอบหมาย ${valid.length} คู่ (รถ/คนขับ) สำเร็จ`);
+      toast.success(`เธกเธญเธเธซเธกเธฒเธข ${valid.length} เธเธนเน (เธฃเธ–/เธเธเธเธฑเธ) เธชเธณเน€เธฃเนเธ`);
       setShowAssignModal(false);
       const res2 = await api.get(`/transfer/jobs/${assignJobId}`);
       if (res2.data.success) setJobDetail(res2.data);
       loadJobs();
     } catch {
-      toast.error('ไม่สามารถมอบหมายงานได้');
+      toast.error('เนเธกเนเธชเธฒเธกเธฒเธฃเธ–เธกเธญเธเธซเธกเธฒเธขเธเธฒเธเนเธ”เน');
     } finally {
       setSavingAssign(false);
     }
@@ -446,7 +446,7 @@ export default function Transfer() {
         );
       })()}
 
-      {/* ── JOBS TAB ── */}
+      {/* โ”€โ”€ JOBS TAB โ”€โ”€ */}
       {activeTab === 'jobs' && (
         <div className="space-y-4">
           {/* Status filter chips */}
@@ -518,16 +518,16 @@ export default function Transfer() {
                         <div className="flex flex-wrap items-center gap-4">
                           {job.PlannedBundles != null && (
                             <span className="text-xs font-semibold" style={{ color: '#9ca3af' }}>
-                              มัด: <span style={{ color: '#111827' }}>{job.ActualBundles || 0}</span>/{job.PlannedBundles}
+                              เธกเธฑเธ”: <span style={{ color: '#111827' }}>{job.ActualBundles || 0}</span>/{job.PlannedBundles}
                             </span>
                           )}
                           {job.PlannedWeightKg != null && (
                             <span className="text-xs font-semibold" style={{ color: '#9ca3af' }}>
-                              น้ำหนัก: <span style={{ color: '#111827' }}>{(job.ActualWeightKg || 0).toFixed(1)}</span>/{job.PlannedWeightKg} กก.
+                              เธเนเธณเธซเธเธฑเธ: <span style={{ color: '#111827' }}>{(job.ActualWeightKg || 0).toFixed(1)}</span>/{job.PlannedWeightKg} เธเธ.
                             </span>
                           )}
                           <span className="text-xs font-semibold" style={{ color: '#9ca3af' }}>
-                            รอบ: <span style={{ color: '#111827' }}>{job.CompletedTripCount}/{job.TripCount}</span>
+                            เธฃเธญเธ: <span style={{ color: '#111827' }}>{job.CompletedTripCount}/{job.TripCount}</span>
                           </span>
                           <span className="flex items-center gap-1 text-xs" style={{ color: '#d1d5db' }}>
                             <Clock size={11} />
@@ -537,12 +537,12 @@ export default function Transfer() {
                               if (start && end && job.Status === 'COMPLETE') {
                                 const mins = end.diff(start, 'minute');
                                 const h = Math.floor(mins / 60), m = mins % 60;
-                                return `ใช้เวลา ${h > 0 ? `${h} ชม. ` : ''}${m} นาที`;
+                                return `เนเธเนเน€เธงเธฅเธฒ ${h > 0 ? `${h} เธเธก. ` : ''}${m} เธเธฒเธ—เธต`;
                               }
                               if (start && job.Status === 'IN_PROGRESS') {
                                 const mins = dayjs().diff(start, 'minute');
                                 const h = Math.floor(mins / 60), m = mins % 60;
-                                return `เริ่ม ${h > 0 ? `${h} ชม. ` : ''}${m} นาทีที่แล้ว`;
+                                return `เน€เธฃเธดเนเธก ${h > 0 ? `${h} เธเธก. ` : ''}${m} เธเธฒเธ—เธตเธ—เธตเนเนเธฅเนเธง`;
                               }
                               return dayjs(job.CreatedAt).format('DD/MM HH:mm');
                             })()}
@@ -595,7 +595,7 @@ export default function Transfer() {
                       <div className="px-5 pb-5" style={{ borderTop: '1px solid #f9fafb' }}>
                         <div className="flex items-center justify-between pt-4 mb-3">
                           <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#d1d5db' }}>
-                            การมอบหมาย ({jobDetail.trips.length} รอบ)
+                            เธเธฒเธฃเธกเธญเธเธซเธกเธฒเธข ({jobDetail.trips.length} เธฃเธญเธ)
                           </p>
                           {job.Status !== 'COMPLETE' && job.Status !== 'CANCELLED' && (
                             <button onClick={() => openAssignModal(job.JobID)}
@@ -634,8 +634,8 @@ export default function Transfer() {
                                     </div>
                                     {(trip.BundleCount || trip.TotalWeightKg) && (
                                       <div className="flex items-center gap-3 mt-1">
-                                        {trip.BundleCount && <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>{trip.BundleCount} มัด</span>}
-                                        {trip.TotalWeightKg && <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>{trip.TotalWeightKg} กก.</span>}
+                                        {trip.BundleCount && <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>{trip.BundleCount} เธกเธฑเธ”</span>}
+                                        {trip.TotalWeightKg && <span className="text-xs font-semibold" style={{ color: '#6b7280' }}>{trip.TotalWeightKg} เธเธ.</span>}
                                       </div>
                                     )}
                                   </div>
@@ -648,10 +648,10 @@ export default function Transfer() {
                                       </button>
                                     )}
                                     <div className="text-right text-xs space-y-0.5" style={{ color: '#9ca3af' }}>
-                                      {trip.SourceEntryTime && <div>เข้าต้น {dayjs(trip.SourceEntryTime).format('HH:mm')}</div>}
-                                      {trip.SourceExitTime  && <div>ออกต้น {dayjs(trip.SourceExitTime).format('HH:mm')}</div>}
-                                      {trip.DestEntryTime   && <div>เข้าปลาย {dayjs(trip.DestEntryTime).format('HH:mm')}</div>}
-                                      {trip.DestExitTime    && <div>ออกปลาย {dayjs(trip.DestExitTime).format('HH:mm')}</div>}
+                                      {trip.SourceEntryTime && <div>เน€เธเนเธฒเธ•เนเธ {dayjs(trip.SourceEntryTime).format('HH:mm')}</div>}
+                                      {trip.SourceExitTime  && <div>เธญเธญเธเธ•เนเธ {dayjs(trip.SourceExitTime).format('HH:mm')}</div>}
+                                      {trip.DestEntryTime   && <div>เน€เธเนเธฒเธเธฅเธฒเธข {dayjs(trip.DestEntryTime).format('HH:mm')}</div>}
+                                      {trip.DestExitTime    && <div>เธญเธญเธเธเธฅเธฒเธข {dayjs(trip.DestExitTime).format('HH:mm')}</div>}
                                     </div>
                                   </div>
                                 </div>
@@ -669,7 +669,7 @@ export default function Transfer() {
         </div>
       )}
 
-      {/* ── STATIONS TAB ── */}
+      {/* โ”€โ”€ STATIONS TAB โ”€โ”€ */}
       {activeTab === 'stations' && (
         <div className="space-y-4">
           <div className="flex justify-end">
@@ -731,7 +731,7 @@ export default function Transfer() {
         </div>
       )}
 
-      {/* ── VEHICLES TAB ── */}
+      {/* โ”€โ”€ VEHICLES TAB โ”€โ”€ */}
       {activeTab === 'vehicles' && (() => {
         const VSTATUS = {
           READY:       { label: t('transfer.statusReady'),    icon: CheckCircle,    bg: '#f0fdf4', color: '#16a34a' },
@@ -827,7 +827,7 @@ export default function Transfer() {
         );
       })()}
 
-      {/* ── REPORT TAB ── */}
+      {/* โ”€โ”€ REPORT TAB โ”€โ”€ */}
       {activeTab === 'report' && (
         <div className="space-y-5">
           <div className="flex items-center justify-between">
@@ -835,11 +835,11 @@ export default function Transfer() {
             <button onClick={loadDashboard} className="flex items-center gap-1.5 text-xs px-3 py-1.5 rounded-xl"
               style={{ background: '#f3f4f6', color: '#6b7280' }}>
               <RefreshCw size={12} className={dashLoading ? 'animate-spin' : ''} />
-              รีเฟรช
+              เธฃเธตเน€เธเธฃเธ
             </button>
           </div>
 
-          {dashLoading && <div className="text-center py-12 text-sm" style={{ color: '#9ca3af' }}>กำลังโหลด...</div>}
+          {dashLoading && <div className="text-center py-12 text-sm" style={{ color: '#9ca3af' }}>เธเธณเธฅเธฑเธเนเธซเธฅเธ”...</div>}
 
           {dashData && (() => {
             const ss = dashData.statusSummary || [];
@@ -852,17 +852,17 @@ export default function Transfer() {
             const pendingCount  = getS('PENDING', 'Total') + getS('ASSIGNED', 'Total');
             const inProgCount   = getS('IN_PROGRESS', 'Total');
             const avg = dashData.avgDuration || {};
-            const fmtDur = (m) => m == null ? '-' : m < 60 ? `${m} นาที` : `${Math.floor(m/60)} ชม. ${m%60} นาที`;
+            const fmtDur = (m) => m == null ? '-' : m < 60 ? `${m} เธเธฒเธ—เธต` : `${Math.floor(m/60)} เธเธก. ${m%60} เธเธฒเธ—เธต`;
 
             return (
               <>
-                {/* ── KPI row ── */}
+                {/* โ”€โ”€ KPI row โ”€โ”€ */}
                 <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                   {[
-                    { label: 'งานวันนี้', value: totalToday, sub: `เสร็จ ${completeToday}`, color: '#3b82f6', bg: '#eff6ff' },
-                    { label: 'งานเดือนนี้', value: totalMonth, sub: `เสร็จ ${completeMonth}`, color: '#10b981', bg: '#f0fdf4' },
-                    { label: 'รอดำเนินการ', value: pendingCount + inProgCount, sub: `รอ ${pendingCount} / ดำเนินการ ${inProgCount}`, color: '#f59e0b', bg: '#fffbeb' },
-                    { label: 'งานทั้งหมด', value: totalAll, sub: `ยกเลิก ${getS('CANCELLED','Total')}`, color: '#8b5cf6', bg: '#f5f3ff' },
+                    { label: 'เธเธฒเธเธงเธฑเธเธเธตเน', value: totalToday, sub: `เน€เธชเธฃเนเธ ${completeToday}`, color: '#3b82f6', bg: '#eff6ff' },
+                    { label: 'เธเธฒเธเน€เธ”เธทเธญเธเธเธตเน', value: totalMonth, sub: `เน€เธชเธฃเนเธ ${completeMonth}`, color: '#10b981', bg: '#f0fdf4' },
+                    { label: 'เธฃเธญเธ”เธณเน€เธเธดเธเธเธฒเธฃ', value: pendingCount + inProgCount, sub: `เธฃเธญ ${pendingCount} / เธ”เธณเน€เธเธดเธเธเธฒเธฃ ${inProgCount}`, color: '#f59e0b', bg: '#fffbeb' },
+                    { label: 'เธเธฒเธเธ—เธฑเนเธเธซเธกเธ”', value: totalAll, sub: `เธขเธเน€เธฅเธดเธ ${getS('CANCELLED','Total')}`, color: '#8b5cf6', bg: '#f5f3ff' },
                   ].map(({ label, value, sub, color, bg }) => (
                     <div key={label} className="rounded-2xl p-4" style={{ background: bg, border: `1.5px solid ${color}22` }}>
                       <p className="text-xs font-semibold mb-1" style={{ color }}>{label}</p>
@@ -872,27 +872,27 @@ export default function Transfer() {
                   ))}
                 </div>
 
-                {/* ── เวลาเฉลี่ย ── */}
+                {/* โ”€โ”€ เน€เธงเธฅเธฒเน€เธเธฅเธตเนเธข โ”€โ”€ */}
                 {avg.CompletedCount > 0 && (
                   <div className="rounded-2xl p-4 grid grid-cols-3 gap-4" style={{ background: '#f8fafc', border: '1.5px solid #e2e8f0' }}>
                     <div>
-                      <p className="text-xs font-semibold text-slate-500 mb-1">⏱ เวลาเฉลี่ย (เดือนนี้)</p>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">โฑ เน€เธงเธฅเธฒเน€เธเธฅเธตเนเธข (เน€เธ”เธทเธญเธเธเธตเน)</p>
                       <p className="text-xl font-black text-slate-800">{fmtDur(avg.AvgMinThisMonth)}</p>
-                      <p className="text-xs text-slate-400">จาก {avg.CompletedCount} งาน</p>
+                      <p className="text-xs text-slate-400">เธเธฒเธ {avg.CompletedCount} เธเธฒเธ</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-500 mb-1">🏆 เร็วสุด</p>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">๐ เน€เธฃเนเธงเธชเธธเธ”</p>
                       <p className="text-xl font-black text-emerald-600">{fmtDur(avg.MinMin)}</p>
                     </div>
                     <div>
-                      <p className="text-xs font-semibold text-slate-500 mb-1">🐢 ช้าสุด</p>
+                      <p className="text-xs font-semibold text-slate-500 mb-1">๐ข เธเนเธฒเธชเธธเธ”</p>
                       <p className="text-xl font-black text-rose-500">{fmtDur(avg.MaxMin)}</p>
                     </div>
                   </div>
                 )}
 
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                  {/* ── งานค้างนาน ── */}
+                  {/* โ”€โ”€ เธเธฒเธเธเนเธฒเธเธเธฒเธ โ”€โ”€ */}
                   <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #fde68a' }}>
                     <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#fffbeb' }}>
                       <AlertTriangle size={14} style={{ color: '#d97706' }} />
@@ -900,7 +900,7 @@ export default function Transfer() {
                     </div>
                     <table className="w-full text-xs">
                       <thead><tr style={{ background: '#fef3c7' }}>
-                        {['รหัส','ต้นทาง → ปลายทาง','รอนาน'].map(h => (
+                        {['เธฃเธซเธฑเธช','เธ•เนเธเธ—เธฒเธ โ’ เธเธฅเธฒเธขเธ—เธฒเธ','เธฃเธญเธเธฒเธ'].map(h => (
                           <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: '#92400e' }}>{h}</th>
                         ))}
                       </tr></thead>
@@ -910,9 +910,9 @@ export default function Transfer() {
                           : (dashData.pendingLong || []).map(j => (
                             <tr key={j.JobCode} style={{ borderTop: '1px solid #fde68a' }}>
                               <td className="px-3 py-2 font-mono font-bold" style={{ color: '#d97706' }}>{j.JobCode}</td>
-                              <td className="px-3 py-2" style={{ color: '#374151' }}>{j.Source} → {j.Dest}</td>
+                              <td className="px-3 py-2" style={{ color: '#374151' }}>{j.Source} โ’ {j.Dest}</td>
                               <td className="px-3 py-2 font-semibold whitespace-nowrap" style={{ color: j.HoursWaiting > 8 ? '#ef4444' : '#f59e0b' }}>
-                                {j.HoursWaiting} ชม.
+                                {j.HoursWaiting} เธเธก.
                               </td>
                             </tr>
                           ))
@@ -921,7 +921,7 @@ export default function Transfer() {
                     </table>
                   </div>
 
-                  {/* ── รถที่ใช้บ่อย ── */}
+                  {/* โ”€โ”€ เธฃเธ–เธ—เธตเนเนเธเนเธเนเธญเธข โ”€โ”€ */}
                   <div className="rounded-2xl overflow-hidden" style={{ border: '1.5px solid #e0e7ff' }}>
                     <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#eef2ff' }}>
                       <Truck size={14} style={{ color: '#4f46e5' }} />
@@ -929,7 +929,7 @@ export default function Transfer() {
                     </div>
                     <table className="w-full text-xs">
                       <thead><tr style={{ background: '#e0e7ff' }}>
-                        {['ทะเบียน','รหัส','รอบ','งาน'].map(h => (
+                        {['เธ—เธฐเน€เธเธตเธขเธ','เธฃเธซเธฑเธช','เธฃเธญเธ','เธเธฒเธ'].map(h => (
                           <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: '#3730a3' }}>{h}</th>
                         ))}
                       </tr></thead>
@@ -949,7 +949,7 @@ export default function Transfer() {
                     </table>
                   </div>
 
-                  {/* ── เส้นทางที่ใช้บ่อย ── */}
+                  {/* โ”€โ”€ เน€เธชเนเธเธ—เธฒเธเธ—เธตเนเนเธเนเธเนเธญเธข โ”€โ”€ */}
                   <div className="rounded-2xl overflow-hidden sm:col-span-2" style={{ border: '1.5px solid #d1fae5' }}>
                     <div className="px-4 py-3 flex items-center gap-2" style={{ background: '#ecfdf5' }}>
                       <ArrowRight size={14} style={{ color: '#059669' }} />
@@ -957,7 +957,7 @@ export default function Transfer() {
                     </div>
                     <table className="w-full text-xs">
                       <thead><tr style={{ background: '#d1fae5' }}>
-                        {['ต้นทาง','ปลายทาง','งาน','มัด','น้ำหนัก (กก.)'].map(h => (
+                        {['เธ•เนเธเธ—เธฒเธ','เธเธฅเธฒเธขเธ—เธฒเธ','เธเธฒเธ','เธกเธฑเธ”','เธเนเธณเธซเธเธฑเธ (เธเธ.)'].map(h => (
                           <th key={h} className="px-3 py-2 text-left font-semibold" style={{ color: '#065f46' }}>{h}</th>
                         ))}
                       </tr></thead>
@@ -984,10 +984,10 @@ export default function Transfer() {
         </div>
       )}
 
-      {/* ── CREATE JOB MODAL ── */}
+      {/* โ”€โ”€ CREATE JOB MODAL โ”€โ”€ */}
       {showCreateJob && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          
           onMouseDown={e => { if (e.target === e.currentTarget) { setShowCreateJob(false); setEditingJob(null); } }}>
           <div className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
@@ -1004,7 +1004,7 @@ export default function Transfer() {
                   <select value={jobForm.sourceStationId}
                     onChange={e => setJobForm(f => ({ ...f, sourceStationId: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                    <option value="">-- เลือก --</option>
+                    <option value="">-- เน€เธฅเธทเธญเธ --</option>
                     {sortedStations.map(s => <option key={s.StationID} value={s.StationID}>{s.StationName}</option>)}
                   </select>
                 </div>
@@ -1013,7 +1013,7 @@ export default function Transfer() {
                   <select value={jobForm.destStationId}
                     onChange={e => setJobForm(f => ({ ...f, destStationId: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                    <option value="">-- เลือก --</option>
+                    <option value="">-- เน€เธฅเธทเธญเธ --</option>
                     {sortedStations.map(s => <option key={s.StationID} value={s.StationID}>{s.StationName}</option>)}
                   </select>
                 </div>
@@ -1078,7 +1078,7 @@ export default function Transfer() {
                 <input type="text" value={jobForm.notes}
                   onChange={e => setJobForm(f => ({ ...f, notes: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
-                  placeholder="หมายเหตุเพิ่มเติม (ถ้ามี)" />
+                  placeholder="เธซเธกเธฒเธขเน€เธซเธ•เธธเน€เธเธดเนเธกเน€เธ•เธดเธก (เธ–เนเธฒเธกเธต)" />
               </div>
             </div>
             <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
@@ -1099,10 +1099,10 @@ export default function Transfer() {
         </div>
       )}
 
-      {/* ── VEHICLE MODAL ── */}
+      {/* โ”€โ”€ VEHICLE MODAL โ”€โ”€ */}
       {showVehicleModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          
           onMouseDown={e => { if (e.target === e.currentTarget) setShowVehicleModal(false); }}>
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
@@ -1121,14 +1121,14 @@ export default function Transfer() {
                   <input type="text" value={vehicleForm.vehicleCode}
                     onChange={e => setVehicleForm(f => ({ ...f, vehicleCode: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
-                    style={inputStyle} placeholder="เช่น FG03" />
+                    style={inputStyle} placeholder="เน€เธเนเธ FG03" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.vehPlate')}</label>
                   <input type="text" value={vehicleForm.vehiclePlate}
                     onChange={e => setVehicleForm(f => ({ ...f, vehiclePlate: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
-                    style={inputStyle} placeholder="เช่น 81-3359" />
+                    style={inputStyle} placeholder="เน€เธเนเธ 81-3359" />
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -1137,18 +1137,18 @@ export default function Transfer() {
                   <input type="text" value={vehicleForm.vehicleName}
                     onChange={e => setVehicleForm(f => ({ ...f, vehicleName: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none"
-                    style={inputStyle} placeholder="เช่น รถโฟล์คลิฟท์" />
+                    style={inputStyle} placeholder="เน€เธเนเธ เธฃเธ–เนเธเธฅเนเธเธฅเธดเธเธ—เน" />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>ประเภทรถ</label>
+                  <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>เธเธฃเธฐเน€เธ เธ—เธฃเธ–</label>
                   <select value={vehicleForm.vehicleType}
                     onChange={e => setVehicleForm(f => ({ ...f, vehicleType: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                    <option value="">-- เลือก --</option>
-                    <option value="6 ล้อ">6 ล้อ</option>
-                    <option value="10 ล้อ">10 ล้อ</option>
-                    <option value="รถพ่วง">รถพ่วง</option>
-                    <option value="อื่นๆ">อื่นๆ</option>
+                    <option value="">-- เน€เธฅเธทเธญเธ --</option>
+                    <option value="6 เธฅเนเธญ">6 เธฅเนเธญ</option>
+                    <option value="10 เธฅเนเธญ">10 เธฅเนเธญ</option>
+                    <option value="เธฃเธ–เธเนเธงเธ">เธฃเธ–เธเนเธงเธ</option>
+                    <option value="เธญเธทเนเธเน">เธญเธทเนเธเน</option>
                   </select>
                 </div>
               </div>
@@ -1174,21 +1174,21 @@ export default function Transfer() {
               {(vehicleForm.vehicleStatus === 'MAINTENANCE' || vehicleForm.vehicleStatus === 'ACCIDENT') && (
                 <div className="space-y-3 p-4 rounded-2xl" style={{ background: '#fef9f0', border: '1.5px solid #fde68a' }}>
                   <div>
-                    <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>อาการ / รายละเอียด</label>
+                    <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>เธญเธฒเธเธฒเธฃ / เธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”</label>
                     <textarea rows={2} value={vehicleForm.statusNote}
                       onChange={e => setVehicleForm(f => ({ ...f, statusNote: e.target.value }))}
                       className="w-full px-3 py-2 rounded-xl text-sm font-semibold outline-none resize-none"
-                      style={inputStyle} placeholder="ระบุอาการหรือรายละเอียด..." />
+                      style={inputStyle} placeholder="เธฃเธฐเธเธธเธญเธฒเธเธฒเธฃเธซเธฃเธทเธญเธฃเธฒเธขเธฅเธฐเน€เธญเธตเธขเธ”..." />
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>วันที่เข้าซ่อม</label>
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>เธงเธฑเธเธ—เธตเนเน€เธเนเธฒเธเนเธญเธก</label>
                       <input type="date" value={vehicleForm.repairStartDate}
                         onChange={e => setVehicleForm(f => ({ ...f, repairStartDate: e.target.value }))}
                         className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle} />
                     </div>
                     <div>
-                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>คาดว่าจะเสร็จ</label>
+                      <label className="block text-xs font-bold mb-1.5" style={{ color: '#92400e' }}>เธเธฒเธ”เธงเนเธฒเธเธฐเน€เธชเธฃเนเธ</label>
                       <input type="date" value={vehicleForm.repairExpectedDate}
                         onChange={e => setVehicleForm(f => ({ ...f, repairExpectedDate: e.target.value }))}
                         className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle} />
@@ -1213,10 +1213,10 @@ export default function Transfer() {
         </div>
       )}
 
-      {/* ── ASSIGN MODAL ── */}
+      {/* โ”€โ”€ ASSIGN MODAL โ”€โ”€ */}
       {showAssignModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          
           onMouseDown={e => { if (e.target === e.currentTarget) setShowAssignModal(false); }}>
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
@@ -1230,7 +1230,7 @@ export default function Transfer() {
               {assignForm.map((pair, idx) => (
                 <div key={idx} className="p-3 rounded-2xl space-y-2" style={{ background: '#f9fafb', border: '1px solid #f3f4f6' }}>
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-black" style={{ color: '#9ca3af' }}>คู่ที่ {idx + 1}</span>
+                    <span className="text-xs font-black" style={{ color: '#9ca3af' }}>เธเธนเนเธ—เธตเน {idx + 1}</span>
                     {assignForm.length > 1 && (
                       <button onClick={() => removeAssignPair(idx)}
                         className="w-6 h-6 rounded-lg flex items-center justify-center"
@@ -1241,14 +1241,14 @@ export default function Transfer() {
                   </div>
                   <select value={pair.operatorId} onChange={e => updateAssignPair(idx, 'operatorId', e.target.value)}
                     className="w-full h-9 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                    <option value="">-- พนักงานขับรถ --</option>
+                    <option value="">-- เธเธเธฑเธเธเธฒเธเธเธฑเธเธฃเธ– --</option>
                     {users.map(u => (
                       <option key={u.UserID} value={u.UserID}>{u.FullName} ({u.Username})</option>
                     ))}
                   </select>
                   <select value={pair.vehicleId} onChange={e => updateAssignPair(idx, 'vehicleId', e.target.value)}
                     className="w-full h-9 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                    <option value="">-- รถขนย้าย --</option>
+                    <option value="">-- เธฃเธ–เธเธเธขเนเธฒเธข --</option>
                     {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').map(v => (
                       <option key={v.VehicleID} value={v.VehicleID}>
                         {v.VehicleCode ? `[${v.VehicleCode}] ` : ''}{v.VehiclePlate}{v.VehicleType ? ` (${v.VehicleType})` : ''}
@@ -1259,13 +1259,13 @@ export default function Transfer() {
               ))}
               {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').length === 0 && (
                 <p className="text-xs font-semibold" style={{ color: '#dc2626' }}>
-                  ไม่มีรถที่พร้อมใช้งาน — กรุณาตรวจสอบสถานะรถที่ tab รถ
+                  เนเธกเนเธกเธตเธฃเธ–เธ—เธตเนเธเธฃเนเธญเธกเนเธเนเธเธฒเธ โ€” เธเธฃเธธเธ“เธฒเธ•เธฃเธงเธเธชเธญเธเธชเธ–เธฒเธเธฐเธฃเธ–เธ—เธตเน tab เธฃเธ–
                 </p>
               )}
               <button onClick={addAssignPair}
                 className="w-full h-9 rounded-xl text-xs font-bold flex items-center justify-center gap-1.5"
                 style={{ background: '#f0fdf4', color: '#10b981', border: '1.5px dashed #bbf7d0' }}>
-                <Plus size={13} /> เพิ่มรถ/คนขับ
+                <Plus size={13} /> เน€เธเธดเนเธกเธฃเธ–/เธเธเธเธฑเธ
               </button>
             </div>
             <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
@@ -1284,10 +1284,10 @@ export default function Transfer() {
         </div>
       )}
 
-      {/* ── EDIT TRIP MODAL ── */}
+      {/* โ”€โ”€ EDIT TRIP MODAL โ”€โ”€ */}
       {showEditTripModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          
           onMouseDown={e => { if (e.target === e.currentTarget) setShowEditTripModal(false); }}>
           <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
@@ -1302,7 +1302,7 @@ export default function Transfer() {
                 <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.operatorLabel')}</label>
                 <select value={editTripForm.operatorId} onChange={e => setEditTripForm(f => ({ ...f, operatorId: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                  <option value="">-- เลือกพนักงาน --</option>
+                  <option value="">-- เน€เธฅเธทเธญเธเธเธเธฑเธเธเธฒเธ --</option>
                   {users.map(u => (
                     <option key={u.UserID} value={u.UserID}>{u.FullName} ({u.Username})</option>
                   ))}
@@ -1312,7 +1312,7 @@ export default function Transfer() {
                 <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.vehicleLabel')}</label>
                 <select value={editTripForm.vehicleId} onChange={e => setEditTripForm(f => ({ ...f, vehicleId: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}>
-                  <option value="">-- เลือกรถ --</option>
+                  <option value="">-- เน€เธฅเธทเธญเธเธฃเธ– --</option>
                   {vehicles.filter(v => (v.VehicleStatus || 'READY') === 'READY').map(v => (
                     <option key={v.VehicleID} value={v.VehicleID}>
                       {v.VehicleCode ? `[${v.VehicleCode}] ` : ''}{v.VehiclePlate}{v.VehicleType ? ` (${v.VehicleType})` : ''}
@@ -1320,7 +1320,7 @@ export default function Transfer() {
                   ))}
                 </select>
               </div>
-              <p className="text-xs" style={{ color: '#9ca3af' }}>แก้ไขได้เฉพาะรอบที่ยังไม่เริ่มออกเดินทาง</p>
+              <p className="text-xs" style={{ color: '#9ca3af' }}>เนเธเนเนเธเนเธ”เนเน€เธเธเธฒเธฐเธฃเธญเธเธ—เธตเนเธขเธฑเธเนเธกเนเน€เธฃเธดเนเธกเธญเธญเธเน€เธ”เธดเธเธ—เธฒเธ</p>
             </div>
             <div className="flex gap-3 px-6 py-4" style={{ borderTop: '1px solid #f3f4f6' }}>
               <button onClick={() => setShowEditTripModal(false)}
@@ -1338,10 +1338,10 @@ export default function Transfer() {
         </div>
       )}
 
-      {/* ── STATION MODAL ── */}
+      {/* โ”€โ”€ STATION MODAL โ”€โ”€ */}
       {showStationModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,0.45)', backdropFilter: 'blur(4px)' }}
+          
           onMouseDown={e => { if (e.target === e.currentTarget) setShowStationModal(false); }}>
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
@@ -1360,7 +1360,7 @@ export default function Transfer() {
                   <input type="text" value={stationForm.stationCode}
                     onChange={e => setStationForm(f => ({ ...f, stationCode: e.target.value }))}
                     className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
-                    placeholder="เช่น ST01" />
+                    placeholder="เน€เธเนเธ ST01" />
                 </div>
                 <div>
                   <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.sortOrder')}</label>
@@ -1374,7 +1374,7 @@ export default function Transfer() {
                 <input type="text" value={stationForm.stationName}
                   onChange={e => setStationForm(f => ({ ...f, stationName: e.target.value }))}
                   className="w-full h-10 px-3 rounded-xl text-sm font-semibold outline-none" style={inputStyle}
-                  placeholder="ชื่อสถานี" />
+                  placeholder="เธเธทเนเธญเธชเธ–เธฒเธเธต" />
               </div>
               <div>
                 <label className="block text-xs font-bold mb-1.5" style={{ color: '#6b7280' }}>{t('transfer.stationTypeLabel')}</label>
