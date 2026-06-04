@@ -59,7 +59,7 @@ router.get('/', authenticate, async (req, res) => {
         SELECT TOP 1 PickDocumentNo
         FROM WMS_DataStation WITH (NOLOCK)
         WHERE TripID = t.TripID
-        ORDER BY CreatedAt DESC
+        ORDER BY ReceivedTime DESC
       ) ds
       ${where}
       ORDER BY t.CreatedAt DESC
