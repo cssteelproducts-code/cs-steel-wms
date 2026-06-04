@@ -141,9 +141,11 @@ const _doEnsure = async () => {
       TmsOrderID  INT NOT NULL,   DistFromPrevKm DECIMAL(10,2) DEFAULT 0,
       Status      NVARCHAR(20) DEFAULT N'PENDING'
     );
-    IF COL_LENGTH('WMS_Products','ItemLength') IS NULL ALTER TABLE WMS_Products ADD ItemLength DECIMAL(8,3) NULL;
-    IF COL_LENGTH('WMS_Products','ItemWidth')  IS NULL ALTER TABLE WMS_Products ADD ItemWidth  DECIMAL(8,3) NULL;
-    IF COL_LENGTH('WMS_Products','ItemHeight') IS NULL ALTER TABLE WMS_Products ADD ItemHeight DECIMAL(8,3) NULL;
+    IF OBJECT_ID('WMS_Products','U') IS NOT NULL BEGIN
+      IF COL_LENGTH('WMS_Products','ItemLength') IS NULL ALTER TABLE WMS_Products ADD ItemLength DECIMAL(8,3) NULL;
+      IF COL_LENGTH('WMS_Products','ItemWidth')  IS NULL ALTER TABLE WMS_Products ADD ItemWidth  DECIMAL(8,3) NULL;
+      IF COL_LENGTH('WMS_Products','ItemHeight') IS NULL ALTER TABLE WMS_Products ADD ItemHeight DECIMAL(8,3) NULL;
+    END
   `);
 };
 

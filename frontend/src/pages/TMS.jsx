@@ -426,7 +426,7 @@ export default function TMS() {
               <button onClick={() => fileRef.current?.click()} disabled={importing}
                 className="btn-primary text-sm px-3 py-1.5 flex items-center gap-1.5 disabled:opacity-60">
                 {importing ? <><span className="w-3.5 h-3.5 border-2 border-white/30 border-t-white rounded-full animate-spin" />นำเข้า...</>
-                  : <><Upload size={13} />Import Excel</>}
+                  : <><Upload size={13} />Import</>}
               </button>
               {orders.length > 0 && (
                 <button onClick={handleClearAll} className="p-2 rounded-lg border border-red-200 text-red-400 hover:text-red-600 hover:bg-red-50">
@@ -466,10 +466,10 @@ export default function TMS() {
             <div className="card text-center py-16 text-slate-400">
               <FileSpreadsheet size={40} className="mx-auto mb-3 opacity-20" />
               <p className="font-medium">ไม่มีคำสั่งส่ง</p>
-              <p className="text-sm mt-1">กด Import Excel เพื่อนำเข้าข้อมูล</p>
+              <p className="text-sm mt-1">กด Import เพื่อนำเข้าข้อมูล</p>
               <button onClick={() => fileRef.current?.click()} disabled={importing}
                 className="mt-4 btn-primary text-sm">
-                <Upload size={14} />Import Excel
+                <Upload size={14} />Import
               </button>
             </div>
           ) : (

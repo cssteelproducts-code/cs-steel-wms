@@ -1,4 +1,4 @@
-import { Suspense, useState, useEffect, useRef } from 'react';
+import { Suspense, useState, useEffect } from 'react';
 import { Outlet, useLocation } from 'react-router-dom';
 import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
@@ -42,8 +42,6 @@ const PageFallback = () => (
 export default function MainLayout() {
   const location = useLocation();
   const { t } = useLang();
-  const mainRef = useRef(null);
-
   const [collapsed, setCollapsed] = useState(() => {
     try { return localStorage.getItem('wms_sidebar_collapsed') === 'true'; } catch { return false; }
   });
@@ -61,21 +59,20 @@ export default function MainLayout() {
   const subtitle = pageInfo?.subtitle ? t(pageInfo.subtitle) : null;
 
   useEffect(() => {
-    if (mainRef.current) mainRef.current.scrollTop = 0;
+    window.scrollTo(0, 0);
   }, [location.pathname]);
 
   return (
-    <div className="flex h-screen" style={{ background: 'transparent', overflow: 'clip' }}>
-      {/* Sidebar — desktop only */}
+    <div className="flex min-h-screen">
+      {/* Sidebar — desktop only, sticky at viewport level */}
       <Sidebar collapsed={collapsed} onToggle={toggleCollapse} />
 
-      {/* Main area — no overflow-hidden so position:fixed modals cover full viewport on iOS */}
+      {/* Main area — no overflow on this column so position:fixed modals cover full viewport */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header title={title} subtitle={subtitle} />
 
         <main
-          ref={mainRef}
-          className="flex-1 overflow-y-scroll p-4 lg:p-6 pb-[72px] lg:pb-6"
+          className="flex-1 p-4 lg:p-6 pb-[72px] lg:pb-6"
           style={{ background: '#f1f5f9' }}
         >
           <Suspense fallback={<PageFallback />}>
