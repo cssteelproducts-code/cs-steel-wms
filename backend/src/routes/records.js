@@ -55,7 +55,12 @@ router.get('/', authenticate, async (req, res) => {
       LEFT JOIN WMS_WeighOut wo     WITH (NOLOCK) ON wo.TripID     = t.TripID
       LEFT JOIN WMS_CheckerRecord cr WITH (NOLOCK) ON cr.TripID    = t.TripID
       LEFT JOIN WMS_Users u         WITH (NOLOCK) ON u.UserID      = cr.OperatorID
-      LEFT JOIN WMS_DataStation ds  WITH (NOLOCK) ON ds.TripID     = t.TripID
+      OUTER APPLY (
+        SELECT TOP 1 PickDocumentNo
+        FROM WMS_DataStation WITH (NOLOCK)
+        WHERE TripID = t.TripID
+        ORDER BY CreatedAt DESC
+      ) ds
       ${where}
       ORDER BY t.CreatedAt DESC
       OFFSET @Offset ROWS FETCH NEXT @Limit ROWS ONLY
