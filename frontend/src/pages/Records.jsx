@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef, useCallback } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { ClipboardList, RefreshCw, Search, Pencil, Trash2, X, ChevronLeft, ChevronRight, ChevronDown, ChevronUp, CheckCircle, XCircle } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -7,7 +7,7 @@ import dayjs from 'dayjs';
 import LoadingSpinner from '../components/LoadingSpinner';
 import { useLang } from '../context/LanguageContext';
 
-const PRIORITIES = ['เธเธเธ•เธด', 'เธ”เนเธงเธ', 'เธ”เนเธงเธเธกเธฒเธ'];
+const PRIORITIES = ['ปกติ', 'ด่วน', 'ด่วนมาก'];
 
 const TRIP_STATUSES = [
   { value: 'WeighIn',   labelKey: 'status.weighIn' },
@@ -124,7 +124,7 @@ export default function Records() {
       vehicleTypeId: row.VehicleTypeID || '',
       customerId: row.CustomerID || null,
       customerName: row.CustomerName || '',
-      priority: row.Priority || 'เธเธเธ•เธด',
+      priority: row.Priority || 'ปกติ',
       status: row.Status || '',
       tripDate: row.TripDate ? dayjs(row.TripDate).format('YYYY-MM-DD') : '',
       weighInTime: row.WeighInTime ? dayjs(row.WeighInTime).format('HH:mm') : '',
@@ -379,7 +379,7 @@ export default function Records() {
                               <div className="px-5 py-3">
                                 <div className="flex items-center justify-between mb-3">
                                   <p className="text-xs font-bold text-blue-600 uppercase tracking-wider flex items-center gap-1.5">
-                                    โฑ {t('records.timelineTitle')}
+                                    ⏱ {t('records.timelineTitle')}
                                   </p>
                                   <button onClick={() => refreshTimeline(row.TripID)}
                                     disabled={refreshingTimeline[row.TripID]}
@@ -393,7 +393,7 @@ export default function Records() {
                                 ) : (
                                   <div className="flex flex-wrap gap-3">
                                     <div className="bg-white rounded-xl border border-purple-100 px-4 py-2.5 min-w-44">
-                                      <p className="text-xs font-bold text-purple-600 mb-1.5">๐“ {t('records.dataStation')}</p>
+                                      <p className="text-xs font-bold text-purple-600 mb-1.5">📋 {t('records.dataStation')}</p>
                                       {tl.pickWaitMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
                                           <span className="text-slate-500">{t('records.waitPickDoc')}</span>
@@ -413,7 +413,7 @@ export default function Records() {
                                     {(tl.stations || []).length > 0
                                       ? (tl.stations || []).map((s, i) => (
                                           <div key={i} className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
-                                            <p className="text-xs font-bold text-amber-600 mb-1.5">๐“ฆ {s.StationName}</p>
+                                            <p className="text-xs font-bold text-amber-600 mb-1.5">📦 {s.StationName}</p>
                                             <div className="flex items-center justify-between gap-4 text-xs">
                                               <span className="text-slate-500">{t('records.loading2')}</span>
                                               <span className="font-semibold text-amber-700">
@@ -424,14 +424,14 @@ export default function Records() {
                                         ))
                                       : (
                                           <div className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
-                                            <p className="text-xs font-bold text-amber-600 mb-1.5">๐“ฆ {t('records.loadingStation')}</p>
+                                            <p className="text-xs font-bold text-amber-600 mb-1.5">📦 {t('records.loadingStation')}</p>
                                             <p className="text-xs text-slate-400">{t('records.noData')}</p>
                                           </div>
                                         )
                                     }
 
                                     <div className="bg-white rounded-xl border border-cyan-100 px-4 py-2.5 min-w-44">
-                                      <p className="text-xs font-bold text-cyan-600 mb-1.5">โ–๏ธ {t('records.weighOutStation')}</p>
+                                      <p className="text-xs font-bold text-cyan-600 mb-1.5">⚖️ {t('records.weighOutStation')}</p>
                                       {tl.weighOutWaitMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
                                           <span className="text-slate-500">{t('records.waitWeighOut')}</span>
@@ -443,7 +443,7 @@ export default function Records() {
                                     </div>
 
                                     <div className="bg-white rounded-xl border border-orange-100 px-4 py-2.5 min-w-44">
-                                      <p className="text-xs font-bold text-orange-600 mb-1.5">โ… {t('records.checkerStation')}</p>
+                                      <p className="text-xs font-bold text-orange-600 mb-1.5">✅ {t('records.checkerStation')}</p>
                                       {tl.checkerMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
                                           <span className="text-slate-500">{t('records.checkerTime')}</span>
@@ -463,7 +463,7 @@ export default function Records() {
                                       if (total === 0) return null;
                                       return (
                                         <div className="bg-white rounded-xl border-2 border-blue-200 px-4 py-2.5 min-w-44">
-                                          <p className="text-xs font-bold text-blue-600 mb-1.5">โฑ {t('records.totalStations')}</p>
+                                          <p className="text-xs font-bold text-blue-600 mb-1.5">⏱ {t('records.totalStations')}</p>
                                           <div className="flex items-center justify-between gap-4 text-xs">
                                             <span className="text-slate-500">{t('records.totalWorkTime')}</span>
                                             <span className="font-bold text-blue-700 text-sm">{fmtMin(total)}</span>
@@ -474,7 +474,7 @@ export default function Records() {
 
                                     {tl.totalTripMinutes != null && (
                                       <div className="bg-white rounded-xl border border-indigo-100 px-4 py-2.5 min-w-44">
-                                        <p className="text-xs font-bold text-indigo-600 mb-1.5">๐ {t('records.totalInWarehouse')}</p>
+                                        <p className="text-xs font-bold text-indigo-600 mb-1.5">🚛 {t('records.totalInWarehouse')}</p>
                                         <div className="flex items-center justify-between gap-4 text-xs">
                                           <span className="text-slate-500">{t('records.weighInToChecker')}</span>
                                           <span className="font-bold text-indigo-700 text-sm">{fmtMin(tl.totalTripMinutes)}</span>
@@ -579,7 +579,7 @@ export default function Records() {
                   <div className="grid grid-cols-2 gap-3">
                     <div>
                       <label className="label">{t('common.priority')}</label>
-                      <select value={editForm.priority || 'เธเธเธ•เธด'} onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))} className="input-field w-full">
+                      <select value={editForm.priority || 'ปกติ'} onChange={e => setEditForm(f => ({ ...f, priority: e.target.value }))} className="input-field w-full">
                         {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
@@ -678,7 +678,7 @@ export default function Records() {
                 </div>
                 <div>
                   <h3 className="font-bold text-slate-800">{t('common.confirm')}</h3>
-                  <p className="text-sm text-slate-500">Trip #{deleteRow.TripID} โ€” {deleteRow.LicensePlate}</p>
+                  <p className="text-sm text-slate-500">Trip #{deleteRow.TripID} — {deleteRow.LicensePlate}</p>
                 </div>
               </div>
             </div>

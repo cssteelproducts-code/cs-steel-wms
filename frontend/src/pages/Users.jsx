@@ -1,4 +1,4 @@
-﻿import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Users as UsersIcon, Plus, Edit, UserX, Shield, Save, X, Trash2, Pencil, RefreshCw, Eye, EyeOff, ChevronDown, ChevronRight } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -514,7 +514,7 @@ export default function Users() {
                           <tr key={child.code} className={`border-b border-slate-50 ${permissions[child.code] ? 'bg-red-50/20' : 'bg-slate-50/40'}`}>
                             <td className="pl-10 pr-3 py-1.5">
                               <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                                <span className="text-slate-300">โ””</span>
+                                <span className="text-slate-300">└</span>
                                 <span>{t(child.nameKey)}</span>
                               </div>
                             </td>

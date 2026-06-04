@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer
@@ -70,7 +70,7 @@ const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKe
                 <Icon size={20} className={color} />
               </div>
             </div>
-            <p className="text-slate-400 text-xs text-right mt-1">{t('dash.detailBtn')} โ’</p>
+            <p className="text-slate-400 text-xs text-right mt-1">{t('dash.detailBtn')} →</p>
           </div>
         </div>
         <div style={{ ...face, transform: 'rotateY(180deg)' }}>
@@ -98,7 +98,7 @@ const FlipStatCard = ({ title, value, icon: Icon, color, deliveryStats, periodKe
               );
             })}
           </div>
-          <p className="text-slate-400 text-xs text-right mt-2">โ</p>
+          <p className="text-slate-400 text-xs text-right mt-2">←</p>
         </div>
       </div>
     </div>
@@ -261,9 +261,9 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Checker avg time by vehicle type โ€” monthly comparison */}
+      {/* Checker avg time by vehicle type — monthly comparison */}
       {data?.checkerAvgByVehicleType?.length > 0 && (() => {
-        const THAI_MONTHS = ['เธก.เธ.','เธ.เธ.','เธกเธต.เธ.','เน€เธก.เธข.','เธ.เธ.','เธกเธด.เธข.','เธ.เธ.','เธช.เธ.','เธ.เธข.','เธ•.เธ.','เธ.เธข.','เธ.เธ.'];
+        const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
         const now = new Date();
         const last6 = Array.from({ length: 6 }, (_, i) => {
           const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
@@ -278,7 +278,7 @@ export default function Dashboard() {
           typeMap[r.TypeName].months[`${r.Year}-${r.Month}`] = r;
         });
 
-        const TYPE_ORDER = ['เธฃเธ– 4 เธฅเนเธญ','เธฃเธ– 6 เธฅเนเธญ','เธฃเธ– 10 เธฅเนเธญ','เธฃเธ– 12 เธฅเนเธญ','เธฃเธ–เน€เธ—เธฃเธฅเน€เธฅเธญเธฃเน','เธฃเธ–เธเนเธงเธ'];
+        const TYPE_ORDER = ['รถ 4 ล้อ','รถ 6 ล้อ','รถ 10 ล้อ','รถ 12 ล้อ','รถเทรลเลอร์','รถพ่วง'];
         const sorted = Object.entries(typeMap).sort(([a], [b]) => {
           const ai = TYPE_ORDER.indexOf(a); const bi = TYPE_ORDER.indexOf(b);
           return (ai === -1 ? 99 : ai) - (bi === -1 ? 99 : bi);
@@ -290,7 +290,7 @@ export default function Dashboard() {
           <div className="card">
             <SectionHeader title={t('dash.checkerAvgByType')} sectionKey="checkerAvg" collapsed={collapsed.checkerAvg} onToggle={toggleSection}
               icon={Clock}
-              extra={<span className="text-xs text-slate-400">6 {t('common.month') || 'เน€เธ”เธทเธญเธ'}</span>} />
+              extra={<span className="text-xs text-slate-400">6 {t('common.month') || 'เดือน'}</span>} />
             {!collapsed.checkerAvg && (
               <div className="space-y-4">
                 {sorted.map(([typeName, { months }]) => {
@@ -305,7 +305,7 @@ export default function Dashboard() {
                         <span className="text-sm font-semibold text-slate-700">{typeName}</span>
                         {curRow
                           ? <span className="text-sm font-bold text-slate-800">{fmtMin(curRow.AvgMinutes)}</span>
-                          : <span className="text-xs text-slate-400">เนเธกเนเธกเธตเธเนเธญเธกเธนเธฅเน€เธ”เธทเธญเธเธเธตเน</span>}
+                          : <span className="text-xs text-slate-400">ไม่มีข้อมูลเดือนนี้</span>}
                       </div>
                       {/* 6-month sparkline */}
                       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${last6.length}, 1fr)` }}>
@@ -331,7 +331,7 @@ export default function Dashboard() {
                               </span>
                               {/* avg value */}
                               <span className="text-xs text-slate-500 leading-tight text-center" style={{ fontSize: '0.65rem' }}>
-                                {row ? fmtMin(row.AvgMinutes) : 'โ€“'}
+                                {row ? fmtMin(row.AvgMinutes) : '–'}
                               </span>
                             </div>
                           );
@@ -432,11 +432,11 @@ export default function Dashboard() {
                             </div>
                           </div>
                           {(overtime ?? 0) > 0 && (
-                            <p className="text-xs text-slate-300 text-right mt-1.5">{t('dash.detailBtn')} โ’</p>
+                            <p className="text-xs text-slate-300 text-right mt-1.5">{t('dash.detailBtn')} →</p>
                           )}
                         </div>
                         <div style={{ ...face, transform: 'rotateY(180deg)', background: '#fffbeb', border: '1px solid #fde68a' }}>
-                          <p className="text-xs font-semibold text-amber-700 mb-2">{label} โ€” {t('dash.overtimeLabel')}</p>
+                          <p className="text-xs font-semibold text-amber-700 mb-2">{label} — {t('dash.overtimeLabel')}</p>
                           {types.length > 0 ? (
                             <div className="space-y-1.5">
                               {types.map(item => (
@@ -447,9 +447,9 @@ export default function Dashboard() {
                               ))}
                             </div>
                           ) : (
-                            <p className="text-xs text-slate-400 text-center mt-2">{t('dash.noInProgress')} โ“</p>
+                            <p className="text-xs text-slate-400 text-center mt-2">{t('dash.noInProgress')} ✓</p>
                           )}
-                          <p className="text-xs text-slate-400 text-right mt-1.5">โ</p>
+                          <p className="text-xs text-slate-400 text-right mt-1.5">←</p>
                         </div>
                       </div>
                     </div>
@@ -471,9 +471,9 @@ export default function Dashboard() {
                       {allTypes.map((name, i) => (
                         <tr key={name} className={i % 2 === 0 ? 'bg-white' : 'bg-slate-50/50'}>
                           <td className="px-3 py-1.5 font-medium text-slate-700">{name}</td>
-                          <td className="px-3 py-1.5 text-center font-bold text-blue-600">{todayMap[name] ?? 'โ€”'}</td>
-                          <td className="px-3 py-1.5 text-center font-bold text-emerald-600">{monthMap[name] ?? 'โ€”'}</td>
-                          <td className="px-3 py-1.5 text-center font-bold text-violet-600">{yearMap[name] ?? 'โ€”'}</td>
+                          <td className="px-3 py-1.5 text-center font-bold text-blue-600">{todayMap[name] ?? '—'}</td>
+                          <td className="px-3 py-1.5 text-center font-bold text-emerald-600">{monthMap[name] ?? '—'}</td>
+                          <td className="px-3 py-1.5 text-center font-bold text-violet-600">{yearMap[name] ?? '—'}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -551,7 +551,7 @@ export default function Dashboard() {
 
     {/* Station popup */}
     {stationPopup && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4" >
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg max-h-[80vh] flex flex-col">
           <div className="flex items-center justify-between px-5 py-4 border-b border-slate-200">
             <div>

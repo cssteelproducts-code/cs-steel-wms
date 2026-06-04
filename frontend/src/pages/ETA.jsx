@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { RefreshCw, Truck, Navigation, AlertCircle, Search, MapPin, Clock, Settings, X, Check } from 'lucide-react';
 import api from '../services/api';
 import { formatDateTime } from '../utils/helpers';
@@ -104,9 +104,9 @@ export default function ETA() {
 
   const shortAddress = (addr) => {
     if (!addr) return '';
-    const tambon = addr.match(/(?:เธ•เธณเธเธฅ|เนเธเธงเธ)\S+/);
-    const amphoe = addr.match(/(?:เธญเธณเน€เธ เธญ|เน€เธเธ•)\S+/);
-    const changwat = addr.match(/เธเธฑเธเธซเธงเธฑเธ”\S+/);
+    const tambon = addr.match(/(?:ตำบล|แขวง)\S+/);
+    const amphoe = addr.match(/(?:อำเภอ|เขต)\S+/);
+    const changwat = addr.match(/จังหวัด\S+/);
     const parts = [tambon?.[0], amphoe?.[0], changwat?.[0]].filter(Boolean);
     return parts.length ? parts.join(' ') : addr;
   };
@@ -131,7 +131,7 @@ export default function ETA() {
             {t('page.eta')}
           </h2>
           <p className="text-gray-400 text-xs mt-0.5">
-            {source === 'mock' && <span className="text-amber-500 mr-1">โ  Mock ยท</span>}
+            {source === 'mock' && <span className="text-amber-500 mr-1">⚠ Mock ·</span>}
             {lastUpdate ? t('eta.updateTime').replace('{time}', lastUpdate.toLocaleTimeString(lang === 'th' ? 'th-TH' : 'en-US')) : t('common.loading')}
           </p>
         </div>
@@ -153,7 +153,7 @@ export default function ETA() {
         <div className="bg-amber-50 border border-amber-200 rounded-2xl p-3 flex items-start gap-3">
           <AlertCircle size={16} className="text-amber-500 flex-shrink-0 mt-0.5" />
           <p className="text-amber-700 text-sm">
-            {t('eta.mockWarning')} โ€” Set <code className="bg-amber-100 px-1 rounded">DTC_API_URL</code> &amp; <code className="bg-amber-100 px-1 rounded">DTC_API_KEY</code>
+            {t('eta.mockWarning')} — Set <code className="bg-amber-100 px-1 rounded">DTC_API_URL</code> &amp; <code className="bg-amber-100 px-1 rounded">DTC_API_KEY</code>
           </p>
         </div>
       )}

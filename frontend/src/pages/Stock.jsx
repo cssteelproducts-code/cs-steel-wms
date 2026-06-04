@@ -1,4 +1,4 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Boxes, ArrowDownToLine, ClipboardList, Package, Plus, RefreshCw, CheckCircle, X, Edit2, Upload, ChevronLeft, History } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -8,8 +8,8 @@ import { useLang } from '../context/LanguageContext';
 const TX_KEYS = {
   IN:     { id: 'IN',     labelKey: 'stock.txIn',     color: 'text-emerald-600', sign: '+' },
   OUT:    { id: 'OUT',    labelKey: 'stock.txOut',    color: 'text-red-500',     sign: '-' },
-  ADJUST: { id: 'ADJUST', labelKey: 'stock.txAdjust', color: 'text-amber-600',  sign: 'ยฑ' },
-  COUNT:  { id: 'COUNT',  labelKey: 'stock.txAdjust', color: 'text-blue-500',   sign: 'ยฑ' },
+  ADJUST: { id: 'ADJUST', labelKey: 'stock.txAdjust', color: 'text-amber-600',  sign: '±' },
+  COUNT:  { id: 'COUNT',  labelKey: 'stock.txAdjust', color: 'text-blue-500',   sign: '±' },
 };
 
 export default function Stock() {
@@ -28,7 +28,7 @@ export default function Stock() {
 
   const [showProductForm, setShowProductForm] = useState(false);
   const [editingProduct, setEditingProduct] = useState(null);
-  const [productForm, setProductForm] = useState({ productCode: '', productName: '', unit: 'เธ•เธฑเธ', category: '', description: '' });
+  const [productForm, setProductForm] = useState({ productCode: '', productName: '', unit: 'ตัน', category: '', description: '' });
 
   const [showTxForm, setShowTxForm] = useState(false);
   const [txForm, setTxForm] = useState({ warehouseId: '', productId: '', txType: 'IN', quantity: '', refDocNo: '', remark: '' });
@@ -256,7 +256,7 @@ export default function Stock() {
                     <tr key={s.StockID} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="table-cell font-mono text-blue-600">{s.ProductCode}</td>
                       <td className="table-cell font-medium text-slate-900">{s.ProductName}</td>
-                      <td className="table-cell hide-mobile text-slate-500">{s.Category || 'โ€”'}</td>
+                      <td className="table-cell hide-mobile text-slate-500">{s.Category || '—'}</td>
                       <td className="table-cell hide-mobile">{s.WarehouseName}</td>
                       <td className="table-cell text-right">
                         <span className={`font-bold ${s.Quantity > 0 ? 'text-emerald-600' : 'text-red-500'}`}>
@@ -385,7 +385,7 @@ export default function Stock() {
                       <td className="table-cell text-right font-bold">
                         <span className={cfg.color}>{cfg.sign}{Math.abs(tx.Quantity).toFixed(3)} {tx.Unit}</span>
                       </td>
-                      <td className="table-cell hide-mobile text-slate-400 text-xs">{tx.RefDocNo || tx.Remark || 'โ€”'}</td>
+                      <td className="table-cell hide-mobile text-slate-400 text-xs">{tx.RefDocNo || tx.Remark || '—'}</td>
                     </tr>
                   );
                 })}
@@ -430,7 +430,7 @@ export default function Stock() {
                       onClick={() => { setSelectedCountId(c.CountID); fetchCountDetail(c.CountID); setItemFilter('all'); }}>
                       <div>
                         <div className="font-semibold text-slate-900">{c.CountName || c.CountCode}</div>
-                        <div className="text-xs text-slate-500">{c.CountCode} ยท {dayjs(c.CountDate).format('DD/MM/YYYY')} ยท {c.OperatorName}</div>
+                        <div className="text-xs text-slate-500">{c.CountCode} · {dayjs(c.CountDate).format('DD/MM/YYYY')} · {c.OperatorName}</div>
                       </div>
                       <div className="flex items-center gap-3">
                         {c.ItemCount > 0 && <div className="text-xs text-slate-500 hide-mobile">{c.ClosedCount}/{c.ItemCount}</div>}
@@ -451,7 +451,7 @@ export default function Stock() {
                   <button onClick={() => { setSelectedCountId(null); setCountDetail(null); fetchCounts(); }} className="p-1.5 rounded-lg hover:bg-slate-100"><ChevronLeft size={16} /></button>
                   <div className="flex-1">
                     <div className="font-bold text-slate-900">{countDetail.CountName || countDetail.CountCode}</div>
-                    <div className="text-xs text-slate-500">{countDetail.CountCode} ยท {dayjs(countDetail.CountDate).format('DD/MM/YYYY')} ยท {countDetail.OperatorName}</div>
+                    <div className="text-xs text-slate-500">{countDetail.CountCode} · {dayjs(countDetail.CountDate).format('DD/MM/YYYY')} · {countDetail.OperatorName}</div>
                   </div>
                   <div className="flex gap-2 flex-wrap justify-end">
                     {countDetail.Status !== 'CANCELLED' && countDetail.Status !== 'CLOSED' && (
@@ -530,11 +530,11 @@ export default function Stock() {
                                   <div className="text-slate-800 font-medium text-xs leading-tight">{item.ExternalName}</div>
                                   {item.TypeSKU && <div className="text-xs text-slate-400">{item.TypeSKU}</div>}
                                 </td>
-                                <td className="px-3 py-2 hide-mobile text-xs text-slate-500 font-mono">{item.Location || 'โ€”'}</td>
+                                <td className="px-3 py-2 hide-mobile text-xs text-slate-500 font-mono">{item.Location || '—'}</td>
                                 <td className="px-3 py-2 text-right text-slate-700 font-semibold">{parseFloat(item.SystemQty).toLocaleString(undefined,{maximumFractionDigits:3})}</td>
-                                <td className="px-3 py-2 text-right font-bold text-slate-900">{item.LatestCount != null ? parseFloat(item.LatestCount).toLocaleString(undefined,{maximumFractionDigits:3}) : <span className="text-slate-300">โ€”</span>}</td>
+                                <td className="px-3 py-2 text-right font-bold text-slate-900">{item.LatestCount != null ? parseFloat(item.LatestCount).toLocaleString(undefined,{maximumFractionDigits:3}) : <span className="text-slate-300">—</span>}</td>
                                 <td className={`px-3 py-2 text-right font-bold ${variance == null ? 'text-slate-300' : Math.abs(variance) < 0.001 ? 'text-emerald-600' : 'text-red-500'}`}>
-                                  {variance != null ? (variance >= 0 ? '+' : '') + parseFloat(variance).toLocaleString(undefined,{maximumFractionDigits:3}) : 'โ€”'}
+                                  {variance != null ? (variance >= 0 ? '+' : '') + parseFloat(variance).toLocaleString(undefined,{maximumFractionDigits:3}) : '—'}
                                 </td>
                                 <td className="px-3 py-2 text-center">
                                   {item.EntryCount > 0 ? (
@@ -569,10 +569,10 @@ export default function Stock() {
           )}
 
           {entryModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4"  onClick={() => setEntryModal(null)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEntryModal(null)}>
               <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-slate-900 mb-1">{t('stockCount.enterQty')}</h3>
-                <p className="text-xs text-slate-500 mb-4">{entryModal.item.ExternalName}<br />{entryModal.item.ItemCode} ยท {entryModal.item.Location}</p>
+                <p className="text-xs text-slate-500 mb-4">{entryModal.item.ExternalName}<br />{entryModal.item.ItemCode} · {entryModal.item.Location}</p>
                 <div className="space-y-3">
                   <div>
                     <label className="label">{t('stockCount.counted')}</label>
@@ -593,7 +593,7 @@ export default function Stock() {
           )}
 
           {entryHistory && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4"  onClick={() => setEntryHistory(null)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEntryHistory(null)}>
               <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
                   <div>
@@ -608,7 +608,7 @@ export default function Stock() {
                       <div>
                         <div className="text-sm font-bold text-slate-900">{parseFloat(e.CountedQty).toLocaleString()} <span className="text-xs font-normal text-slate-500">#{entryHistory.entries.length - i}</span></div>
                         {e.Note && <div className="text-xs text-slate-500">{e.Note}</div>}
-                        <div className="text-xs text-slate-400">{e.CountedByName} ยท {dayjs(e.CountedAt).format('DD/MM HH:mm')}</div>
+                        <div className="text-xs text-slate-400">{e.CountedByName} · {dayjs(e.CountedAt).format('DD/MM HH:mm')}</div>
                       </div>
                       {i === 0 && <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full">{t('common.justArrived')}</span>}
                     </div>
@@ -626,7 +626,7 @@ export default function Stock() {
         <div className="card">
           <div className="flex items-center justify-between mb-4">
             <h3 className="card-header mb-0 flex items-center gap-2"><Package size={18} className="text-blue-500" />{t('stock.productTitle')}</h3>
-            <button onClick={() => { setShowProductForm(true); setEditingProduct(null); setProductForm({ productCode: '', productName: '', unit: 'เธ•เธฑเธ', category: '', description: '' }); }}
+            <button onClick={() => { setShowProductForm(true); setEditingProduct(null); setProductForm({ productCode: '', productName: '', unit: 'ตัน', category: '', description: '' }); }}
               className="btn-primary text-sm px-3 py-1.5"><Plus size={13} />{t('stock.addProduct')}</button>
           </div>
 
@@ -671,7 +671,7 @@ export default function Stock() {
                     <td className="table-cell font-mono text-blue-600 font-semibold">{p.ProductCode}</td>
                     <td className="table-cell font-medium text-slate-900">{p.ProductName}</td>
                     <td className="table-cell hide-mobile text-slate-600">{p.Unit}</td>
-                    <td className="table-cell hide-mobile text-slate-500">{p.Category || 'โ€”'}</td>
+                    <td className="table-cell hide-mobile text-slate-500">{p.Category || '—'}</td>
                     <td className="table-cell text-center">
                       <span className={`text-xs px-2 py-0.5 rounded-full ${p.IsActive ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-500'}`}>
                         {p.IsActive ? t('common.active') : t('common.inactive')}
