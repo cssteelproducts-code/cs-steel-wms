@@ -230,7 +230,7 @@ export default function TransferDriver() {
                 })}
               </div>
 
-              {meta?.btn && trip.Status !== 'COMPLETE' && !showWeight && (
+              {meta?.btnKey && trip.Status !== 'COMPLETE' && !showWeight && (
                 <button onClick={() => advanceTrip(trip)} disabled={actionLoading}
                   className="w-full h-16 rounded-2xl text-base font-black text-white transition-all disabled:opacity-60 flex items-center justify-center gap-2 mt-2"
                   style={{ background: `linear-gradient(135deg,${meta.color},${meta.color}cc)`, boxShadow: `0 6px 20px ${meta.color}40` }}>
