@@ -83,6 +83,8 @@ const ensureTables = () => {
 
 const _doEnsure = async () => {
   const pool = getPool();
+  // Each query is compiled separately so CREATE INDEX on WMS_TMS_OrderLines
+  // doesn't fail to compile before CREATE TABLE has had a chance to run.
   await pool.request().query(`
     IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_TMS_Orders' AND xtype='U')
     CREATE TABLE WMS_TMS_Orders (
@@ -99,6 +101,8 @@ const _doEnsure = async () => {
       ImportBatch  NVARCHAR(100),
       CreatedAt    DATETIME DEFAULT GETDATE()
     );
+  `);
+  await pool.request().query(`
     IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_TMS_OrderLines' AND xtype='U')
     CREATE TABLE WMS_TMS_OrderLines (
       LineID       INT IDENTITY(1,1) PRIMARY KEY,
@@ -111,8 +115,12 @@ const _doEnsure = async () => {
       ItemLength   DECIMAL(8,3),  ItemWidth DECIMAL(8,3),
       ItemHeight   DECIMAL(8,3)
     );
+  `);
+  await pool.request().query(`
     IF NOT EXISTS (SELECT 1 FROM sys.indexes WHERE name='IX_TMS_OL_OrderID' AND object_id=OBJECT_ID('WMS_TMS_OrderLines'))
       CREATE INDEX IX_TMS_OL_OrderID ON WMS_TMS_OrderLines(TmsOrderID);
+  `);
+  await pool.request().query(`
     IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_TMS_Plans' AND xtype='U')
     CREATE TABLE WMS_TMS_Plans (
       PlanID    INT IDENTITY(1,1) PRIMARY KEY,
@@ -123,6 +131,8 @@ const _doEnsure = async () => {
       CreatedBy INT,
       CreatedAt DATETIME DEFAULT GETDATE()
     );
+  `);
+  await pool.request().query(`
     IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_TMS_Trips' AND xtype='U')
     CREATE TABLE WMS_TMS_Trips (
       TripID        INT IDENTITY(1,1) PRIMARY KEY,
@@ -134,6 +144,8 @@ const _doEnsure = async () => {
       TotalWeightKg DECIMAL(12,3) DEFAULT 0,
       Status        NVARCHAR(20) DEFAULT N'DRAFT'
     );
+  `);
+  await pool.request().query(`
     IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_TMS_TripStops' AND xtype='U')
     CREATE TABLE WMS_TMS_TripStops (
       StopID      INT IDENTITY(1,1) PRIMARY KEY,
@@ -141,6 +153,8 @@ const _doEnsure = async () => {
       TmsOrderID  INT NOT NULL,   DistFromPrevKm DECIMAL(10,2) DEFAULT 0,
       Status      NVARCHAR(20) DEFAULT N'PENDING'
     );
+  `);
+  await pool.request().query(`
     IF OBJECT_ID('WMS_Products','U') IS NOT NULL BEGIN
       IF COL_LENGTH('WMS_Products','ItemLength') IS NULL ALTER TABLE WMS_Products ADD ItemLength DECIMAL(8,3) NULL;
       IF COL_LENGTH('WMS_Products','ItemWidth')  IS NULL ALTER TABLE WMS_Products ADD ItemWidth  DECIMAL(8,3) NULL;
