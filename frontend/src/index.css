@@ -223,12 +223,6 @@ button:has(.lucide-refresh-cw):active .lucide-refresh-cw {
   }
   .table-cell { @apply px-4 py-3 text-sm text-slate-700; }
 
-  /* iOS Safari: always allow horizontal scroll + smooth inertia scrolling */
-  .overflow-x-auto, .overflow-x-scroll {
-    -webkit-overflow-scrolling: touch;
-    overflow-x: scroll;
-  }
-
   /* ══════════════════════════════════════════════════════
      BADGES
   ══════════════════════════════════════════════════════ */
@@ -317,4 +311,11 @@ button:has(.lucide-refresh-cw):active .lucide-refresh-cw {
     max-height: 56vh !important;
     max-height: 56svh !important;
   }
+}
+
+/* iOS Safari overflow-x fix — outside @layer so this wins over Tailwind utility .overflow-x-auto { overflow-x: auto } */
+.overflow-x-auto,
+.overflow-x-scroll {
+  overflow-x: scroll !important;
+  -webkit-overflow-scrolling: touch;
 }

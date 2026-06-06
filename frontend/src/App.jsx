@@ -31,9 +31,6 @@ const Records        = lazy(() => import('./pages/Records'));
 const LocationCheck  = lazy(() => import('./pages/LocationCheck'));
 const StockCount     = lazy(() => import('./pages/StockCount'));
 const Stock          = lazy(() => import('./pages/Stock'));
-const StockReport    = lazy(() => import('./pages/StockReport'));
-const DaySupply      = lazy(() => import('./pages/DaySupply'));
-
 
 const ProtectedRoute = ({ children, menuCode, menuCodeAny }) => {
   const { user, loading, hasPermission } = useAuth();
@@ -80,7 +77,6 @@ const LAZY_PAGES = [
   () => import('./pages/Profile'),        () => import('./pages/Forecast'),
   () => import('./pages/ShiftPlanning'),  () => import('./pages/FreightCalc'),
   () => import('./pages/TMS'),
-  () => import('./pages/StockReport'),
 ];
 
 function AppRoutes() {
@@ -122,8 +118,6 @@ function AppRoutes() {
         <Route path="stock-count" element={<ProtectedRoute menuCodeAny={['STOCKCOUNT_OFFICE', 'STOCKCOUNT_FIELD']}><StockCount /></ProtectedRoute>} />
         <Route path="stock" element={<ProtectedRoute menuCode="STOCK"><Stock /></ProtectedRoute>} />
         <Route path="tms" element={<ProtectedRoute menuCode="TMS"><TMS /></ProtectedRoute>} />
-        <Route path="stock-report" element={<ProtectedRoute menuCode="STOCK_REPORT"><StockReport /></ProtectedRoute>} />
-        <Route path="day-supply" element={<ProtectedRoute menuCode="DAY_SUPPLY"><DaySupply /></ProtectedRoute>} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

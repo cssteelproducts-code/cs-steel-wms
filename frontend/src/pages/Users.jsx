@@ -40,8 +40,6 @@ const MENUS = [
   { divider: true, sectionKey: 'section.tools' },
   { code: 'SHIFT_PLANNING', nameKey: 'nav.shiftPlanning' },
   { code: 'FREIGHT_CALC', nameKey: 'nav.freightCalc' },
-  { code: 'STOCK_REPORT', nameKey: 'nav.stockReport' },
-  { code: 'DAY_SUPPLY',   nameKey: 'nav.daySupply' },
 ];
 
 const ALL_MENU_CODES = MENUS.filter(m => !m.divider).flatMap(m => [m, ...(m.children || [])]);

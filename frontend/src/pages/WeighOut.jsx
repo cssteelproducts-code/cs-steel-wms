@@ -323,7 +323,7 @@ export default function WeighOut() {
         <div className="card">
           <h3 className="card-header">{t('weighOut.doneTab')} ({completed.length})</h3>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[440px]">
+            <table className="min-w-[440px]">
               <thead>
                 <tr className="border-b border-slate-200">
                   <th className="table-header text-left px-4 py-2">{t('common.licensePlate')}</th>
