@@ -127,19 +127,20 @@ function AppRoutes() {
 
 const loadingBarStyle = `
 #global-loading-bar {
-  position: fixed; top: 0; left: 0; width: 100%; height: 3px;
-  background: linear-gradient(90deg, #dc2626 0%, #ef4444 50%, #dc2626 100%);
-  background-size: 200% 100%;
+  position: fixed; top: 0; left: 0; height: 3px;
+  background: #dc2626;
   z-index: 99999; opacity: 0; pointer-events: none;
-  transition: opacity 0.15s ease;
+  width: 0;
 }
 #global-loading-bar.active {
   opacity: 1;
-  animation: loading-sweep 1.2s linear infinite;
+  animation: loading-grow 8s cubic-bezier(0.05, 0.5, 0.1, 1) forwards;
 }
-@keyframes loading-sweep {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
+@keyframes loading-grow {
+  0%   { width: 20%; }
+  40%  { width: 60%; }
+  70%  { width: 78%; }
+  100% { width: 88%; }
 }
 `;
 

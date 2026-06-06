@@ -10,8 +10,29 @@ const api = axios.create({
 // Global loading bar
 let _pending = 0;
 const bar = () => document.getElementById('global-loading-bar');
-const showBar = () => { _pending++; const el = bar(); if (el) el.classList.add('active'); };
-const hideBar = () => { _pending = Math.max(0, _pending - 1); if (_pending === 0) { const el = bar(); if (el) el.classList.remove('active'); } };
+const showBar = () => {
+  _pending++;
+  const el = bar();
+  if (!el) return;
+  el.style.cssText = '';        // clear any in-progress done transition
+  void el.offsetWidth;          // force reflow so animation restarts from 20%
+  el.classList.add('active');
+};
+const hideBar = () => {
+  _pending = Math.max(0, _pending - 1);
+  if (_pending > 0) return;
+  const el = bar();
+  if (!el) return;
+  const w = el.offsetWidth;     // freeze at current animated width
+  el.classList.remove('active');
+  el.style.width = w + 'px';
+  requestAnimationFrame(() => {
+    el.style.transition = 'width 0.15s ease, opacity 0.25s ease 0.1s';
+    el.style.width = '100%';
+    el.style.opacity = '0';
+    setTimeout(() => { el.style.cssText = ''; }, 450);
+  });
+};
 
 api.interceptors.request.use(cfg => { showBar(); return cfg; }, err => { hideBar(); return Promise.reject(err); });
 
