@@ -459,18 +459,18 @@ export default function ShiftPlanning() {
             <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="table-header px-3 py-2 w-8 hide-mobile">
+                  <th className="table-header whitespace-nowrap px-3 py-2 w-8 hide-mobile">
                     <input type="checkbox" className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
                       checked={records.length > 0 && selected.size === records.length}
                       onChange={toggleSelectAll} />
                   </th>
-                  <th className="table-header text-left px-3 py-2">{t('shift.colDate')}</th>
-                  <th className="table-header text-center px-3 py-2">{t('shift.colEndTime')}</th>
-                  <th className="table-header text-center px-3 py-2">{t('shift.colOTEmp')}</th>
-                  <th className="table-header text-right px-3 py-2 text-blue-600">{t('shift.colOT1')}</th>
-                  <th className="table-header text-right px-3 py-2 text-orange-600">{t('shift.colOT2')}</th>
-                  <th className="table-header text-right px-3 py-2">{t('shift.colDiff')}</th>
-                  <th className="table-header px-3 py-2"></th>
+                  <th className="table-header whitespace-nowrap text-left px-3 py-2">{t('shift.colDate')}</th>
+                  <th className="table-header whitespace-nowrap text-center px-3 py-2">{t('shift.colEndTime')}</th>
+                  <th className="table-header whitespace-nowrap text-center px-3 py-2">{t('shift.colOTEmp')}</th>
+                  <th className="table-header whitespace-nowrap text-right px-3 py-2 text-blue-600">{t('shift.colOT1')}</th>
+                  <th className="table-header whitespace-nowrap text-right px-3 py-2 text-orange-600">{t('shift.colOT2')}</th>
+                  <th className="table-header whitespace-nowrap text-right px-3 py-2">{t('shift.colDiff')}</th>
+                  <th className="table-header whitespace-nowrap px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody>

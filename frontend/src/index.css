@@ -218,11 +218,16 @@ button:has(.lucide-refresh-cw):active .lucide-refresh-cw {
      TABLE
   ══════════════════════════════════════════════════════ */
   .table-header {
-    @apply text-xs font-semibold text-slate-500 bg-slate-50 px-4 py-2.5;
+    @apply text-xs font-semibold text-slate-500 bg-slate-50 px-4 py-2.5 whitespace-nowrap;
     letter-spacing: 0.02em;
-    white-space: nowrap;
   }
   .table-cell { @apply px-4 py-3 text-sm text-slate-700; }
+
+  /* iOS Safari: always allow horizontal scroll + smooth inertia scrolling */
+  .overflow-x-auto, .overflow-x-scroll {
+    -webkit-overflow-scrolling: touch;
+    overflow-x: scroll;
+  }
 
   /* ══════════════════════════════════════════════════════
      BADGES
