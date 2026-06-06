@@ -301,7 +301,7 @@ export default function Records() {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full min-w-[560px]">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
                   <th className="table-header px-3 py-2 text-center w-8 hide-mobile">

@@ -456,7 +456,7 @@ export default function ShiftPlanning() {
             </div>
           )}
           <div className="overflow-x-auto">
-            <table className="w-full text-sm">
+            <table className="w-full min-w-[520px] text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
                   <th className="table-header px-3 py-2 w-8 hide-mobile">
