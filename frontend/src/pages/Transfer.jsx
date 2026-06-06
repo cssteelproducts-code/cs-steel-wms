@@ -986,7 +986,7 @@ export default function Transfer() {
 
       {/* ── CREATE JOB MODAL ── */}
       {showCreateJob && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"          onMouseDown={e => { if (e.target === e.currentTarget) { setShowCreateJob(false); setEditingJob(null); } }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"          onMouseDown={e => { if (e.target === e.currentTarget) { setShowCreateJob(false); setEditingJob(null); } }}>
           <div className="w-full max-w-lg rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -1099,7 +1099,7 @@ export default function Transfer() {
 
       {/* ── VEHICLE MODAL ── */}
       {showVehicleModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"          onMouseDown={e => { if (e.target === e.currentTarget) setShowVehicleModal(false); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"          onMouseDown={e => { if (e.target === e.currentTarget) setShowVehicleModal(false); }}>
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -1211,7 +1211,7 @@ export default function Transfer() {
 
       {/* ── ASSIGN MODAL ── */}
       {showAssignModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"          onMouseDown={e => { if (e.target === e.currentTarget) setShowAssignModal(false); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"          onMouseDown={e => { if (e.target === e.currentTarget) setShowAssignModal(false); }}>
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -1280,7 +1280,7 @@ export default function Transfer() {
 
       {/* ── EDIT TRIP MODAL ── */}
       {showEditTripModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"          onMouseDown={e => { if (e.target === e.currentTarget) setShowEditTripModal(false); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"          onMouseDown={e => { if (e.target === e.currentTarget) setShowEditTripModal(false); }}>
           <div className="w-full max-w-sm rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>
@@ -1332,7 +1332,7 @@ export default function Transfer() {
 
       {/* ── STATION MODAL ── */}
       {showStationModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4"          onMouseDown={e => { if (e.target === e.currentTarget) setShowStationModal(false); }}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40"          onMouseDown={e => { if (e.target === e.currentTarget) setShowStationModal(false); }}>
           <div className="w-full max-w-md rounded-3xl overflow-hidden shadow-2xl" style={{ background: '#ffffff' }}
             onMouseDown={e => e.stopPropagation()}>
             <div className="flex items-center justify-between px-6 py-5" style={{ borderBottom: '1px solid #f3f4f6' }}>

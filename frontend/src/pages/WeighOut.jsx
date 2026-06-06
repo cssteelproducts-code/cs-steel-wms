@@ -379,7 +379,7 @@ export default function WeighOut() {
 
       {/* Delete confirm dialog */}
       {deleteConfirm && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
             <div className="px-6 pt-6 pb-4">
               <div className="flex items-center gap-3 mb-3">

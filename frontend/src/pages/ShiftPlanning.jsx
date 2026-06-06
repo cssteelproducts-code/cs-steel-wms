@@ -459,7 +459,7 @@ export default function ShiftPlanning() {
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-slate-200 bg-slate-50">
-                  <th className="table-header px-3 py-2 w-8">
+                  <th className="table-header px-3 py-2 w-8 hide-mobile">
                     <input type="checkbox" className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
                       checked={records.length > 0 && selected.size === records.length}
                       onChange={toggleSelectAll} />
@@ -486,7 +486,7 @@ export default function ShiftPlanning() {
                     const previewOT2 = calcOT2(shiftTimes, cfg);
                     return (
                       <tr key={r.id} className="border-b border-indigo-100 bg-indigo-50">
-                        <td className="px-3 py-1.5" />
+                        <td className="px-3 py-1.5 hide-mobile" />
                         <td className="px-3 py-1.5 font-medium text-indigo-700">{r.date}</td>
                         <td className="px-3 py-1.5">
                           <input type="time" value={editRow.endTime} onChange={e => setEditRow(f => ({ ...f, endTime: e.target.value }))} className="input-field text-sm py-1 w-28" />
@@ -524,7 +524,7 @@ export default function ShiftPlanning() {
                   }
                   return (
                     <tr key={r.id} className={`border-b border-slate-100 ${selected.has(r.id) ? 'bg-indigo-50' : 'hover:bg-slate-50'}`}>
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-center hide-mobile">
                         <input type="checkbox" className="w-4 h-4 rounded accent-indigo-600 cursor-pointer"
                           checked={selected.has(r.id)} onChange={() => toggleSelect(r.id)} />
                       </td>

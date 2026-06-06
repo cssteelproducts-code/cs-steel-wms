@@ -624,7 +624,7 @@ export default function StockCount() {
 
       {/* ── Delete confirm modal ── */}
       {deleteModal.open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center px-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm p-6 space-y-4">
             <div className="flex items-center gap-3">
               <div className="p-2 rounded-xl bg-red-50"><Trash2 size={18} className="text-red-500" /></div>
@@ -1104,7 +1104,7 @@ export default function StockCount() {
       {/* ══════════ MODALS ══════════ */}
 
       {createModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900">{t('stockCount.createSession')}</h3>
@@ -1134,7 +1134,7 @@ export default function StockCount() {
       )}
 
       {entriesModal && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white rounded-2xl w-full max-w-md p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <div>

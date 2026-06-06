@@ -304,7 +304,7 @@ export default function Records() {
             <table className="w-full">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50">
-                  <th className="table-header px-3 py-2 text-center w-8">
+                  <th className="table-header px-3 py-2 text-center w-8 hide-mobile">
                     <input type="checkbox"
                       checked={records.length > 0 && records.every(r => selectedIds.has(r.TripID))}
                       onChange={toggleSelectAll}
@@ -327,7 +327,7 @@ export default function Records() {
                 {records.map(row => (
                   <>
                     <tr key={row.TripID} className={`border-b border-slate-50 hover:bg-slate-50 transition-colors ${selectedIds.has(row.TripID) ? 'bg-red-50/50' : ''}`}>
-                      <td className="px-3 py-2 text-center">
+                      <td className="px-3 py-2 text-center hide-mobile">
                         <input type="checkbox" checked={selectedIds.has(row.TripID)} onChange={() => toggleSelect(row.TripID)} className="w-3.5 h-3.5 cursor-pointer accent-red-600" />
                       </td>
                       <td className="px-4 py-2 text-center">
@@ -391,8 +391,8 @@ export default function Records() {
                                 {!tl ? (
                                   <p className="text-xs text-slate-400">{t('common.loading')}</p>
                                 ) : (
-                                  <div className="flex flex-wrap gap-3">
-                                    <div className="bg-white rounded-xl border border-purple-100 px-4 py-2.5 min-w-44">
+                                  <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2 sm:gap-3">
+                                    <div className="bg-white rounded-xl border border-purple-100 px-4 py-2.5 sm:min-w-44">
                                       <p className="text-xs font-bold text-purple-600 mb-1.5">📋 {t('records.dataStation')}</p>
                                       {tl.pickWaitMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
@@ -412,7 +412,7 @@ export default function Records() {
 
                                     {(tl.stations || []).length > 0
                                       ? (tl.stations || []).map((s, i) => (
-                                          <div key={i} className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
+                                          <div key={i} className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 sm:min-w-44">
                                             <p className="text-xs font-bold text-amber-600 mb-1.5">📦 {s.StationName}</p>
                                             <div className="flex items-center justify-between gap-4 text-xs">
                                               <span className="text-slate-500">{t('records.loading2')}</span>
@@ -423,14 +423,14 @@ export default function Records() {
                                           </div>
                                         ))
                                       : (
-                                          <div className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 min-w-44">
+                                          <div className="bg-white rounded-xl border border-amber-100 px-4 py-2.5 sm:min-w-44">
                                             <p className="text-xs font-bold text-amber-600 mb-1.5">📦 {t('records.loadingStation')}</p>
                                             <p className="text-xs text-slate-400">{t('records.noData')}</p>
                                           </div>
                                         )
                                     }
 
-                                    <div className="bg-white rounded-xl border border-cyan-100 px-4 py-2.5 min-w-44">
+                                    <div className="bg-white rounded-xl border border-cyan-100 px-4 py-2.5 sm:min-w-44">
                                       <p className="text-xs font-bold text-cyan-600 mb-1.5">⚖️ {t('records.weighOutStation')}</p>
                                       {tl.weighOutWaitMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
@@ -442,7 +442,7 @@ export default function Records() {
                                       )}
                                     </div>
 
-                                    <div className="bg-white rounded-xl border border-orange-100 px-4 py-2.5 min-w-44">
+                                    <div className="bg-white rounded-xl border border-orange-100 px-4 py-2.5 sm:min-w-44">
                                       <p className="text-xs font-bold text-orange-600 mb-1.5">✅ {t('records.checkerStation')}</p>
                                       {tl.checkerMinutes != null ? (
                                         <div className="flex items-center justify-between gap-4 text-xs">
@@ -462,7 +462,7 @@ export default function Records() {
                                         + (tl.checkerMinutes ?? 0);
                                       if (total === 0) return null;
                                       return (
-                                        <div className="bg-white rounded-xl border-2 border-blue-200 px-4 py-2.5 min-w-44">
+                                        <div className="bg-white rounded-xl border-2 border-blue-200 px-4 py-2.5 sm:min-w-44">
                                           <p className="text-xs font-bold text-blue-600 mb-1.5">⏱ {t('records.totalStations')}</p>
                                           <div className="flex items-center justify-between gap-4 text-xs">
                                             <span className="text-slate-500">{t('records.totalWorkTime')}</span>
@@ -473,7 +473,7 @@ export default function Records() {
                                     })()}
 
                                     {tl.totalTripMinutes != null && (
-                                      <div className="bg-white rounded-xl border border-indigo-100 px-4 py-2.5 min-w-44">
+                                      <div className="bg-white rounded-xl border border-indigo-100 px-4 py-2.5 sm:min-w-44">
                                         <p className="text-xs font-bold text-indigo-600 mb-1.5">🚛 {t('records.totalInWarehouse')}</p>
                                         <div className="flex items-center justify-between gap-4 text-xs">
                                           <span className="text-slate-500">{t('records.weighInToChecker')}</span>
@@ -529,7 +529,7 @@ export default function Records() {
 
       {/* Edit Modal */}
       {editModal && editRow && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100">
               <h3 className="font-bold text-slate-800">{t('records.editTitle').replace('{n}', editRow.TripID)}</h3>
@@ -669,7 +669,7 @@ export default function Records() {
 
       {/* Delete Confirm */}
       {deleteRow && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white rounded-2xl shadow-2xl w-full max-w-sm">
             <div className="px-6 pt-6 pb-4">
               <div className="flex items-center gap-3 mb-3">

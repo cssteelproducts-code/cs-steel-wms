@@ -569,7 +569,7 @@ export default function Stock() {
           )}
 
           {entryModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEntryModal(null)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setEntryModal(null)}>
               <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm" onClick={e => e.stopPropagation()}>
                 <h3 className="font-bold text-slate-900 mb-1">{t('stockCount.enterQty')}</h3>
                 <p className="text-xs text-slate-500 mb-4">{entryModal.item.ExternalName}<br />{entryModal.item.ItemCode} · {entryModal.item.Location}</p>
@@ -593,7 +593,7 @@ export default function Stock() {
           )}
 
           {entryHistory && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setEntryHistory(null)}>
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/40" onClick={() => setEntryHistory(null)}>
               <div className="bg-white rounded-2xl shadow-xl p-6 w-full max-w-md" onClick={e => e.stopPropagation()}>
                 <div className="flex items-center justify-between mb-4">
                   <div>

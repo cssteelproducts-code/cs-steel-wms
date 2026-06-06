@@ -362,7 +362,7 @@ export default function Users() {
 
       {/* Role Modal */}
       {modal === 'role' && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white rounded-2xl w-full max-w-sm p-6 shadow-xl border border-slate-200">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-lg font-bold text-slate-900">{editingRole ? t('users.editRole') : t('users.newRole')}</h3>
@@ -392,7 +392,7 @@ export default function Users() {
 
       {/* User Modal */}
       {(modal === 'create' || modal === 'edit') && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl">
             <h3 className="text-lg font-bold text-slate-900 mb-4">
               {modal === 'create' ? t('users.newUser') : t('users.editUser')}
@@ -460,7 +460,7 @@ export default function Users() {
 
       {/* Permissions Modal */}
       {modal === 'permissions' && (
-        <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-50 p-4 bg-black/40">
           <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-xl flex flex-col" style={{ maxHeight: 'calc(92vh - 5rem)' }}>
             <div className="px-6 pt-6 pb-3 flex-shrink-0">
               <h3 className="text-lg font-bold text-slate-900 mb-1">{t('users.permissionsTitle')} {selectedRole?.RoleName}</h3>

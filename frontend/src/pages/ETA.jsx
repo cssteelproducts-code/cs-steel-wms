@@ -283,7 +283,7 @@ export default function ETA() {
 
       {/* Vehicle Management Modal */}
       {showManage && (
-        <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4">
+        <div className="fixed inset-0 flex items-center justify-center z-[9999] p-4 bg-black/40">
           <div className="bg-white rounded-2xl w-full max-w-lg shadow-xl border border-gray-100 flex flex-col max-h-[80vh]">
             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
               <div>
