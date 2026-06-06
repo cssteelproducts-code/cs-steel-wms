@@ -5,7 +5,7 @@ import {
   LayoutDashboard, Scale, FileText, Package, CheckSquare, TruckIcon,
   MapPin, Users, Settings, Activity, Bell, ClipboardList,
   BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck,
-  ChevronLeft, ChevronRight,
+  ChevronLeft, ChevronRight, BarChart2,
 } from 'lucide-react';
 import logoImg from '../assets/Logo.png';
 
@@ -35,6 +35,7 @@ const menuItems = [
   { key: 'section.tools', divider: true },
   { path: '/shift-planning', icon: CalendarClock, key: 'nav.shiftPlanning', code: 'SHIFT_PLANNING' },
   { path: '/freight-calc', icon: Truck, key: 'nav.freightCalc', code: 'FREIGHT_CALC' },
+  { path: '/stock-report', icon: BarChart2, key: 'nav.stockReport', code: 'STOCK_REPORT' },
 ];
 
 export default function Sidebar({ collapsed, onToggle }) {

@@ -5,7 +5,7 @@ import { useLang } from '../context/LanguageContext';
 import {
   MoreHorizontal, X, LayoutDashboard, Scale, FileText, Package, CheckSquare,
   TruckIcon, MapPin, Users, Settings, Activity, Bell, ClipboardList,
-  BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck
+  BrainCircuit, CalendarClock, Truck, ArrowLeftRight, ScanLine, ClipboardCheck, BarChart2
 } from 'lucide-react';
 
 const ALL_ITEMS = [
@@ -28,6 +28,7 @@ const ALL_ITEMS = [
   { path: '/master',         icon: Settings,        key: 'nav.master',         code: 'MASTER' },
   { path: '/shift-planning', icon: CalendarClock,   key: 'nav.shiftPlanning',  code: 'SHIFT_PLANNING' },
   { path: '/freight-calc',   icon: Truck,           key: 'nav.freightCalc',    code: 'FREIGHT_CALC' },
+  { path: '/stock-report',   icon: BarChart2,       key: 'nav.stockReport',    code: 'STOCK_REPORT' },
   { path: '/transfer/driver',icon: Truck,           key: 'nav.transferDriver', code: 'TRANSFER_DRIVER' },
 ];
 
