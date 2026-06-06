@@ -189,7 +189,7 @@ router.post('/import', authenticate, upload.single('file'), async (req, res) => 
           .input(`ih${k}`, sql.Decimal(8,3), l.ih);
         return `(@oid${k},@ln${k},@pc${k},@pd${k},@qt${k},@um${k},@wu${k},@tw${k},@il${k},@iw${k},@ih${k})`;
       }).join(',');
-      await req2.query(`INSERT INTO WMS_TMS_OrderLines (TmsOrderID,LineNo,PartCode,PartDesc,Qty,UOM,WeightPerUnit,TotalWeightKg,ItemLength,ItemWidth,ItemHeight) VALUES ${vals}`);
+      await req2.query(`INSERT INTO WMS_TMS_OrderLines (TmsOrderID,[LineNo],PartCode,PartDesc,Qty,UOM,WeightPerUnit,TotalWeightKg,ItemLength,ItemWidth,ItemHeight) VALUES ${vals}`);
     }
 
     res.json({ success: true, message: `นำเข้าสำเร็จ ${insertedIds.length} คำสั่งส่ง`, count: insertedIds.length, batch });
@@ -227,7 +227,7 @@ router.get('/orders/:id/lines', authenticate, async (req, res) => {
   try {
     const pool = getPool();
     const result = await pool.request().input('id', sql.Int, req.params.id)
-      .query('SELECT * FROM WMS_TMS_OrderLines WHERE TmsOrderID=@id ORDER BY LineNo');
+      .query('SELECT * FROM WMS_TMS_OrderLines WHERE TmsOrderID=@id ORDER BY [LineNo]');
     res.json({ success: true, data: result.recordset });
   } catch (err) { res.status(500).json({ success: false, message: err.message }); }
 });
