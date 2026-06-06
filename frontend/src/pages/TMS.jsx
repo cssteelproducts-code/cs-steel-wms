@@ -9,14 +9,12 @@ import api from '../services/api';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
 import { useLang } from '../context/LanguageContext';
-import DeliveryPlan from './DeliveryPlan';
 
 const TABS = [
   { id: 'orders',   icon: FileSpreadsheet, label: 'คำสั่งส่ง' },
   { id: 'assign',   icon: Truck,           label: 'จัดรถ' },
   { id: 'routes',   icon: Route,           label: 'วางแผนเส้นทาง' },
   { id: 'diagram',  icon: Layers,          label: 'แผนผังบรรทุก' },
-  { id: 'delivery', icon: MapPin,          label: 'แผนจัดส่ง' },
 ];
 
 const STATUS_COLORS = {
@@ -396,7 +394,7 @@ export default function TMS() {
           </h2>
           <p className="text-slate-500 text-xs mt-0.5">นำเข้าคำสั่งส่ง → จัดรถ → วางเส้นทาง → แผนผังบรรทุก</p>
         </div>
-        {selectedOrders.size > 0 && activeTab !== 'delivery' && (
+        {selectedOrders.size > 0 && (
           <div className="flex items-center gap-2 flex-shrink-0">
             <span className="text-sm font-semibold text-red-700 bg-red-50 px-3 py-1.5 rounded-lg border border-red-200">
               {selectedOrders.size} คำสั่ง · {reqTotalWt.toLocaleString(undefined, { maximumFractionDigits: 1 })} kg
@@ -790,8 +788,6 @@ export default function TMS() {
         </div>
       )}
 
-      {/* ═══ TAB: DELIVERY PLAN ═══════════════════════════════════════════════ */}
-      {activeTab === 'delivery' && <DeliveryPlan />}
     </div>
   );
 }
