@@ -467,10 +467,6 @@ export default function TMS() {
               <FileSpreadsheet size={40} className="mx-auto mb-3 opacity-20" />
               <p className="font-medium">ไม่มีคำสั่งส่ง</p>
               <p className="text-sm mt-1">กด Import เพื่อนำเข้าข้อมูล</p>
-              <button onClick={() => fileRef.current?.click()} disabled={importing}
-                className="mt-4 btn-primary text-sm">
-                <Upload size={14} />Import
-              </button>
             </div>
           ) : (
             <div className="card p-0 overflow-hidden">

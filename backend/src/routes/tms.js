@@ -147,9 +147,10 @@ router.post('/import', authenticate, upload.single('file'), async (req, res) => 
       dRes.recordset.forEach(p => { dimMap[p.ProductCode] = p; });
     }
 
-    // Batch insert orders in parallel
+    // Insert orders sequentially — prevents partial import if pool is under load
     const orderArr = [...ordersMap.values()];
-    const insertedIds = await Promise.all(orderArr.map(async o => {
+    const insertedIds = [];
+    for (const o of orderArr) {
       const totWt = o.lines.reduce((s, l) => s + l.totalWeightKg, 0);
       const totQty = o.lines.reduce((s, l) => s + l.qty, 0);
       const r = await pool.request()
@@ -162,8 +163,8 @@ router.post('/import', authenticate, upload.single('file'), async (req, res) => 
         .input('TW', sql.Decimal(12,3), totWt).input('TQ', sql.Decimal(12,3), totQty)
         .input('IB', sql.NVarChar, batch)
         .query(`INSERT INTO WMS_TMS_Orders (SourceOrderNo,PoNo,CustCode,CustName,DeliveryAddr,City,Province,PostalCode,OrderDate,ShipByDate,ShipType,DistanceKm,TotalWeightKg,TotalQty,ImportBatch) OUTPUT INSERTED.TmsOrderID VALUES (@SN,@PN,@CC,@CN,@DA,@CI,@PR,@PC,@OD,@SB,@ST,@DK,@TW,@TQ,@IB)`);
-      return { orderNo: o.orderNo, id: r.recordset[0].TmsOrderID, lines: o.lines };
-    }));
+      insertedIds.push({ orderNo: o.orderNo, id: r.recordset[0].TmsOrderID, lines: o.lines });
+    }
 
     // Collect all lines and batch insert in chunks of 50
     const allLines = insertedIds.flatMap(({ id, lines }) =>
