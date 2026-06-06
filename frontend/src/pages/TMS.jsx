@@ -247,7 +247,7 @@ export default function TMS() {
     try {
       const fd = new FormData();
       fd.append('file', file);
-      const res = await api.post('/tms/import', fd, { timeout: 60000 });
+      const res = await api.post('/tms/import', fd, { headers: { 'Content-Type': 'multipart/form-data' }, timeout: 60000 });
       toast.success(res.data.message);
       fetchOrders();
     } catch (err) { toast.error(err.response?.data?.message || 'นำเข้าไม่สำเร็จ'); }
