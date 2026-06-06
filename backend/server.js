@@ -705,7 +705,7 @@ const runMigrations = async () => {
       IF NOT EXISTS (SELECT 1 FROM sysobjects WHERE name='WMS_TMS_OrderLines' AND xtype='U')
       CREATE TABLE WMS_TMS_OrderLines (
         LineID        INT IDENTITY(1,1) PRIMARY KEY,
-        TmsOrderID    INT NOT NULL, LineNo INT DEFAULT 0,
+        TmsOrderID    INT NOT NULL, [LineNo] INT DEFAULT 0,
         PartCode      NVARCHAR(100), PartDesc NVARCHAR(300),
         Qty           DECIMAL(12,3) DEFAULT 0,
         UOM           NVARCHAR(20),
