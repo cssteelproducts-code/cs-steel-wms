@@ -1230,7 +1230,7 @@ export default function Master() {
                 </h3>
                 <button onClick={() => setModal(null)} className="text-slate-400 hover:text-slate-700 p-1"><X size={18} /></button>
               </div>
-              <div className="px-6 py-4 overflow-y-auto" style={{ maxHeight: 'calc(90vh - 140px)' }}>
+              <div className="px-6 py-4 overflow-y-auto" style={{ maxHeight: 'calc(70vh - 140px)' }}>
                 {renderForm()}
               </div>
               <div className="flex gap-3 px-6 pb-5 pt-3 border-t border-slate-100">

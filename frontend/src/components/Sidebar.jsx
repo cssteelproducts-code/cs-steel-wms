@@ -23,7 +23,7 @@ const menuItems = [
   { key: 'section.warehouse', divider: true },
   { path: '/location-check', icon: ScanLine, key: 'nav.locationCheck', code: 'STOCK' },
   { path: '/transfer', icon: ArrowLeftRight, key: 'nav.transfer', code: 'TRANSFER' },
-  { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER' },
+  { path: '/transfer/driver', icon: Truck, key: 'nav.transferDriver', code: 'TRANSFER_DRIVER' },
   { path: '/stock-count', icon: ClipboardCheck, key: 'nav.stockCount', codes: ['STOCKCOUNT_OFFICE', 'STOCKCOUNT_FIELD'] },
   { key: 'section.logistics', divider: true },
   { path: '/tms', icon: Truck, key: 'nav.tms', code: 'TMS' },

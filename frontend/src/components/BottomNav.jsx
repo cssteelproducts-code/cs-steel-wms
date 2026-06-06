@@ -28,7 +28,7 @@ const ALL_ITEMS = [
   { path: '/master',         icon: Settings,        key: 'nav.master',         code: 'MASTER' },
   { path: '/shift-planning', icon: CalendarClock,   key: 'nav.shiftPlanning',  code: 'SHIFT_PLANNING' },
   { path: '/freight-calc',   icon: Truck,           key: 'nav.freightCalc',    code: 'FREIGHT_CALC' },
-  { path: '/transfer/driver',icon: Truck,           key: 'nav.transferDriver', code: 'TRANSFER' },
+  { path: '/transfer/driver',icon: Truck,           key: 'nav.transferDriver', code: 'TRANSFER_DRIVER' },
 ];
 
 export default function BottomNav() {

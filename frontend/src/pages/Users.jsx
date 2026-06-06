@@ -25,6 +25,7 @@ const MENUS = [
     { code: 'TRANSFER_VEHICLES', nameKey: 'transfer.tabVehicles' },
     { code: 'TRANSFER_REPORTS', nameKey: 'transfer.tabReport' },
   ]},
+  { code: 'TRANSFER_DRIVER', nameKey: 'nav.transferDriver' },
   { code: 'STOCKCOUNT_OFFICE', nameKey: 'nav.stockCount', children: [
     { code: 'STOCKCOUNT_FIELD', nameKey: 'stockCount.fieldTab' },
   ]},
@@ -460,7 +461,7 @@ export default function Users() {
       {/* Permissions Modal */}
       {modal === 'permissions' && (
         <div className="fixed inset-0 flex items-center justify-center z-50 p-4">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-xl flex flex-col" style={{ maxHeight: '90vh' }}>
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-xl flex flex-col" style={{ maxHeight: 'calc(92vh - 5rem)' }}>
             <div className="px-6 pt-6 pb-3 flex-shrink-0">
               <h3 className="text-lg font-bold text-slate-900 mb-1">{t('users.permissionsTitle')} {selectedRole?.RoleName}</h3>
               <p className="text-slate-500 text-sm">{selectedRole?.Description}</p>

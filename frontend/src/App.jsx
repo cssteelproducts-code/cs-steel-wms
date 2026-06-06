@@ -112,7 +112,7 @@ function AppRoutes() {
         <Route path="alerts" element={<ProtectedRoute menuCode="ALERTS"><Alerts /></ProtectedRoute>} />
         <Route path="delivery" element={<ProtectedRoute menuCode="DELIVERY_PLAN"><DeliveryPlan /></ProtectedRoute>} />
         <Route path="transfer" element={<ProtectedRoute menuCode="TRANSFER"><Transfer /></ProtectedRoute>} />
-        <Route path="transfer/driver" element={<ProtectedRoute menuCode="TRANSFER"><TransferDriver /></ProtectedRoute>} />
+        <Route path="transfer/driver" element={<ProtectedRoute menuCode="TRANSFER_DRIVER"><TransferDriver /></ProtectedRoute>} />
         <Route path="records" element={<ProtectedRoute menuCode="RECORDS"><Records /></ProtectedRoute>} />
         <Route path="location-check" element={<ProtectedRoute menuCode="STOCK"><LocationCheck /></ProtectedRoute>} />
         <Route path="freight-calc" element={<ProtectedRoute menuCode="FREIGHT_CALC"><FreightCalc /></ProtectedRoute>} />

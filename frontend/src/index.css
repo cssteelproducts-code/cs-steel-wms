@@ -278,18 +278,37 @@ button:has(.lucide-refresh-cw):active .lucide-refresh-cw {
   .hide-mobile { display: none !important; }
 }
 
-/* ─── Modal tall-form fix ────────────────────────────────────────────────────
-   flex items-center justify-center + position:fixed fails when content is
-   taller than viewport on iOS — the top portion disappears above the fold.
-   Override to flex-start + overflow-y:auto on small screens so modal scrolls.
+/* ─── Modal viewport fix (iOS + Android) ─────────────────────────────────────
+   iOS Safari : 100vh = full screen incl. browser chrome → cards overflow.
+   Android Chrome: dynamic URL bar changes viewport height; dvh tracks it.
+   Fix: use svh (small-viewport = chrome fully visible) to cap heights so cards
+   always fit, restore centering, and respect env(safe-area-inset-*) for
+   notch / home-indicator devices (requires viewport-fit=cover in <meta>).
 ──────────────────────────────────────────────────────────────────────────── */
 @media (max-width: 767px) {
   .fixed.inset-0.z-50,
   .fixed.inset-0.z-\[9999\],
   .fixed.inset-0.z-\[200\] {
     overflow-y: auto !important;
-    align-items: flex-start !important;
-    padding-top: 0.75rem !important;
-    padding-bottom: 4rem !important; /* clear bottom nav */
+    align-items: center !important;
+    padding-top: max(0.75rem, env(safe-area-inset-top)) !important;
+    padding-bottom: max(4.5rem, calc(env(safe-area-inset-bottom) + 4rem)) !important;
+  }
+
+  /* Cap modal card — vh fallback → dvh (Android dynamic bar) → svh (iOS/conservative) */
+  .fixed.inset-0.z-50 > *,
+  .fixed.inset-0.z-\[9999\] > *,
+  .fixed.inset-0.z-\[200\] > * {
+    max-height: calc(92vh - 5rem) !important;
+    max-height: calc(100dvh - max(0.75rem, env(safe-area-inset-top)) - max(4.5rem, calc(env(safe-area-inset-bottom) + 4rem))) !important;
+    max-height: calc(100svh - max(0.75rem, env(safe-area-inset-top)) - max(4.5rem, calc(env(safe-area-inset-bottom) + 4rem))) !important;
+  }
+
+  /* Fix inner scroll areas (e.g. max-h-[70vh]) — vh fallback, then svh for iOS */
+  .fixed.inset-0.z-50 > * [class*="max-h-["],
+  .fixed.inset-0.z-\[9999\] > * [class*="max-h-["],
+  .fixed.inset-0.z-\[200\] > * [class*="max-h-["] {
+    max-height: 56vh !important;
+    max-height: 56svh !important;
   }
 }
