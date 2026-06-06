@@ -29,6 +29,7 @@ const ALL_ITEMS = [
   { path: '/shift-planning', icon: CalendarClock,   key: 'nav.shiftPlanning',  code: 'SHIFT_PLANNING' },
   { path: '/freight-calc',   icon: Truck,           key: 'nav.freightCalc',    code: 'FREIGHT_CALC' },
   { path: '/stock-report',   icon: BarChart2,       key: 'nav.stockReport',    code: 'STOCK_REPORT' },
+  { path: '/day-supply',     icon: BarChart2,       key: 'nav.daySupply',      code: 'DAY_SUPPLY' },
   { path: '/transfer/driver',icon: Truck,           key: 'nav.transferDriver', code: 'TRANSFER_DRIVER' },
 ];
 

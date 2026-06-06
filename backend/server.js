@@ -58,6 +58,7 @@ app.use('/api/forecast', require('./src/routes/forecast'));
 app.use('/api/location-check', require('./src/routes/locationCheck'));
 app.use('/api/tms', require('./src/routes/tms'));
 app.use('/api/stock-report', require('./src/routes/stockReport'));
+app.use('/api/day-supply', require('./src/routes/daySupply'));
 
 // Serve React frontend (production build)
 const publicPath = path.join(__dirname, 'public');
