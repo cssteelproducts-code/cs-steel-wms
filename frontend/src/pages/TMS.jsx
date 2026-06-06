@@ -286,14 +286,14 @@ export default function TMS() {
   };
 
   // ── vehicle assignment ────────────────────────────────────────────────────
-  const checkLoad = async () => {
-    if (!selectedOrders.size) { toast.error('เลือกคำสั่งส่งก่อน'); return; }
-    const sel = orders.filter(o => selectedOrders.has(o.TmsOrderID));
-    const totalWt = sel.reduce((s, o) => s + (parseFloat(o.TotalWeightKg) || 0), 0);
-    const maxLen = Math.max(...sel.map(o => parseFloat(o.MaxItemLength) || 0), 0);
-    const maxWid = Math.max(...sel.map(o => parseFloat(o.MaxItemWidth) || 0), 0);
-    const summary = { totalWeightKg: totalWt, maxLengthM: maxLen, maxWidthM: maxWid, orderCount: sel.length };
-    setReqSummary(summary);
+  const buildSummary = (sel) => ({
+    totalWeightKg: sel.reduce((s, o) => s + (parseFloat(o.TotalWeightKg) || 0), 0),
+    maxLengthM: Math.max(...sel.map(o => parseFloat(o.MaxItemLength) || 0), 0),
+    maxWidthM: Math.max(...sel.map(o => parseFloat(o.MaxItemWidth) || 0), 0),
+    orderCount: sel.length,
+  });
+
+  const fetchVehicles = async (summary) => {
     setLoadingVehicles(true);
     setSelectedVehicle(null);
     try {
@@ -301,7 +301,26 @@ export default function TMS() {
       setVehicles(res.data.data || []);
     } catch { toast.error('ไม่สามารถโหลดข้อมูลรถได้'); }
     finally { setLoadingVehicles(false); }
+  };
+
+  const checkLoad = async () => {
+    if (!selectedOrders.size) { toast.error('เลือกคำสั่งส่งก่อน'); return; }
+    const sel = orders.filter(o => selectedOrders.has(o.TmsOrderID));
+    const summary = buildSummary(sel);
+    setReqSummary(summary);
+    await fetchVehicles(summary);
     setActiveTab('assign');
+  };
+
+  const removeOrderFromSelection = async (id) => {
+    const next = new Set(selectedOrders);
+    next.delete(id);
+    setSelectedOrders(next);
+    if (next.size === 0) { setReqSummary(null); setVehicles([]); return; }
+    const sel = orders.filter(o => next.has(o.TmsOrderID));
+    const summary = buildSummary(sel);
+    setReqSummary(summary);
+    await fetchVehicles(summary);
   };
 
   // ── route optimization ────────────────────────────────────────────────────
@@ -545,6 +564,25 @@ export default function TMS() {
                       <s.icon size={20} className={`mx-auto mb-1 ${s.color}`} />
                       <p className="text-xs text-slate-500">{s.label}</p>
                       <p className={`text-base font-bold ${s.color}`}>{s.value}</p>
+                    </div>
+                  ))}
+                </div>
+                {/* Selected order list — click X to deselect from this batch */}
+                <div className="mt-3 space-y-1.5">
+                  {orders.filter(o => selectedOrders.has(o.TmsOrderID)).map(o => (
+                    <div key={o.TmsOrderID} className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-lg">
+                      <div className="flex-1 min-w-0">
+                        <span className="text-sm font-mono font-semibold text-slate-800">#{o.SourceOrderNo}</span>
+                        <span className="text-xs text-slate-400 ml-2 truncate">{o.CustName}</span>
+                      </div>
+                      <span className="text-xs text-slate-400 flex-shrink-0">
+                        {parseFloat(o.TotalWeightKg || 0).toLocaleString(undefined, { maximumFractionDigits: 0 })} kg
+                      </span>
+                      <button onClick={() => removeOrderFromSelection(o.TmsOrderID)}
+                        className="p-1 rounded text-slate-300 hover:text-red-500 hover:bg-red-50 flex-shrink-0"
+                        title="เอาออกจากรอบนี้">
+                        <X size={13} />
+                      </button>
                     </div>
                   ))}
                 </div>
