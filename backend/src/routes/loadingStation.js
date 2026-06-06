@@ -119,7 +119,6 @@ router.put('/exit/:recordId', authenticate, async (req, res) => {
       `);
 
     const rem = remaining.recordset[0].Remaining;
-    console.log(`[LoadingStation exit] TripID=${tripId} remaining=${rem}`);
 
     if (rem > 0) {
       await pool.request()

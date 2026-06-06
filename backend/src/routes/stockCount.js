@@ -248,7 +248,6 @@ router.post('/:id/import', authenticate, upload.single('file'), async (req, res)
             `INSERT INTO WMS_StockCountItems (SessionID,Warehouse,Location,ItemCode,ItemName,TypeSKU,CategoryCode,CategoryName,SizeCode,Thickness,SystemQty,SystemWeight) VALUES ${valStrings.slice(b, b + BATCH).join(',')}`
           );
         }
-        console.log(`✅ Import session ${sessionId}: ${validRows.length} rows done`);
       } catch (e) {
         console.error(`❌ Import session ${sessionId} background error:`, e.message);
       }

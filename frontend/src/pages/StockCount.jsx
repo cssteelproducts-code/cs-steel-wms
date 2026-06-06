@@ -10,7 +10,6 @@ import {
 } from 'lucide-react';
 import LoadingSpinner from '../components/LoadingSpinner';
 import dayjs from 'dayjs';
-import '../utils/helpers';
 
 // Searchable dropdown with max-height scroll — fixes overflow on long lists
 function SearchSelect({ value, onChange, options, placeholder, className = '' }) {
