@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Bell, AlertTriangle, AlertCircle, CheckCircle, Settings, CheckCheck, X, Trash2 } from 'lucide-react';
+import { Bell, AlertTriangle, AlertCircle, CheckCircle, Settings, CheckCheck, Trash2 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import dayjs from 'dayjs';
@@ -188,10 +188,6 @@ export default function Alerts() {
                           <CheckCircle size={13} />
                         </button>
                       )}
-                      <button onClick={() => resolve(alert.AlertID)} title={t('alerts.markResolved')}
-                        className="p-1.5 rounded-lg bg-white/60 hover:bg-white transition-colors">
-                        <X size={13} />
-                      </button>
                     </div>
                   )}
                 </div>
