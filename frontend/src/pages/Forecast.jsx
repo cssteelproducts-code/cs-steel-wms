@@ -55,7 +55,11 @@ export default function Forecast() {
 
   const BUSINESS_HOURS = Array.from({ length: 15 }, (_, i) => `${String(i + 8).padStart(2, '0')}:00`); // 08:00–22:00
   const hourMap = Object.fromEntries((data?.hourDistribution || []).map(h => [h.hour, h]));
-  const displayHours = BUSINESS_HOURS.map(h => hourMap[h] || { hour: h, count: 0, pct: 0 });
+  const allDisplayHours = BUSINESS_HOURS.map(h => hourMap[h] || { hour: h, count: 0, pct: 0 });
+  const lastActiveIdx = allDisplayHours.reduce((acc, h, i) => h.count > 0 ? i : acc, -1);
+  const displayHours = lastActiveIdx >= 0
+    ? allDisplayHours.slice(0, Math.min(lastActiveIdx + 2, allDisplayHours.length))
+    : allDisplayHours;
 
   return (
     <div className="space-y-5">
@@ -161,7 +165,7 @@ export default function Forecast() {
             <div className="card">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="card-header mb-0">{t('forecast.peakChart')}</h3>
-                <span className="text-xs text-slate-400">08:00 – 22:00 น.</span>
+                <span className="text-xs text-slate-400">{displayHours[0]?.hour} – {displayHours[displayHours.length - 1]?.hour} น.</span>
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={displayHours} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
@@ -169,7 +173,7 @@ export default function Forecast() {
                   <XAxis dataKey="hour" tick={{ fontSize: 10 }} />
                   <YAxis tick={{ fontSize: 10 }} />
                   <Tooltip
-                    formatter={(v) => [`${v} ${t('unit.vehicles')}`, t('forecast.expectedVehicles')]}
+                    formatter={(v) => [`~${v} ${t('unit.vehicles')}/วัน`, t('forecast.expectedVehicles')]}
                     contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]}>
                     {displayHours.map((h, i) => <Cell key={i} fill={getPeakColor(h.pct)} />)}
@@ -181,8 +185,8 @@ export default function Forecast() {
             <div className="space-y-4">
               {/* ช่วงเวลาปิดจบงาน */}
               {(() => {
-                const peakCount = Math.max(...displayHours.map(h => h.count), 1);
-                const lowThreshold = Math.max(1, Math.round(peakCount * 0.2));
+                const peakCount = Math.max(...displayHours.map(h => h.count), 0.01);
+                const lowThreshold = peakCount * 0.2;
                 const lastBusyIdx = displayHours.reduce((acc, h, i) => h.count > lowThreshold ? i : acc, -1);
                 const quietFromHour = lastBusyIdx >= 0 && lastBusyIdx + 1 < displayHours.length
                   ? displayHours[lastBusyIdx + 1].hour : null;
@@ -201,35 +205,6 @@ export default function Forecast() {
                       <CheckCircle size={14} className="text-emerald-500" />
                       {t('forecast.clearanceTitle')}
                     </h3>
-                    <div className="flex gap-px mb-0.5">
-                      {displayHours.map(h => {
-                        const bg = h.count === 0 ? 'bg-emerald-400'
-                          : h.pct < 20 ? 'bg-yellow-300'
-                          : h.pct < 50 ? 'bg-orange-400'
-                          : 'bg-red-400';
-                        return (
-                          <div key={h.hour} className="flex-1 group relative">
-                            <div className={`h-4 rounded-sm ${bg}`} />
-                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
-                              {h.hour}: {h.count} {t('unit.vehicles')}
-                            </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className="flex gap-px mb-3">
-                      {displayHours.map(h => (
-                        <div key={h.hour} className="flex-1 text-center">
-                          <p className="text-[7px] text-slate-400">{h.hour.slice(0, 2)}</p>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="flex flex-wrap gap-2 text-[10px] text-slate-500 mb-3">
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" />{t('forecast.clearanceLegendHeavy')}</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-orange-400 inline-block" />{t('forecast.clearanceLegendMed')}</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-yellow-300 inline-block" />{t('forecast.clearanceLegendLight')}</span>
-                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" />{t('forecast.clearanceLegendFree')}</span>
-                    </div>
                     <div className="space-y-2">
                       {quietFromHour && (
                         <div className="flex items-center justify-between px-3 py-1.5 bg-emerald-50 rounded-lg">

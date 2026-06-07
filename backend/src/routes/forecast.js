@@ -85,10 +85,11 @@ router.get('/tomorrow', authenticate, async (req, res) => {
     const hourBuckets = Array(24).fill(0);
     rows.forEach(r => { if (r.WeighInHour != null) hourBuckets[r.WeighInHour]++; });
     const totalHourEntries = hourBuckets.reduce((s, v) => s + v, 0) || 1;
-    const hourDistribution = hourBuckets.map((count, hour) => ({
+    const numSamples = dayCounts.length || 1;
+    const hourDistribution = hourBuckets.map((rawCount, hour) => ({
       hour: `${String(hour).padStart(2, '0')}:00`,
-      count,
-      pct: Math.round((count / totalHourEntries) * 100),
+      count: Math.round((rawCount / numSamples) * 10) / 10, // avg vehicles per day (1 decimal)
+      pct: Math.round((rawCount / totalHourEntries) * 100),
     }));
     const peakHour = hourDistribution.reduce((a, b) => b.count > a.count ? b : a);
 
