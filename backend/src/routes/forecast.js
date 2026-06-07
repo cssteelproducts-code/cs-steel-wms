@@ -38,7 +38,7 @@ router.get('/tomorrow', authenticate, async (req, res) => {
       ORDER BY t.TripDate DESC
     `);
 
-    // ข้อมูลสถานีขึ้นสินค้า (duration สำหรับ avg time)
+    // ข้อมูลสถานีขึ้นสินค้า (duration สำหรับ avg time) — ใช้ทุกวัน 90 วันย้อนหลัง
     const stationData = await pool.request().query(`
       SELECT
         ls.StationName,
@@ -48,14 +48,13 @@ router.get('/tomorrow', authenticate, async (req, res) => {
       JOIN WMS_Trips t ON lr.TripID = t.TripID
       JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
       WHERE
-        DATEPART(WEEKDAY, t.TripDate) = DATEPART(WEEKDAY, DATEADD(DAY, 1, GETUTCDATE()))
-        AND t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
+        t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
         AND t.TripDate < CAST(GETUTCDATE() AS DATE)
         AND lr.DurationMinutes IS NOT NULL
         AND lr.DurationMinutes > 0
     `);
 
-    // ปริมาณรถต่อสถานีต่อวัน (นับทุก trip ไม่กรอง duration)
+    // ปริมาณรถต่อสถานีต่อวัน (นับทุก trip ไม่กรอง duration) — ใช้ทุกวัน 90 วันย้อนหลัง
     const stationVolumeData = await pool.request().query(`
       SELECT
         ls.StationName,
@@ -65,8 +64,7 @@ router.get('/tomorrow', authenticate, async (req, res) => {
       JOIN WMS_Trips t ON lr.TripID = t.TripID
       JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
       WHERE
-        DATEPART(WEEKDAY, t.TripDate) = DATEPART(WEEKDAY, DATEADD(DAY, 1, GETUTCDATE()))
-        AND t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
+        t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
         AND t.TripDate < CAST(GETUTCDATE() AS DATE)
       GROUP BY ls.StationName, CAST(t.TripDate AS DATE)
     `);
