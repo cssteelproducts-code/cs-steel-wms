@@ -102,19 +102,64 @@ router.get('/tomorrow', authenticate, async (req, res) => {
     const topCustomers = Object.entries(custMap)
       .map(([name, count]) => ({ name, count }))
       .sort((a, b) => b.count - a.count)
-      .slice(0, 5);
+      .slice(0, 10);
 
     // --- น้ำหนักเฉลี่ย ---
     const withWeight = rows.filter(r => r.NetWeight != null);
     const avgNetWeight = withWeight.length
       ? Math.round(withWeight.reduce((s, r) => s + parseFloat(r.NetWeight), 0) / withWeight.length)
       : null;
+    const minNetWeight = withWeight.length ? Math.round(Math.min(...withWeight.map(r => parseFloat(r.NetWeight)))) : null;
+    const maxNetWeight = withWeight.length ? Math.round(Math.max(...withWeight.map(r => parseFloat(r.NetWeight)))) : null;
 
     // --- เวลาเฉลี่ยชั่งเข้า → ชั่งออก ---
     const withDuration = rows.filter(r => r.WeighToWeighMinutes != null && r.WeighToWeighMinutes > 0 && r.WeighToWeighMinutes < 600);
     const avgTotalMinutes = withDuration.length
       ? Math.round(withDuration.reduce((s, r) => s + r.WeighToWeighMinutes, 0) / withDuration.length)
       : null;
+    const minTotalMinutes = withDuration.length ? Math.min(...withDuration.map(r => r.WeighToWeighMinutes)) : null;
+    const maxTotalMinutes = withDuration.length ? Math.max(...withDuration.map(r => r.WeighToWeighMinutes)) : null;
+
+    // --- แยกตามประเภทการส่ง ---
+    const deliveryMap = {};
+    rows.forEach(r => {
+      const k = r.DeliveryType || 'ไม่ระบุ';
+      deliveryMap[k] = (deliveryMap[k] || 0) + 1;
+    });
+    const deliveryTypeBreakdown = Object.entries(deliveryMap)
+      .map(([type, count]) => ({ type, count, pct: Math.round((count / rows.length) * 100) }))
+      .sort((a, b) => b.count - a.count);
+
+    // --- แยกตาม Priority ---
+    const priorityMap = {};
+    rows.forEach(r => {
+      const k = r.Priority || 'Normal';
+      priorityMap[k] = (priorityMap[k] || 0) + 1;
+    });
+    const priorityBreakdown = Object.entries(priorityMap)
+      .map(([priority, count]) => ({ priority, count, pct: Math.round((count / rows.length) * 100) }))
+      .sort((a, b) => b.count - a.count);
+
+    // --- เวลาเฉลี่ยแยกตามประเภทรถ ---
+    const typeTimeMap = {};
+    withDuration.forEach(r => {
+      const k = r.VehicleType || 'ไม่ระบุ';
+      if (!typeTimeMap[k]) typeTimeMap[k] = [];
+      typeTimeMap[k].push(r.WeighToWeighMinutes);
+    });
+    const avgTimeByType = Object.entries(typeTimeMap)
+      .map(([type, mins]) => ({
+        type,
+        avgMinutes: Math.round(mins.reduce((s, v) => s + v, 0) / mins.length),
+        count: mins.length,
+      }))
+      .sort((a, b) => b.count - a.count);
+
+    // --- แนวโน้มย้อนหลัง (ทุก occurrence ของวันในสัปดาห์นี้) ---
+    const historicalTrend = Object.entries(byDate)
+      .map(([date, count]) => ({ date, count }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-12);
 
     // --- เวลาเฉลี่ยต่อสถานี ---
     const stationMap = {};
@@ -146,8 +191,12 @@ router.get('/tomorrow', authenticate, async (req, res) => {
         peakHour,
         vehicleTypes,
         topCustomers,
-        avgNetWeight,
-        avgTotalMinutes,
+        avgNetWeight, minNetWeight, maxNetWeight,
+        avgTotalMinutes, minTotalMinutes, maxTotalMinutes,
+        deliveryTypeBreakdown,
+        priorityBreakdown,
+        avgTimeByType,
+        historicalTrend,
         avgByStation,
       }
     });

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { BrainCircuit, RefreshCw, TruckIcon, Clock, Scale, Users, Sparkles, AlertTriangle, CheckCircle, ChevronDown, ChevronUp } from 'lucide-react';
+import { BrainCircuit, RefreshCw, TruckIcon, Clock, Scale, Users, Sparkles, AlertTriangle, CheckCircle, ChevronDown, ChevronUp, TrendingUp, Package, Star } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 import { useLang } from '../context/LanguageContext';
@@ -125,7 +125,11 @@ export default function Forecast() {
                   <p className="text-2xl font-bold text-emerald-600 mt-0.5">
                     {data.avgNetWeight ? data.avgNetWeight.toLocaleString('th-TH') : '-'}
                   </p>
-                  <p className="text-slate-400 text-xs mt-0.5">{t('forecast.avgWeightUnit')}</p>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    {data.minNetWeight != null && data.maxNetWeight != null
+                      ? `${data.minNetWeight.toLocaleString('th-TH')} – ${data.maxNetWeight.toLocaleString('th-TH')} กก.`
+                      : t('forecast.avgWeightUnit')}
+                  </p>
                 </div>
                 <div className="p-2.5 rounded-xl bg-emerald-50"><Scale size={20} className="text-emerald-500" /></div>
               </div>
@@ -135,7 +139,11 @@ export default function Forecast() {
                 <div>
                   <p className="text-slate-500 text-xs">{t('forecast.avgTime')}</p>
                   <p className="text-2xl font-bold text-amber-600 mt-0.5">{data.avgTotalMinutes ?? '-'}</p>
-                  <p className="text-slate-400 text-xs mt-0.5">{t('forecast.avgTimeUnit')}</p>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    {data.minTotalMinutes != null && data.maxTotalMinutes != null
+                      ? `${data.minTotalMinutes} – ${data.maxTotalMinutes} นาที`
+                      : t('forecast.avgTimeUnit')}
+                  </p>
                 </div>
                 <div className="p-2.5 rounded-xl bg-amber-50"><Clock size={20} className="text-amber-500" /></div>
               </div>
@@ -190,7 +198,7 @@ export default function Forecast() {
                     <Users size={14} className="text-blue-500" />{t('forecast.topCustomers')}
                   </h3>
                   <div className="space-y-1">
-                    {data.topCustomers.map((c, i) => (
+                    {data.topCustomers.slice(0, 10).map((c, i) => (
                       <div key={c.name} className="flex items-center justify-between text-xs py-1 border-b border-slate-50 last:border-0">
                         <div className="flex items-center gap-2">
                           <span className="w-5 h-5 rounded-full bg-blue-100 text-blue-600 font-bold flex items-center justify-center text-[10px]">{i + 1}</span>
@@ -203,6 +211,90 @@ export default function Forecast() {
                 </div>
               )}
             </div>
+          </div>
+
+          {/* แนวโน้มย้อนหลัง */}
+          {data.historicalTrend?.length > 1 && (
+            <div className="card">
+              <h3 className="card-header mb-3 flex items-center gap-2">
+                <TrendingUp size={14} className="text-violet-500" />
+                แนวโน้มจำนวนรถ ({data.historicalTrend.length} ครั้งย้อนหลัง)
+              </h3>
+              <ResponsiveContainer width="100%" height={130}>
+                <BarChart data={data.historicalTrend} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
+                  <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={d => d.slice(5)} />
+                  <YAxis tick={{ fontSize: 10 }} />
+                  <Tooltip formatter={v => [`${v} คัน`, 'จำนวนรถ']} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                  <Bar dataKey="count" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          )}
+
+          {/* Delivery type + Priority + เวลาแยกตามรถ */}
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+            {data.deliveryTypeBreakdown?.length > 0 && (
+              <div className="card">
+                <h3 className="card-header mb-3 flex items-center gap-2">
+                  <Package size={14} className="text-blue-500" />
+                  ประเภทการส่ง
+                </h3>
+                <div className="space-y-2">
+                  {data.deliveryTypeBreakdown.map(d => (
+                    <div key={d.type}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-slate-700 font-medium">{d.type}</span>
+                        <span className="text-slate-400">{d.count} คัน ({d.pct}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full">
+                        <div className="h-1.5 bg-blue-400 rounded-full" style={{ width: `${d.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data.priorityBreakdown?.length > 0 && (
+              <div className="card">
+                <h3 className="card-header mb-3 flex items-center gap-2">
+                  <Star size={14} className="text-amber-500" />
+                  ระดับความสำคัญ
+                </h3>
+                <div className="space-y-2">
+                  {data.priorityBreakdown.map(p => (
+                    <div key={p.priority}>
+                      <div className="flex items-center justify-between text-xs mb-1">
+                        <span className="text-slate-700 font-medium">{p.priority}</span>
+                        <span className="text-slate-400">{p.count} คัน ({p.pct}%)</span>
+                      </div>
+                      <div className="h-1.5 bg-slate-100 rounded-full">
+                        <div className={`h-1.5 rounded-full ${p.priority === 'Urgent' ? 'bg-red-400' : 'bg-slate-400'}`}
+                          style={{ width: `${p.pct}%` }} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {data.avgTimeByType?.length > 0 && (
+              <div className="card">
+                <h3 className="card-header mb-3 flex items-center gap-2">
+                  <Clock size={14} className="text-emerald-500" />
+                  เวลาเฉลี่ยแยกตามรถ
+                </h3>
+                <div className="space-y-2">
+                  {data.avgTimeByType.map(v => (
+                    <div key={v.type} className="flex items-center justify-between text-xs py-1 border-b border-slate-50 last:border-0">
+                      <span className="text-slate-700 font-medium">{v.type}</span>
+                      <span className="font-bold text-emerald-600">{fmtMin(v.avgMinutes)}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {data.avgByStation.length > 0 && (

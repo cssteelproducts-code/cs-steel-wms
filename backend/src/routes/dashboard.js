@@ -93,7 +93,7 @@ router.get('/summary', authenticate, async (req, res) => {
                COUNT(*) as TotalTrips,
                SUM(CASE WHEN Status='Complete' THEN 1 ELSE 0 END) as Completed
         FROM WMS_Trips
-        WHERE TripDate >= DATEADD(DAY, -14, CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
+        WHERE TripDate >= DATEADD(DAY, -29, CAST(DATEADD(HOUR,7,GETUTCDATE()) AS DATE))
         GROUP BY CAST(TripDate AS DATE)
         ORDER BY TripDate
       `),
@@ -266,7 +266,7 @@ router.get('/summary', authenticate, async (req, res) => {
         JOIN WMS_CheckerRecord cr ON t.TripID = cr.TripID
         WHERE cr.CheckTime > wi.WeighDateTime
           AND DATEDIFF(MINUTE, wi.WeighDateTime, cr.CheckTime) < 600
-          AND wi.WeighDateTime >= DATEADD(MONTH,-6,GETUTCDATE())
+          AND wi.WeighDateTime >= DATEADD(MONTH,-12,GETUTCDATE())
         GROUP BY vt.TypeName, vt.TypeID,
                  YEAR(DATEADD(HOUR,7,wi.WeighDateTime)),
                  MONTH(DATEADD(HOUR,7,wi.WeighDateTime))

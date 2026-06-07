@@ -290,7 +290,7 @@ export default function Dashboard() {
           <div className="card">
             <SectionHeader title={t('dash.checkerAvgByType')} sectionKey="checkerAvg" collapsed={collapsed.checkerAvg} onToggle={toggleSection}
               icon={Clock}
-              extra={<span className="text-xs text-slate-400">6 {t('common.month') || 'เดือน'}</span>} />
+              extra={<span className="text-xs text-slate-400">12 {t('common.month') || 'เดือน'}</span>} />
             {!collapsed.checkerAvg && (
               <div className="space-y-4">
                 {sorted.map(([typeName, { months }]) => {
