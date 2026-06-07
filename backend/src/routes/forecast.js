@@ -38,7 +38,7 @@ router.get('/tomorrow', authenticate, async (req, res) => {
       ORDER BY t.TripDate DESC
     `);
 
-    // ข้อมูลสถานีขึ้นสินค้า
+    // ข้อมูลสถานีขึ้นสินค้า (duration สำหรับ avg time)
     const stationData = await pool.request().query(`
       SELECT
         ls.StationName,
@@ -53,6 +53,22 @@ router.get('/tomorrow', authenticate, async (req, res) => {
         AND t.TripDate < CAST(GETUTCDATE() AS DATE)
         AND lr.DurationMinutes IS NOT NULL
         AND lr.DurationMinutes > 0
+    `);
+
+    // ปริมาณรถต่อสถานีต่อวัน (นับทุก trip ไม่กรอง duration)
+    const stationVolumeData = await pool.request().query(`
+      SELECT
+        ls.StationName,
+        CAST(t.TripDate AS DATE) as DateOnly,
+        COUNT(*) as TripCount
+      FROM WMS_LoadingRecord lr
+      JOIN WMS_Trips t ON lr.TripID = t.TripID
+      JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+      WHERE
+        DATEPART(WEEKDAY, t.TripDate) = DATEPART(WEEKDAY, DATEADD(DAY, 1, GETUTCDATE()))
+        AND t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
+        AND t.TripDate < CAST(GETUTCDATE() AS DATE)
+      GROUP BY ls.StationName, CAST(t.TripDate AS DATE)
     `);
 
     const rows = history.recordset;
@@ -173,6 +189,27 @@ router.get('/tomorrow', authenticate, async (req, res) => {
       sampleCount: mins.length,
     })).sort((a, b) => b.avgMinutes - a.avgMinutes);
 
+    // --- ปริมาณรถต่อสถานี (forecast) ---
+    // สะสม TripCount ต่อสถานีต่อวัน แล้วหาค่าเฉลี่ย
+    const stationVolByDay = {}; // { StationName: { date: count } }
+    stationVolumeData.recordset.forEach(r => {
+      const d = r.DateOnly?.toISOString?.()?.slice(0, 10) || String(r.DateOnly);
+      if (!stationVolByDay[r.StationName]) stationVolByDay[r.StationName] = {};
+      stationVolByDay[r.StationName][d] = r.TripCount;
+    });
+    const uniqueDates = new Set(stationVolumeData.recordset.map(r =>
+      r.DateOnly?.toISOString?.()?.slice(0, 10) || String(r.DateOnly)
+    ));
+    const numDays = uniqueDates.size || 1;
+    const stationLoadForecast = Object.entries(stationVolByDay).map(([station, dateMap]) => {
+      const total = Object.values(dateMap).reduce((s, v) => s + v, 0);
+      const avgTrips = Math.round((total / numDays) * 10) / 10;
+      const maxTrips = Math.max(...Object.values(dateMap));
+      const minTrips = Math.min(...Object.values(dateMap));
+      return { station, avgTrips, maxTrips, minTrips, totalSamples: Object.keys(dateMap).length };
+    }).sort((a, b) => b.avgTrips - a.avgTrips);
+    const maxStationLoad = stationLoadForecast[0]?.avgTrips || 1;
+
     // --- วันในสัปดาห์พรุ่งนี้ ---
     const DOW = ['อาทิตย์', 'จันทร์', 'อังคาร', 'พุธ', 'พฤหัสบดี', 'ศุกร์', 'เสาร์'];
     const tomorrowDate = new Date();
@@ -198,6 +235,8 @@ router.get('/tomorrow', authenticate, async (req, res) => {
         avgTimeByType,
         historicalTrend,
         avgByStation,
+        stationLoadForecast,
+        maxStationLoad,
       }
     });
   } catch (err) {

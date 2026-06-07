@@ -301,6 +301,47 @@ export default function Forecast() {
             )}
           </div>
 
+          {/* ปริมาณรถต่อสถานี (forecast) */}
+          {data.stationLoadForecast?.length > 0 && (
+            <div className="card">
+              <h3 className="card-header mb-4 flex items-center gap-2">
+                <TrendingUp size={14} className="text-orange-500" />
+                สถานีที่คาดว่าจะหนาแน่น
+                <span className="text-xs font-normal text-slate-400 ml-1">(เฉลี่ยต่อวัน)</span>
+              </h3>
+              <div className="space-y-3">
+                {data.stationLoadForecast.map((s, i) => {
+                  const pct = Math.round((s.avgTrips / data.maxStationLoad) * 100);
+                  const isHot = pct >= 80;
+                  const isMed = pct >= 50;
+                  const barColor = isHot ? 'bg-red-400' : isMed ? 'bg-orange-400' : 'bg-blue-300';
+                  const badge = isHot ? 'bg-red-100 text-red-600' : isMed ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500';
+                  const label = isHot ? 'หนาแน่นมาก' : isMed ? 'หนาแน่น' : 'ปกติ';
+                  return (
+                    <div key={s.station}>
+                      <div className="flex items-center justify-between mb-1">
+                        <div className="flex items-center gap-2">
+                          <span className="w-5 h-5 rounded-full bg-slate-100 text-slate-500 font-bold flex items-center justify-center text-[10px]">{i + 1}</span>
+                          <span className="text-sm font-semibold text-slate-700">{s.station}</span>
+                          <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${badge}`}>{label}</span>
+                        </div>
+                        <div className="text-right">
+                          <span className="text-sm font-bold text-slate-800">~{s.avgTrips} คัน</span>
+                          {s.minTrips !== s.maxTrips && (
+                            <span className="text-[10px] text-slate-400 ml-1">({s.minTrips}–{s.maxTrips})</span>
+                          )}
+                        </div>
+                      </div>
+                      <div className="h-2 bg-slate-100 rounded-full">
+                        <div className={`h-2 rounded-full transition-all ${barColor}`} style={{ width: `${pct}%` }} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {data.avgByStation.length > 0 && (
             <div className="card">
               <h3 className="card-header mb-3">{t('forecast.avgByStation')}</h3>
