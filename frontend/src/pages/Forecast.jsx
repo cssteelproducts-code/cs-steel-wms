@@ -179,6 +179,74 @@ export default function Forecast() {
             </div>
 
             <div className="space-y-4">
+              {/* ช่วงเวลาปิดจบงาน */}
+              {(() => {
+                const peakCount = Math.max(...displayHours.map(h => h.count), 1);
+                const lowThreshold = Math.max(1, Math.round(peakCount * 0.2));
+                const lastBusyIdx = displayHours.reduce((acc, h, i) => h.count > lowThreshold ? i : acc, -1);
+                const quietFromHour = lastBusyIdx >= 0 && lastBusyIdx + 1 < displayHours.length
+                  ? displayHours[lastBusyIdx + 1].hour : null;
+                const lastArrivalHour = displayHours.reduce((acc, h) => h.count > 0 ? h.hour : acc, null);
+                let estCloseTime = null;
+                if (lastArrivalHour && data.avgTotalMinutes) {
+                  const hh = parseInt(lastArrivalHour.split(':')[0]);
+                  const totalMins = hh * 60 + data.avgTotalMinutes;
+                  const dh = Math.floor(totalMins / 60);
+                  const dm = totalMins % 60;
+                  if (dh <= 23) estCloseTime = `${String(dh).padStart(2, '0')}:${String(dm).padStart(2, '0')}`;
+                }
+                return (
+                  <div className="card">
+                    <h3 className="card-header mb-3 flex items-center gap-2">
+                      <CheckCircle size={14} className="text-emerald-500" />
+                      {t('forecast.clearanceTitle')}
+                    </h3>
+                    <div className="flex gap-px mb-0.5">
+                      {displayHours.map(h => {
+                        const bg = h.count === 0 ? 'bg-emerald-400'
+                          : h.pct < 20 ? 'bg-yellow-300'
+                          : h.pct < 50 ? 'bg-orange-400'
+                          : 'bg-red-400';
+                        return (
+                          <div key={h.hour} className="flex-1 group relative">
+                            <div className={`h-4 rounded-sm ${bg}`} />
+                            <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-slate-800 text-white text-[9px] px-1.5 py-0.5 rounded whitespace-nowrap opacity-0 group-hover:opacity-100 pointer-events-none z-10">
+                              {h.hour}: {h.count} {t('unit.vehicles')}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-px mb-3">
+                      {displayHours.map(h => (
+                        <div key={h.hour} className="flex-1 text-center">
+                          <p className="text-[7px] text-slate-400">{h.hour.slice(0, 2)}</p>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="flex flex-wrap gap-2 text-[10px] text-slate-500 mb-3">
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-red-400 inline-block" />{t('forecast.clearanceLegendHeavy')}</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-orange-400 inline-block" />{t('forecast.clearanceLegendMed')}</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-yellow-300 inline-block" />{t('forecast.clearanceLegendLight')}</span>
+                      <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-sm bg-emerald-400 inline-block" />{t('forecast.clearanceLegendFree')}</span>
+                    </div>
+                    <div className="space-y-2">
+                      {quietFromHour && (
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-emerald-50 rounded-lg">
+                          <span className="text-xs text-slate-600">{t('forecast.clearanceFrom')}</span>
+                          <span className="text-sm font-bold text-emerald-600">{quietFromHour} น.</span>
+                        </div>
+                      )}
+                      {estCloseTime && (
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-blue-50 rounded-lg">
+                          <span className="text-xs text-slate-600">{t('forecast.clearanceDone')}</span>
+                          <span className="text-sm font-bold text-blue-600">~{estCloseTime} น.</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                );
+              })()}
               <div className="card">
                 <h3 className="card-header mb-3">{t('forecast.vehicleTypes')}</h3>
                 <div className="space-y-2">
