@@ -97,6 +97,19 @@ router.get('/tomorrow', authenticate, async (req, res) => {
     }));
     const peakHour = hourDistribution.reduce((a, b) => b.count > a.count ? b : a);
 
+    // หาช่วงเวลาหนาแน่นต่อเนื่อง (ชั่วโมงที่ count >= 50% ของ peak ที่ติดกัน)
+    const peakIdx = hourDistribution.findIndex(h => h.hour === peakHour.hour);
+    const threshold = peakHour.count * 0.5;
+    let pStart = peakIdx, pEnd = peakIdx;
+    while (pStart > 0 && hourDistribution[pStart - 1].count >= threshold) pStart--;
+    while (pEnd < 23 && hourDistribution[pEnd + 1].count >= threshold) pEnd++;
+    const periodCount = hourDistribution.slice(pStart, pEnd + 1).reduce((s, h) => s + h.count, 0);
+    const peakPeriod = {
+      startHour: hourDistribution[pStart].hour,
+      endHour: `${String(pEnd + 1).padStart(2, '0')}:00`,
+      pct: Math.round((periodCount / totalHourEntries) * 100),
+    };
+
     // --- ประเภทรถ ---
     const typeMap = {};
     rows.forEach(r => {
@@ -224,6 +237,7 @@ router.get('/tomorrow', authenticate, async (req, res) => {
         vehicleCount: { avg: avgPerDay, min: minPerDay, max: maxPerDay },
         hourDistribution,
         peakHour,
+        peakPeriod,
         vehicleTypes,
         topCustomers,
         avgNetWeight, minNetWeight, maxNetWeight,

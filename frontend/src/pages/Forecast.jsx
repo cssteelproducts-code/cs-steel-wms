@@ -20,7 +20,7 @@ export default function Forecast() {
   const [lastUpdate, setLastUpdate] = useState(null);
   const [aiInsight, setAiInsight] = useState(null);
   const [aiLoading, setAiLoading] = useState(false);
-  const [showAllHours, setShowAllHours] = useState(false);
+
 
   const fmtMin = (m) => {
     if (m == null) return '-';
@@ -53,8 +53,9 @@ export default function Forecast() {
 
   useEffect(() => { fetchForecast(); }, []);
 
-  const activeHours = data?.hourDistribution?.filter(h => h.count > 0) || [];
-  const displayHours = showAllHours ? activeHours : activeHours.filter(h => h.pct >= 1);
+  const BUSINESS_HOURS = Array.from({ length: 15 }, (_, i) => `${String(i + 8).padStart(2, '0')}:00`); // 08:00–22:00
+  const hourMap = Object.fromEntries((data?.hourDistribution || []).map(h => [h.hour, h]));
+  const displayHours = BUSINESS_HOURS.map(h => hourMap[h] || { hour: h, count: 0, pct: 0 });
 
   return (
     <div className="space-y-5">
@@ -116,8 +117,10 @@ export default function Forecast() {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-slate-500 text-xs">{t('forecast.peakHour')}</p>
-                  <p className="text-2xl font-bold text-red-600 mt-0.5">{data.peakHour.hour}</p>
-                  <p className="text-slate-400 text-xs mt-0.5">{t('forecast.peakPct').replace('{n}', data.peakHour.pct)}</p>
+                  <p className="text-2xl font-bold text-red-600 mt-0.5">
+                    {data.peakPeriod ? `${data.peakPeriod.startHour} – ${data.peakPeriod.endHour}` : data.peakHour.hour}
+                  </p>
+                  <p className="text-slate-400 text-xs mt-0.5">{t('forecast.peakPct').replace('{n}', data.peakPeriod?.pct ?? data.peakHour.pct)}</p>
                 </div>
                 <div className="p-2.5 rounded-xl bg-red-50"><Clock size={20} className="text-red-500" /></div>
               </div>
@@ -158,10 +161,7 @@ export default function Forecast() {
             <div className="card">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="card-header mb-0">{t('forecast.peakChart')}</h3>
-                <button onClick={() => setShowAllHours(v => !v)}
-                  className="text-xs text-slate-400 hover:text-blue-500 flex items-center gap-1">
-                  {showAllHours ? <><ChevronUp size={12} />{t('forecast.collapse')}</> : <><ChevronDown size={12} />{t('forecast.showAll')}</>}
-                </button>
+                <span className="text-xs text-slate-400">08:00 – 22:00 น.</span>
               </div>
               <ResponsiveContainer width="100%" height={200}>
                 <BarChart data={displayHours} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
