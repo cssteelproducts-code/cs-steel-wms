@@ -222,14 +222,14 @@ export default function Forecast() {
             <div className="card">
               <h3 className="card-header mb-3 flex items-center gap-2">
                 <TrendingUp size={14} className="text-violet-500" />
-                แนวโน้มจำนวนรถ ({data.historicalTrend.length} ครั้งย้อนหลัง)
+                {t('forecast.trendTitle')} ({data.historicalTrend.length} {t('forecast.trendSuffix')})
               </h3>
               <ResponsiveContainer width="100%" height={130}>
                 <BarChart data={data.historicalTrend} margin={{ top: 0, right: 0, left: -25, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" />
                   <XAxis dataKey="date" tick={{ fontSize: 9 }} tickFormatter={d => d.slice(5)} />
                   <YAxis tick={{ fontSize: 10 }} />
-                  <Tooltip formatter={v => [`${v} คัน`, 'จำนวนรถ']} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
+                  <Tooltip formatter={v => [`${v} ${t('unit.vehicles')}`, t('forecast.tooltipCount')]} contentStyle={{ fontSize: 12, borderRadius: 8 }} />
                   <Bar dataKey="count" fill="#8b5cf6" radius={[3, 3, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
@@ -242,14 +242,14 @@ export default function Forecast() {
               <div className="card">
                 <h3 className="card-header mb-3 flex items-center gap-2">
                   <Package size={14} className="text-blue-500" />
-                  ประเภทการส่ง
+                  {t('forecast.deliveryType')}
                 </h3>
                 <div className="space-y-2">
                   {data.deliveryTypeBreakdown.map(d => (
                     <div key={d.type}>
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-slate-700 font-medium">{d.type}</span>
-                        <span className="text-slate-400">{d.count} คัน ({d.pct}%)</span>
+                        <span className="text-slate-400">{d.count} {t('unit.vehicles')} ({d.pct}%)</span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full">
                         <div className="h-1.5 bg-blue-400 rounded-full" style={{ width: `${d.pct}%` }} />
@@ -264,14 +264,14 @@ export default function Forecast() {
               <div className="card">
                 <h3 className="card-header mb-3 flex items-center gap-2">
                   <Star size={14} className="text-amber-500" />
-                  ระดับความสำคัญ
+                  {t('forecast.priorityLevel')}
                 </h3>
                 <div className="space-y-2">
                   {data.priorityBreakdown.map(p => (
                     <div key={p.priority}>
                       <div className="flex items-center justify-between text-xs mb-1">
                         <span className="text-slate-700 font-medium">{p.priority}</span>
-                        <span className="text-slate-400">{p.count} คัน ({p.pct}%)</span>
+                        <span className="text-slate-400">{p.count} {t('unit.vehicles')} ({p.pct}%)</span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full">
                         <div className={`h-1.5 rounded-full ${p.priority === 'Urgent' ? 'bg-red-400' : 'bg-slate-400'}`}
@@ -287,7 +287,7 @@ export default function Forecast() {
               <div className="card">
                 <h3 className="card-header mb-3 flex items-center gap-2">
                   <Clock size={14} className="text-emerald-500" />
-                  เวลาเฉลี่ยแยกตามรถ
+                  {t('forecast.avgTimeByType')}
                 </h3>
                 <div className="space-y-2">
                   {data.avgTimeByType.map(v => (
@@ -306,8 +306,8 @@ export default function Forecast() {
             <div className="card">
               <h3 className="card-header mb-4 flex items-center gap-2">
                 <TrendingUp size={14} className="text-orange-500" />
-                สถานีที่คาดว่าจะหนาแน่น
-                <span className="text-xs font-normal text-slate-400 ml-1">(เฉลี่ยต่อวัน)</span>
+                {t('forecast.stationBusy')}
+                <span className="text-xs font-normal text-slate-400 ml-1">({t('forecast.avgPerDay')})</span>
               </h3>
               <div className="space-y-3">
                 {data.stationLoadForecast.map((s, i) => {
@@ -316,7 +316,7 @@ export default function Forecast() {
                   const isMed = pct >= 50;
                   const barColor = isHot ? 'bg-red-400' : isMed ? 'bg-orange-400' : 'bg-blue-300';
                   const badge = isHot ? 'bg-red-100 text-red-600' : isMed ? 'bg-orange-100 text-orange-600' : 'bg-slate-100 text-slate-500';
-                  const label = isHot ? 'หนาแน่นมาก' : isMed ? 'หนาแน่น' : 'ปกติ';
+                  const label = isHot ? t('forecast.densityHigh') : isMed ? t('forecast.densityMed') : t('forecast.densityNormal');
                   return (
                     <div key={s.station}>
                       <div className="flex items-center justify-between mb-1">
@@ -326,7 +326,7 @@ export default function Forecast() {
                           <span className={`text-[10px] px-1.5 py-0.5 rounded-full font-medium ${badge}`}>{label}</span>
                         </div>
                         <div className="text-right">
-                          <span className="text-sm font-bold text-slate-800">~{s.avgTrips} คัน</span>
+                          <span className="text-sm font-bold text-slate-800">~{s.avgTrips} {t('unit.vehicles')}</span>
                           {s.minTrips !== s.maxTrips && (
                             <span className="text-[10px] text-slate-400 ml-1">({s.minTrips}–{s.maxTrips})</span>
                           )}

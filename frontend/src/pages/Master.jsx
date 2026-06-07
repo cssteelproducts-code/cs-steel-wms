@@ -1098,12 +1098,12 @@ export default function Master() {
   };
 
   const summaryItems = [
-    { key: 'warehouses', label: 'คลังสินค้า', unit: 'คลัง', icon: Warehouse, color: 'text-blue-600', bg: 'bg-blue-50' },
-    { key: 'customers', label: 'ลูกค้า', unit: 'ราย', icon: Users, color: 'text-emerald-600', bg: 'bg-emerald-50' },
-    { key: 'vehicleTypes', label: 'ประเภทรถ', unit: 'ประเภท', icon: Truck, color: 'text-amber-600', bg: 'bg-amber-50' },
-    { key: 'internalVehicles', label: 'รถขนส่งภายใน', unit: 'คัน', icon: Car, color: 'text-cyan-600', bg: 'bg-cyan-50' },
-    { key: 'loadingStations', label: 'สถานีขึ้นสินค้า', unit: 'สถานี', icon: Package, color: 'text-red-600', bg: 'bg-red-50' },
-    { key: 'products', label: 'สินค้า', unit: 'รายการ', icon: ShoppingBag, color: 'text-purple-600', bg: 'bg-purple-50' },
+    { key: 'warehouses',       labelKey: 'master.warehousesTab',      unitKey: 'unit.warehouse', icon: Warehouse,    color: 'text-blue-600',    bg: 'bg-blue-50' },
+    { key: 'customers',        labelKey: 'master.customersTab',        unitKey: 'unit.person',    icon: Users,        color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { key: 'vehicleTypes',     labelKey: 'master.vehicleTypesTab',     unitKey: 'unit.type',      icon: Truck,        color: 'text-amber-600',   bg: 'bg-amber-50' },
+    { key: 'internalVehicles', labelKey: 'master.internalVehiclesTab', unitKey: 'unit.vehicles',  icon: Car,          color: 'text-cyan-600',    bg: 'bg-cyan-50' },
+    { key: 'loadingStations',  labelKey: 'master.stationsTab',         unitKey: 'unit.station',   icon: Package,      color: 'text-red-600',     bg: 'bg-red-50' },
+    { key: 'products',         labelKey: 'master.productsTab',         unitKey: 'unit.items',     icon: ShoppingBag,  color: 'text-purple-600',  bg: 'bg-purple-50' },
   ];
 
   return (

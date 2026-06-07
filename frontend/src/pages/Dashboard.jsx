@@ -126,7 +126,7 @@ const SectionHeader = ({ title, sectionKey, collapsed, onToggle, icon: Icon, ico
 };
 
 export default function Dashboard() {
-  const { t } = useLang();
+  const { t, lang } = useLang();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [lastUpdate, setLastUpdate] = useState(null);
@@ -263,11 +263,11 @@ export default function Dashboard() {
 
       {/* Checker avg time by vehicle type — monthly comparison */}
       {data?.checkerAvgByVehicleType?.length > 0 && (() => {
-        const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+        const locale = lang === 'th' ? 'th-TH' : lang === 'my' ? 'my-MM' : 'en-US';
         const now = new Date();
         const last12 = Array.from({ length: 12 }, (_, i) => {
           const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
-          return { year: d.getFullYear(), month: d.getMonth() + 1, label: THAI_MONTHS[d.getMonth()] };
+          return { year: d.getFullYear(), month: d.getMonth() + 1, label: new Intl.DateTimeFormat(locale, { month: 'short' }).format(d) };
         });
         const curSlot = last12[11];
 
@@ -305,7 +305,7 @@ export default function Dashboard() {
                         <span className="text-sm font-semibold text-slate-700">{typeName}</span>
                         {curRow
                           ? <span className="text-sm font-bold text-slate-800">{fmtMin(curRow.AvgMinutes)}</span>
-                          : <span className="text-xs text-slate-400">ไม่มีข้อมูลเดือนนี้</span>}
+                          : <span className="text-xs text-slate-400">{t('dash.noDataMonth')}</span>}
                       </div>
                       {/* 12-month sparkline */}
                       <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${last12.length}, 1fr)` }}>

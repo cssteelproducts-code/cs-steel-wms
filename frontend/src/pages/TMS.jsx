@@ -11,10 +11,10 @@ import dayjs from 'dayjs';
 import { useLang } from '../context/LanguageContext';
 
 const TABS = [
-  { id: 'orders',   icon: FileSpreadsheet, label: 'คำสั่งส่ง' },
-  { id: 'assign',   icon: Truck,           label: 'จัดรถ' },
-  { id: 'routes',   icon: Route,           label: 'วางแผนเส้นทาง' },
-  { id: 'diagram',  icon: Layers,          label: 'แผนผังบรรทุก' },
+  { id: 'orders',   icon: FileSpreadsheet, labelKey: 'tms.ordersTab' },
+  { id: 'assign',   icon: Truck,           labelKey: 'tms.assignTab' },
+  { id: 'routes',   icon: Route,           labelKey: 'tms.routesTab' },
+  { id: 'diagram',  icon: Layers,          labelKey: 'tms.diagramTab' },
 ];
 
 const STATUS_COLORS = {
@@ -411,7 +411,7 @@ export default function TMS() {
         {TABS.map(tab => (
           <button key={tab.id} onClick={() => setActiveTab(tab.id)}
             className={`flex items-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${activeTab === tab.id ? 'bg-red-600 text-white' : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-50'}`}>
-            <tab.icon size={14} />{tab.label}
+            <tab.icon size={14} />{t(tab.labelKey)}
           </button>
         ))}
       </div>
