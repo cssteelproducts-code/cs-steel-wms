@@ -4,6 +4,7 @@ import Sidebar from '../components/Sidebar';
 import Header from '../components/Header';
 import BottomNav from '../components/BottomNav';
 import { useLang } from '../context/LanguageContext';
+import { showBar, hideBar } from '../services/api';
 
 const pageTitles = {
   '/':                  { title: 'page.dashboard' },
@@ -31,13 +32,10 @@ const pageTitles = {
   '/tms':               { title: 'ระบบวางแผนขนส่ง (TMS)' },
 };
 
-const PageFallback = () => (
-  <div style={{
-    position: 'fixed', top: 0, left: 0, right: 0, height: 3,
-    background: 'linear-gradient(90deg, #dc2626, #ef4444, #dc2626)',
-    backgroundSize: '200% 100%', animation: 'loading-sweep 1s linear infinite', zIndex: 99998,
-  }} />
-);
+const PageFallback = () => {
+  useEffect(() => { showBar(); return () => hideBar(); }, []);
+  return null;
+};
 
 export default function MainLayout() {
   const location = useLocation();

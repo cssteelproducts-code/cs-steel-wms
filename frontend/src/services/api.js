@@ -10,7 +10,7 @@ const api = axios.create({
 // Global loading bar
 let _pending = 0;
 const bar = () => document.getElementById('global-loading-bar');
-const showBar = () => {
+export const showBar = () => {
   _pending++;
   const el = bar();
   if (!el) return;
@@ -18,7 +18,7 @@ const showBar = () => {
   void el.offsetWidth;          // force reflow so animation restarts from 20%
   el.classList.add('active');
 };
-const hideBar = () => {
+export const hideBar = () => {
   _pending = Math.max(0, _pending - 1);
   if (_pending > 0) return;
   const el = bar();
