@@ -265,11 +265,11 @@ export default function Dashboard() {
       {data?.checkerAvgByVehicleType?.length > 0 && (() => {
         const THAI_MONTHS = ['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
         const now = new Date();
-        const last6 = Array.from({ length: 6 }, (_, i) => {
-          const d = new Date(now.getFullYear(), now.getMonth() - 5 + i, 1);
+        const last12 = Array.from({ length: 12 }, (_, i) => {
+          const d = new Date(now.getFullYear(), now.getMonth() - 11 + i, 1);
           return { year: d.getFullYear(), month: d.getMonth() + 1, label: THAI_MONTHS[d.getMonth()] };
         });
-        const curSlot = last6[5];
+        const curSlot = last12[11];
 
         // group rows by TypeName
         const typeMap = {};
@@ -307,9 +307,9 @@ export default function Dashboard() {
                           ? <span className="text-sm font-bold text-slate-800">{fmtMin(curRow.AvgMinutes)}</span>
                           : <span className="text-xs text-slate-400">ไม่มีข้อมูลเดือนนี้</span>}
                       </div>
-                      {/* 6-month sparkline */}
-                      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${last6.length}, 1fr)` }}>
-                        {last6.map(slot => {
+                      {/* 12-month sparkline */}
+                      <div className="grid gap-1" style={{ gridTemplateColumns: `repeat(${last12.length}, 1fr)` }}>
+                        {last12.map(slot => {
                           const row = months[`${slot.year}-${slot.month}`];
                           const pct = row ? Math.round((row.AvgMinutes / globalMax) * 100) : 0;
                           const isCurrentMonth = slot.year === curSlot.year && slot.month === curSlot.month;
@@ -338,8 +338,8 @@ export default function Dashboard() {
                         })}
                       </div>
                       {/* trip count row */}
-                      <div className="grid mt-0.5 gap-1" style={{ gridTemplateColumns: `repeat(${last6.length}, 1fr)` }}>
-                        {last6.map(slot => {
+                      <div className="grid mt-0.5 gap-1" style={{ gridTemplateColumns: `repeat(${last12.length}, 1fr)` }}>
+                        {last12.map(slot => {
                           const row = months[`${slot.year}-${slot.month}`];
                           const isCurrentMonth = slot.year === curSlot.year && slot.month === curSlot.month;
                           return (
