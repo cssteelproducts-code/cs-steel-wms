@@ -103,7 +103,11 @@ export default function Forecast() {
                 <div>
                   <p className="text-slate-500 text-xs">{t('forecast.expectedVehicles')}</p>
                   <p className="text-2xl font-bold text-violet-600 mt-0.5">{data.vehicleCount.avg}</p>
-                  <p className="text-slate-400 text-xs mt-0.5">{t('forecast.range').replace('{min}', data.vehicleCount.min).replace('{max}', data.vehicleCount.max)}</p>
+                  <p className="text-slate-400 text-xs mt-0.5">
+                    {data.vehicleCount.min !== data.vehicleCount.max
+                      ? t('forecast.range').replace('{min}', data.vehicleCount.min).replace('{max}', data.vehicleCount.max)
+                      : `${data.basedOnDays} ${t('forecast.sample')}`}
+                  </p>
                 </div>
                 <div className="p-2.5 rounded-xl bg-violet-50"><TruckIcon size={20} className="text-violet-500" /></div>
               </div>
