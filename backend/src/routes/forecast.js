@@ -55,14 +55,15 @@ router.get('/tomorrow', authenticate, async (req, res) => {
     `);
 
     // ปริมาณรถต่อสถานีต่อวัน (นับทุก trip ไม่กรอง duration) — ใช้ทุกวัน 90 วันย้อนหลัง
+    // ใช้ WMS_DataStationTargets (การ assign สถานีจากขั้นตอน Pick)
     const stationVolumeData = await pool.request().query(`
       SELECT
         ls.StationName,
         CAST(t.TripDate AS DATE) as DateOnly,
         COUNT(*) as TripCount
-      FROM WMS_LoadingRecord lr
-      JOIN WMS_Trips t ON lr.TripID = t.TripID
-      JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+      FROM WMS_DataStationTargets dst
+      JOIN WMS_Trips t ON dst.TripID = t.TripID
+      JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
       WHERE
         t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
         AND t.TripDate < CAST(GETUTCDATE() AS DATE)
