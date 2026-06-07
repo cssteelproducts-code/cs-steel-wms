@@ -9,7 +9,7 @@ export default function AlertBell() {
 
   const fetchCount = async () => {
     try {
-      const res = await api.get('/alerts/unread-count');
+      const res = await api.get('/alerts/unread-count', { silent: true });
       setCount(res.data.count || 0);
     } catch {}
   };

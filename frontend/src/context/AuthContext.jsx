@@ -5,11 +5,11 @@ import api from '../services/api';
 // Fire-and-forget — errors are silently ignored.
 const warmupCaches = () => {
   Promise.allSettled([
-    api.get('/master/vehicle-types'),
-    api.get('/master/warehouses'),
-    api.get('/master/customers'),
-    api.get('/master/loading-stations'),
-    api.get('/trips/active'),
+    api.get('/master/vehicle-types', { silent: true }),
+    api.get('/master/warehouses', { silent: true }),
+    api.get('/master/customers', { silent: true }),
+    api.get('/master/loading-stations', { silent: true }),
+    api.get('/trips/active', { silent: true }),
   ]);
 };
 

@@ -25,7 +25,7 @@ export default function TripMonitor() {
 
   const fetchTrips = async () => {
     try {
-      const res = await api.get('/dashboard/live');
+      const res = await api.get('/dashboard/live', { silent: true });
       if (res.data.success) { setTrips(res.data.data); setLastUpdate(new Date()); }
     } catch {
       toast.error(t('common.noData'));

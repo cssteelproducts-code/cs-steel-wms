@@ -155,7 +155,7 @@ export default function Dashboard() {
 
   const fetchData = useCallback(async () => {
     try {
-      const res = await api.get('/dashboard/summary');
+      const res = await api.get('/dashboard/summary', { silent: true });
       if (res.data.success) { setData(res.data.data); setLastUpdate(new Date()); }
     } catch {
       toast.error(t('common.noData'));

@@ -43,7 +43,7 @@ export default function DataStation() {
 
   const fetchPending = async () => {
     try {
-      const res = await api.get('/data-station/pending');
+      const res = await api.get('/data-station/pending', { silent: true });
       setPending(res.data.data || []);
     } catch {} finally { setPageLoading(false); }
   };

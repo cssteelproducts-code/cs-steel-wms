@@ -34,12 +34,12 @@ export const hideBar = () => {
   });
 };
 
-api.interceptors.request.use(cfg => { showBar(); return cfg; }, err => { hideBar(); return Promise.reject(err); });
+api.interceptors.request.use(cfg => { if (!cfg.silent) showBar(); return cfg; }, err => { hideBar(); return Promise.reject(err); });
 
 api.interceptors.response.use(
-  res => { hideBar(); return res; },
+  res => { if (!res.config.silent) hideBar(); return res; },
   err => {
-    hideBar();
+    if (!err.config?.silent) hideBar();
     if (err.response?.status === 401) {
       localStorage.removeItem('wms_token');
       if (window.location.pathname !== '/login') window.location.href = '/login';

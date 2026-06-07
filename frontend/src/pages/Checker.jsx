@@ -58,7 +58,7 @@ export default function Checker() {
 
   const fetchPending = async () => {
     try {
-      const res = await api.get('/checker/pending');
+      const res = await api.get('/checker/pending', { silent: true });
       setPending(res.data.data || []);
       fetchedAtRef.current = Date.now();
     } catch {} finally { setPageLoading(false); }

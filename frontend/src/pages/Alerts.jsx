@@ -58,11 +58,11 @@ export default function Alerts() {
   };
 
   const fetchWarehouses = async () => {
-    try { const res = await api.get('/master/warehouses'); setWarehouses(res.data.data || []); } catch {}
+    try { const res = await api.get('/master/warehouses', { silent: true }); setWarehouses(res.data.data || []); } catch {}
   };
 
   const fetchVehicleTypes = async () => {
-    try { const res = await api.get('/master/vehicle-types'); setVehicleTypes(res.data.data || []); } catch {}
+    try { const res = await api.get('/master/vehicle-types', { silent: true }); setVehicleTypes(res.data.data || []); } catch {}
   };
 
   const markRead = async (id) => {

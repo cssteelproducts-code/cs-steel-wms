@@ -35,10 +35,10 @@ export default function LoadingStation() {
   const fetchAll = async () => {
     try {
       const [stRes, statusRes, activeRes, tripsRes] = await Promise.allSettled([
-        api.get('/master/loading-stations'),
-        api.get('/loading-station/stations-status'),
-        api.get('/loading-station/active'),
-        api.get('/trips/active')
+        api.get('/master/loading-stations', { silent: true }),
+        api.get('/loading-station/stations-status', { silent: true }),
+        api.get('/loading-station/active', { silent: true }),
+        api.get('/trips/active', { silent: true })
       ]);
       if (stRes.status === 'fulfilled') setStations((stRes.value.data.data || []).sort((a, b) => a.StationName.localeCompare(b.StationName, undefined, { numeric: true })));
       if (statusRes.status === 'fulfilled') setStationStatus(statusRes.value.data.data || []);

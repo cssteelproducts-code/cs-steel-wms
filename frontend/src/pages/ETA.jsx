@@ -27,7 +27,7 @@ export default function ETA() {
 
   const fetchVehicles = useCallback(async () => {
     try {
-      const res = await api.get('/eta/vehicles');
+      const res = await api.get('/eta/vehicles', { silent: true });
       if (res.data.success) {
         setVehicles(res.data.data || []);
         setWarehouses(res.data.warehouses || []);

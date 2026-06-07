@@ -46,13 +46,13 @@ export default function WeighOut() {
 
   const fetchPending = async () => {
     try {
-      const res = await api.get('/weigh-out/pending');
+      const res = await api.get('/weigh-out/pending', { silent: true });
       setPending(res.data.data || []);
     } catch {} finally { setPageLoading(false); }
   };
 
   const fetchCompleted = async () => {
-    try { const res = await api.get('/weigh-out/today'); setCompleted(res.data.data || []); } catch {}
+    try { const res = await api.get('/weigh-out/today', { silent: true }); setCompleted(res.data.data || []); } catch {}
   };
 
   const selectTrip = (trip) => {
