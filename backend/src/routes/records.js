@@ -45,7 +45,7 @@ router.get('/', authenticate, async (req, res) => {
         cr.IsApproved, cr.Remarks as CheckerRemarks, cr.CheckTime,
         u.FullName as CheckerName,
         ds.PickDocumentNo,
-        (SELECT COUNT(*) FROM WMS_LoadingRecord lr WITH (NOLOCK) WHERE lr.TripID = t.TripID) as LoadingCount,
+        ISNULL(lc.LoadingCount, 0) as LoadingCount,
         COUNT(*) OVER() AS TotalRows
       FROM WMS_Trips t          WITH (NOLOCK)
       LEFT JOIN WMS_VehicleTypes vt WITH (NOLOCK) ON vt.TypeID     = t.VehicleTypeID
@@ -55,6 +55,11 @@ router.get('/', authenticate, async (req, res) => {
       LEFT JOIN WMS_WeighOut wo     WITH (NOLOCK) ON wo.TripID     = t.TripID
       LEFT JOIN WMS_CheckerRecord cr WITH (NOLOCK) ON cr.TripID    = t.TripID
       LEFT JOIN WMS_Users u         WITH (NOLOCK) ON u.UserID      = cr.OperatorID
+      LEFT JOIN (
+        SELECT TripID, COUNT(*) as LoadingCount
+        FROM WMS_LoadingRecord WITH (NOLOCK)
+        GROUP BY TripID
+      ) lc ON lc.TripID = t.TripID
       OUTER APPLY (
         SELECT TOP 1 PickDocumentNo
         FROM WMS_DataStation WITH (NOLOCK)

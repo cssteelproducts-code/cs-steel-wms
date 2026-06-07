@@ -2,15 +2,22 @@ const express = require('express');
 const router = express.Router();
 const { sql, getPool } = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const cache = require('../utils/cache');
 
 // GET /api/forecast/tomorrow
 // วิเคราะห์ข้อมูลย้อนหลัง 90 วัน เฉพาะวันในสัปดาห์เดียวกับพรุ่งนี้
 router.get('/tomorrow', authenticate, async (req, res) => {
   try {
+    // cache key รวม weekday พรุ่งนี้ — expire ทุก 10 นาที
+    const tomorrowWd = new Date(Date.now() + 86_400_000).getDay();
+    const cacheKey = `forecast:tomorrow:wd${tomorrowWd}`;
+
+    const responseData = await cache.wrap(cacheKey, async () => {
     const pool = getPool();
 
-    // ดึงข้อมูลย้อนหลัง 90 วัน เฉพาะวันในสัปดาห์เดียวกับพรุ่งนี้
-    const history = await pool.request().query(`
+    // ดึง 3 query พร้อมกัน
+    const [historyRes, stationDataRes, stationVolumeRes] = await Promise.all([
+      pool.request().query(`
       SELECT
         t.TripID,
         t.TripDate,
@@ -36,45 +43,32 @@ router.get('/tomorrow', authenticate, async (req, res) => {
         AND t.TripDate < CAST(GETUTCDATE() AS DATE)
         AND t.Status NOT IN ('Cancelled')
       ORDER BY t.TripDate DESC
-    `);
+    `),
+      // avg loading time per station — all days 90d
+      pool.request().query(`
+        SELECT ls.StationName, lr.DurationMinutes
+        FROM WMS_LoadingRecord lr
+        JOIN WMS_Trips t ON lr.TripID = t.TripID
+        JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
+        WHERE t.TripDate >= CAST(DATEADD(DAY,-90,GETUTCDATE()) AS DATE)
+          AND t.TripDate < CAST(GETUTCDATE() AS DATE)
+          AND lr.DurationMinutes IS NOT NULL AND lr.DurationMinutes > 0
+      `),
+      // station volume from Pick assignments — all days 90d
+      pool.request().query(`
+        SELECT ls.StationName, CAST(t.TripDate AS DATE) as DateOnly, COUNT(*) as TripCount
+        FROM WMS_DataStationTargets dst
+        JOIN WMS_Trips t ON dst.TripID = t.TripID
+        JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
+        WHERE t.TripDate >= CAST(DATEADD(DAY,-90,GETUTCDATE()) AS DATE)
+          AND t.TripDate < CAST(GETUTCDATE() AS DATE)
+        GROUP BY ls.StationName, CAST(t.TripDate AS DATE)
+      `),
+    ]);
 
-    // ข้อมูลสถานีขึ้นสินค้า (duration สำหรับ avg time) — ใช้ทุกวัน 90 วันย้อนหลัง
-    const stationData = await pool.request().query(`
-      SELECT
-        ls.StationName,
-        lr.DurationMinutes,
-        CAST(t.TripDate AS DATE) as DateOnly
-      FROM WMS_LoadingRecord lr
-      JOIN WMS_Trips t ON lr.TripID = t.TripID
-      JOIN WMS_LoadingStations ls ON lr.StationID = ls.StationID
-      WHERE
-        t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
-        AND t.TripDate < CAST(GETUTCDATE() AS DATE)
-        AND lr.DurationMinutes IS NOT NULL
-        AND lr.DurationMinutes > 0
-    `);
+    const rows = historyRes.recordset;
 
-    // ปริมาณรถต่อสถานีต่อวัน (นับทุก trip ไม่กรอง duration) — ใช้ทุกวัน 90 วันย้อนหลัง
-    // ใช้ WMS_DataStationTargets (การ assign สถานีจากขั้นตอน Pick)
-    const stationVolumeData = await pool.request().query(`
-      SELECT
-        ls.StationName,
-        CAST(t.TripDate AS DATE) as DateOnly,
-        COUNT(*) as TripCount
-      FROM WMS_DataStationTargets dst
-      JOIN WMS_Trips t ON dst.TripID = t.TripID
-      JOIN WMS_LoadingStations ls ON dst.StationID = ls.StationID
-      WHERE
-        t.TripDate >= CAST(DATEADD(DAY, -90, GETUTCDATE()) AS DATE)
-        AND t.TripDate < CAST(GETUTCDATE() AS DATE)
-      GROUP BY ls.StationName, CAST(t.TripDate AS DATE)
-    `);
-
-    const rows = history.recordset;
-
-    if (rows.length === 0) {
-      return res.json({ success: true, data: null, message: 'ไม่มีข้อมูลย้อนหลังเพียงพอ' });
-    }
+    if (rows.length === 0) return null;
 
     // --- จำนวนรถต่อวัน ---
     const byDate = {};
@@ -191,7 +185,7 @@ router.get('/tomorrow', authenticate, async (req, res) => {
 
     // --- เวลาเฉลี่ยต่อสถานี ---
     const stationMap = {};
-    stationData.recordset.forEach(r => {
+    stationDataRes.recordset.forEach(r => {
       if (!stationMap[r.StationName]) stationMap[r.StationName] = [];
       stationMap[r.StationName].push(r.DurationMinutes);
     });
@@ -204,12 +198,12 @@ router.get('/tomorrow', authenticate, async (req, res) => {
     // --- ปริมาณรถต่อสถานี (forecast) ---
     // สะสม TripCount ต่อสถานีต่อวัน แล้วหาค่าเฉลี่ย
     const stationVolByDay = {}; // { StationName: { date: count } }
-    stationVolumeData.recordset.forEach(r => {
+    stationVolumeRes.recordset.forEach(r => {
       const d = r.DateOnly?.toISOString?.()?.slice(0, 10) || String(r.DateOnly);
       if (!stationVolByDay[r.StationName]) stationVolByDay[r.StationName] = {};
       stationVolByDay[r.StationName][d] = r.TripCount;
     });
-    const uniqueDates = new Set(stationVolumeData.recordset.map(r =>
+    const uniqueDates = new Set(stationVolumeRes.recordset.map(r =>
       r.DateOnly?.toISOString?.()?.slice(0, 10) || String(r.DateOnly)
     ));
     const numDays = uniqueDates.size || 1;
@@ -229,29 +223,23 @@ router.get('/tomorrow', authenticate, async (req, res) => {
     const tomorrowDow = DOW[tomorrowDate.getDay()];
     const tomorrowStr = tomorrowDate.toLocaleDateString('th-TH', { year: 'numeric', month: 'long', day: 'numeric' });
 
-    res.json({
-      success: true,
-      data: {
-        tomorrowStr,
-        tomorrowDow,
-        basedOnDays: dayCounts.length,
-        vehicleCount: { avg: avgPerDay, min: minPerDay, max: maxPerDay },
-        hourDistribution,
-        peakHour,
-        peakPeriod,
-        vehicleTypes,
-        topCustomers,
-        avgNetWeight, minNetWeight, maxNetWeight,
-        avgTotalMinutes, minTotalMinutes, maxTotalMinutes,
-        deliveryTypeBreakdown,
-        priorityBreakdown,
-        avgTimeByType,
-        historicalTrend,
-        avgByStation,
-        stationLoadForecast,
-        maxStationLoad,
-      }
-    });
+    return {
+      tomorrowStr, tomorrowDow,
+      basedOnDays: dayCounts.length,
+      vehicleCount: { avg: avgPerDay, min: minPerDay, max: maxPerDay },
+      hourDistribution, peakHour, peakPeriod,
+      vehicleTypes, topCustomers,
+      avgNetWeight, minNetWeight, maxNetWeight,
+      avgTotalMinutes, minTotalMinutes, maxTotalMinutes,
+      deliveryTypeBreakdown, priorityBreakdown, avgTimeByType,
+      historicalTrend, avgByStation, stationLoadForecast, maxStationLoad,
+    };
+    }, 10 * 60_000); // cache 10 min — forecast data changes once per day
+
+    if (!responseData) {
+      return res.json({ success: true, data: null, message: 'ไม่มีข้อมูลย้อนหลังเพียงพอ' });
+    }
+    res.json({ success: true, data: responseData });
   } catch (err) {
     console.error('Forecast error:', err);
     res.status(500).json({ success: false, message: err.message });

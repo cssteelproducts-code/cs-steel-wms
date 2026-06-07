@@ -316,7 +316,7 @@ router.get('/summary', authenticate, async (req, res) => {
       checkerAvgByVehicleType: checkerAvgByTypeResult?.recordset || []
     };
       return responseData;
-    }, 60_000); // 60s cache
+    }, 120_000); // 120s cache
     res.json({ success: true, data });
   } catch (err) {
     console.error('Dashboard error:', err);
